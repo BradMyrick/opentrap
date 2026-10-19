@@ -46,11 +46,12 @@ public class SuiteFrame extends JFrame {
 
     private JPanel buildStatusBar() {
         JPanel p = new JPanel(new BorderLayout());
+        p.setBackground(Theme.SURFACE);
         p.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, Ui.GRID), Ui.pad(3, 8, 3, 8)));
+                BorderFactory.createMatteBorder(1, 0, 0, 0, Ui.GRID), Ui.pad(4, 10, 4, 10)));
         statusLabel.setFont(Ui.PLAIN);
         memoryLabel.setFont(Ui.PLAIN);
-        memoryLabel.setForeground(new Color(0x66, 0x66, 0x66));
+        memoryLabel.setForeground(Theme.MUTED);
         p.add(statusLabel, BorderLayout.WEST);
         p.add(memoryLabel, BorderLayout.EAST);
         return p;
@@ -118,10 +119,10 @@ public class SuiteFrame extends JFrame {
         for (ToolModule m : modules) {
             JMenu[] ms = m.menus();
             if (ms == null) continue;
-            for (JMenu x : ms) { x.setFont(Ui.PLAIN); menuBar.add(x); }
+            for (JMenu x : ms) { x.setFont(Ui.PLAIN); x.setText(capitalise(x.getText())); menuBar.add(x); }
         }
 
-        JMenu view = new JMenu("view");
+        JMenu view = new JMenu("View");
         view.setFont(Ui.PLAIN);
         JMenuItem bigger = new JMenuItem("increase text size");
         bigger.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_EQUALS,
@@ -147,7 +148,7 @@ public class SuiteFrame extends JFrame {
         }
         menuBar.add(view);
 
-        JMenu window = new JMenu("window");
+        JMenu window = new JMenu("Window");
         window.setFont(Ui.PLAIN);
         for (int i = 0; i < modules.size(); i++) {
             final int idx = i;
@@ -155,7 +156,7 @@ public class SuiteFrame extends JFrame {
         }
         menuBar.add(window);
 
-        JMenu help = new JMenu("help");
+        JMenu help = new JMenu("Help");
         help.setFont(Ui.PLAIN);
         addItem(help, "proxy setup instructions", e -> showProxyHelp());
         addItem(help, "about", e -> JOptionPane.showMessageDialog(this,
@@ -171,6 +172,11 @@ public class SuiteFrame extends JFrame {
             "3. Trust it for identifying websites, then reload your target.\n\n" +
             "Traffic appears on the proxy history tab and builds the target site map.",
             "proxy setup", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /** Menu titles read as headings, like the tab strip: a leading capital. */
+    private static String capitalise(String s) {
+        return s == null || s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private void addItem(JMenu menu, String label, java.awt.event.ActionListener l) {

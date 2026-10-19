@@ -61,13 +61,7 @@ public class Main {
 
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            try { UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName()); }
-            catch (Exception ignored) {}
-        }
-        UIManager.put("TabbedPane.focus", new Color(0, 0, 0, 0));
+        Theme.install();
 
         // Scale the whole interface before any window is built. The factor comes
         // from -Dopentrap.scale, else the saved preference, else 1.0.

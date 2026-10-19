@@ -34,7 +34,7 @@ public class PositionsPanel extends JPanel {
     private final JComboBox<AttackType> attackCombo = Ui.combo(AttackType.ordered());
     private final JLabel posLabel = Ui.label("0 positions");
     private final JLabel lenLabel = Ui.label("length: 0");
-    private final JButton start = Ui.button("start attack", "launch the attack with the current configuration");
+    private final JButton start = Ui.primaryButton("start attack", "launch the attack with the current configuration");
 
     private Runnable onChange;
 

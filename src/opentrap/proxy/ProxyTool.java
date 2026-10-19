@@ -89,7 +89,7 @@ public class ProxyTool implements ToolModule {
             bar.add(forward); bar.add(drop); bar.add(toggle); bar.add(action);
 
             bar.add(javax.swing.Box.createHorizontalStrut(16));
-            JButton openBrowser = Ui.button("open browser",
+            JButton openBrowser = Ui.primaryButton("open browser",
                     "launch a browser routed through the proxy, with the CA already trusted");
             openBrowser.addActionListener(ev -> {
                 boolean relax = ctx.settings().getBool(BrowserFlags.RELAX_KEY, true);
