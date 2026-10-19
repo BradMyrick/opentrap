@@ -49,7 +49,7 @@ public final class AppIcon {
         java.awt.Graphics2D g = img.createGraphics();
         g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
                 java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(new java.awt.Color(0xDD, 0x47, 0x47));
+        g.setColor(Theme.ACCENT);
         double s = size, t = s * 0.14, cy1 = s * 0.38, cy2 = s * 0.62;
         g.setStroke(new java.awt.BasicStroke((float) t, java.awt.BasicStroke.CAP_ROUND,
                 java.awt.BasicStroke.JOIN_ROUND));
