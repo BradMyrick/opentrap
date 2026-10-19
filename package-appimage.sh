@@ -23,16 +23,21 @@ if [ ! -x "$AIT" ]; then
     chmod +x "$AIT"
 fi
 
-echo ">> jpackage: self-contained app image (bundled JRE + native launcher)"
-rm -rf build/otin build/appimage AppDir
+echo ">> jlink: a complete Java runtime (keeps bin/java)"
+rm -rf build/otin build/appimage build/runtime AppDir
 mkdir -p build/otin
 cp "$JAR" build/otin/
-MODS="$(jdeps --multi-release 25 --print-module-deps --ignore-missing-deps "$JAR" 2>/dev/null)"
-MODS="${MODS},java.management,java.naming,java.security.jgss,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,java.scripting"
+# The runtime must keep bin/java and carry a full module set: the bundled scan
+# engine runs as its own Java process (launched with java.home/bin/java), and
+# jpackage's default runtime strips bin/java and trims modules, which breaks it.
+ALLMODS="$(java --list-modules | sed 's/@.*//' | paste -sd,)"
+jlink --add-modules "$ALLMODS" --strip-debug --no-man-pages --no-header-files --output build/runtime
+
+echo ">> jpackage: self-contained app image using that runtime"
 jpackage --type app-image --name OpenTRAP \
     --input build/otin --main-jar "$JARNAME" --main-class opentrap.ui.Main \
     --icon src/opentrap/ui/icons/opentrap_256.png \
-    --add-modules "$MODS" --java-options "-Xmx1024m" \
+    --runtime-image build/runtime --java-options "-Xmx1024m" \
     --dest build/appimage
 
 echo ">> assembling AppDir (with a scale-probing launcher)"
