@@ -18,7 +18,10 @@ cd "$DIR"
 TS="$(date -u +%Y%m%d-%H%M%S)"
 echo "Release build $TS (UTC)"
 
-rm -rf build/opentrap
+# Start from an empty build/ so nothing left by an earlier build or by the
+# AppImage packaging (its runtime and staging directories live under build/)
+# is packed into the release jar.
+rm -rf build
 mkdir -p build dist
 
 echo "Compiling..."
