@@ -26,6 +26,12 @@ detection engine underneath, and nothing locked behind a licence.</p>
 <a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP"><img src="https://img.shields.io/badge/Share-Hacker%20News-FF6600?style=for-the-badge&logo=ycombinator&logoColor=white" alt="Share on Hacker News"></a>
 </p>
 
+<br>
+
+<a href="docs/images/dashboard.png"><img src="docs/images/dashboard.png" width="100%" alt="OpenTRAP dashboard with a crawl finished, an active audit running, and the live table of the most serious vulnerabilities found"></a>
+
+<p><sub>A live audit on the Dashboard: crawl complete, active scan running, high-severity findings arriving as they are confirmed.</sub></p>
+
 </div>
 
 ---
@@ -51,6 +57,40 @@ tamper with the traffic between a browser and a web application. Map an
 application's attack surface, and drive repeatable manual and automated testing
 from one window: interception, HTTP history, a target site map and scope, a request
 toolset, an out-of-band collaborator, and a complete log of everything that runs.
+
+## See it in action
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<a href="docs/images/target.png"><img src="docs/images/target.png" alt="Target tab: site map tree, request list, and the issues found with a full advisory for a reflected cross-site scripting finding"></a>
+<br><sub><b>Target.</b> Site map, scope and every issue found, with the advisory, request and response beside it.</sub>
+</td>
+<td width="50%" valign="top">
+<a href="docs/images/browser.png"><img src="docs/images/browser.png" alt="Built-in Chromium browser opened from the Proxy tab, routed through the proxy and showing the certificate authority page"></a>
+<br><sub><b>Built-in browser.</b> One click opens Chromium already routed through the proxy and trusting its certificate authority, so TLS interception works with nothing to configure.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<a href="docs/images/collaborator.png"><img src="docs/images/collaborator.png" alt="Collaborator tab listing captured out-of-band DNS and HTTP interactions with the request to the collaborator shown"></a>
+<br><sub><b>Collaborator.</b> Out-of-band DNS and HTTP interactions captured for blind vulnerabilities, with every callback request on record.</sub>
+</td>
+<td width="50%" valign="top">
+<a href="docs/images/passive.png"><img src="docs/images/passive.png" alt="Passive tab listing the scan engine's detection rules with enabled checkboxes, quality and alert threshold columns"></a>
+<br><sub><b>Passive rules.</b> Every detection rule in the engine, in one list: switch rules on or off, tune thresholds, and add your own.</sub>
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center">
+<a href="docs/images/logger.png"><img src="docs/images/logger.png" width="50%" alt="Logger tab with a filterable table of every request made by the audit, with request and response viewers below"></a>
+<br><sub><b>Logger.</b> A complete, filterable record of every request OpenTRAP and the scan engine make.</sub>
+</td>
+</tr>
+</table>
+
+Full-size screenshots of every tool are on the
+[project site](https://opentrap.github.io/opentrap/#see-it-in-action).
 
 ## Help build OpenTRAP
 
