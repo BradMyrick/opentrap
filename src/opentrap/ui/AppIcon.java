@@ -34,6 +34,28 @@ public final class AppIcon {
         return out;
     }
 
+    /** The logo at one size as a Swing icon, for dialogs that show it. */
+    public static javax.swing.Icon icon(int size) {
+        BufferedImage img = load(size);
+        if (img == null) {
+            // Not a rasterised size: scale the smallest one that is larger.
+            for (int s : SIZES) {
+                if (s >= size) { img = load(s); if (img != null) break; }
+            }
+            if (img == null) img = fallback(size);
+            if (img.getWidth() != size) {
+                BufferedImage scaled = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+                java.awt.Graphics2D g = scaled.createGraphics();
+                g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                        java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                g.drawImage(img, 0, 0, size, size, null);
+                g.dispose();
+                img = scaled;
+            }
+        }
+        return new javax.swing.ImageIcon(img);
+    }
+
     private static BufferedImage load(int size) {
         String path = "/opentrap/ui/icons/opentrap_" + size + ".png";
         try (InputStream in = AppIcon.class.getResourceAsStream(path)) {

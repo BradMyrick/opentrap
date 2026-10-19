@@ -190,6 +190,10 @@ public final class Theme {
         d.put("ToolTip.foreground", bg);
         d.put("ToolTip.border", BorderFactory.createEmptyBorder(5, 8, 5, 8));
         d.put("OptionPane.messageForeground", text);
+        d.put("OptionPane.informationIcon", new DialogIcon(DialogIcon.Kind.INFO));
+        d.put("OptionPane.questionIcon", new DialogIcon(DialogIcon.Kind.QUESTION));
+        d.put("OptionPane.warningIcon", new DialogIcon(DialogIcon.Kind.WARNING));
+        d.put("OptionPane.errorIcon", new DialogIcon(DialogIcon.Kind.ERROR));
         d.put("TitledBorder.titleColor", text);
         d.put("TabbedPane.focus", new Color(0, 0, 0, 0));
     }

@@ -159,9 +159,7 @@ public class SuiteFrame extends JFrame {
         JMenu help = new JMenu("Help");
         help.setFont(Ui.PLAIN);
         addItem(help, "proxy setup instructions", e -> showProxyHelp());
-        addItem(help, "about", e -> JOptionPane.showMessageDialog(this,
-                "OpenTRAP " + Main.VERSION + "\nAn HTTP interception and testing suite.",
-                "about", JOptionPane.INFORMATION_MESSAGE));
+        addItem(help, "about", e -> AboutDialog.show(this));
         menuBar.add(help);
     }
 
