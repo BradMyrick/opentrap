@@ -1,0 +1,104 @@
+package opentrap.intruder;
+
+import opentrap.ui.Ui;
+
+import javax.swing.*;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * The payloads tab: a selector for the active payload set, the configuration
+ * of each set, and live payload/request counts. The number of sets is driven
+ * by the attack type and the number of payload positions.
+ */
+public class PayloadsPanel extends JPanel {
+
+    /** Maximum payload sets, matching the original. */
+    static final int MAX_SETS = 8;
+
+    private final PayloadSet[] sets = new PayloadSet[MAX_SETS];
+    private final JPanel cards = new JPanel(new CardLayout());
+    private final JComboBox<Integer> setCombo = new JComboBox<>();
+    private final JLabel payloadCount = Ui.label("0");
+    private final JLabel requestCount = Ui.label("0");
+    private final JButton start = Ui.button("start attack", "launch the attack with the current configuration");
+
+    private AttackType attackType = AttackType.SNIPER;
+    private int positions = 0;
+    private int activeSetCount = 1;
+
+    public PayloadsPanel() {
+        super(new BorderLayout());
+        setBorder(Ui.pad(10, 10, 10, 10));
+
+        for (int i = 0; i < MAX_SETS; i++) {
+            sets[i] = new PayloadSet();
+            sets[i].onChange(this::refreshCounts);
+            cards.add(sets[i], String.valueOf(i));
+        }
+        cards.setOpaque(false);
+
+        setCombo.setFont(Ui.PLAIN);
+        setCombo.setToolTipText("choose the payload set to configure; the attack type "
+                + "determines the number of payload sets available");
+        setCombo.addActionListener(e -> {
+            Object sel = setCombo.getSelectedItem();
+            if (sel instanceof Integer n) {
+                ((CardLayout) cards.getLayout()).show(cards, String.valueOf(n - 1));
+                refreshCounts();
+            }
+        });
+
+        JPanel top = Ui.vbox(
+                Ui.row(Ui.label("number of payloads:"), payloadCount),
+                Ui.row(Ui.label("number of requests:"), requestCount),
+                Ui.row(Ui.label("payload set"), setCombo, start));
+
+        add(top, BorderLayout.NORTH);
+        add(cards, BorderLayout.CENTER);
+
+        setAttack(AttackType.SNIPER, 0);
+    }
+
+    public void setStartAction(Runnable r) {
+        for (java.awt.event.ActionListener l : start.getActionListeners()) start.removeActionListener(l);
+        start.addActionListener(e -> r.run());
+    }
+
+    /** Re-derive the number of payload sets from attack type and positions. */
+    public void setAttack(AttackType type, int positions) {
+        this.attackType = type;
+        this.positions = positions;
+        this.activeSetCount = Math.min(Math.max(1, type.setCount(positions)), MAX_SETS);
+
+        int keep = Math.min(setCombo.getSelectedIndex() + 1, activeSetCount);
+        setCombo.removeAllItems();
+        for (int i = 1; i <= activeSetCount; i++) setCombo.addItem(i);
+        setCombo.setSelectedItem(Math.max(1, keep));
+        refreshCounts();
+    }
+
+    /** The payload sets this attack will draw from, in position order. */
+    public List<PayloadSet> activeSets() {
+        List<PayloadSet> out = new ArrayList<>();
+        for (int i = 0; i < activeSetCount; i++) out.add(sets[i]);
+        return out;
+    }
+
+    private void refreshCounts() {
+        Object sel = setCombo.getSelectedItem();
+        int idx = sel instanceof Integer n ? n - 1 : 0;
+        if (idx < 0 || idx >= MAX_SETS) idx = 0;
+        int c = sets[idx].count();
+        payloadCount.setText(c < 0 ? "unknown" : String.valueOf(c));
+
+        int[] sizes = new int[activeSetCount];
+        for (int i = 0; i < activeSetCount; i++) {
+            int n = sets[i].count();
+            sizes[i] = n < 0 ? 0 : n;
+        }
+        long reqs = attackType.requestCount(positions, sizes);
+        requestCount.setText(String.valueOf(reqs));
+    }
+}

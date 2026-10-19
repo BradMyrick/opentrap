@@ -1,0 +1,9 @@
+# GitHub Pages configuration.
+#
+# Enable Pages in the repo settings with "Deploy from a branch", source
+# "main" / "/docs". This renders docs/index.md as a themed landing page using
+# the content below, so there is one source of truth and nothing to keep in
+# sync by hand. The README stays the developer-facing document in the repo root.
+title: OpenTRAP
+description: Open Traffic Replay and Analysis Proxy - an open-source web security testing suite built around an intercepting proxy, powered by the OWASP ZAP engine.
+theme: jekyll-theme-cayman

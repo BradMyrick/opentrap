@@ -1,0 +1,103 @@
+package opentrap.ui;
+
+import javax.swing.*;
+import java.awt.*;
+
+/**
+ * The options page pattern: a vertical stack of titled sections separated by
+ * rules, inside a scroll pane. Used by most tools and by the suite options.
+ */
+public class OptionsPage extends JPanel {
+
+    private final JPanel stack = new JPanel();
+    private boolean first = true;
+
+    public OptionsPage() {
+        super(new BorderLayout());
+        stack.setLayout(new BoxLayout(stack, BoxLayout.Y_AXIS));
+        stack.setBorder(Ui.pad(12, 14, 30, 14));
+        stack.setOpaque(false);
+        JPanel holder = new JPanel(new BorderLayout());
+        holder.setOpaque(false);
+        holder.add(stack, BorderLayout.NORTH);
+        JScrollPane sp = new JScrollPane(holder);
+        sp.setBorder(null);
+        sp.getVerticalScrollBar().setUnitIncrement(25);
+        sp.getViewport().setBackground(Color.WHITE);
+        holder.setBackground(Color.WHITE);
+        stack.setBackground(Color.WHITE);
+        add(sp, BorderLayout.CENTER);
+    }
+
+    /** Add a section with a heading and a body of stacked components. */
+    public JPanel section(String title, Component... parts) {
+        if (!first) {
+            JSeparator sep = new JSeparator();
+            sep.setMaximumSize(new Dimension(620, 10));
+            sep.setAlignmentX(Component.LEFT_ALIGNMENT);
+            JPanel wrap = new JPanel(new BorderLayout());
+            wrap.setOpaque(false);
+            wrap.setBorder(Ui.pad(16, 0, 16, 0));
+            wrap.setMaximumSize(new Dimension(620, 32));
+            wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
+            wrap.add(sep, BorderLayout.CENTER);
+            stack.add(wrap);
+        }
+        first = false;
+
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
+        body.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        if (title != null && !title.isEmpty()) {
+            JLabel h = Ui.heading(title);
+            h.setAlignmentX(Component.LEFT_ALIGNMENT);
+            h.setBorder(Ui.pad(0, 0, 8, 0));
+            body.add(h);
+        }
+        for (Component c : parts) {
+            if (c instanceof JTextArea ta && ta.getLineWrap()) {
+                // Bound wrapping notes to the page width and let height follow.
+                int w = 600;
+                ta.setSize(w, Short.MAX_VALUE);
+                int h = Math.max(ta.getPreferredSize().height, 20);
+                ta.setAlignmentX(Component.LEFT_ALIGNMENT);
+                ta.setMaximumSize(new Dimension(w, h));
+                ta.setPreferredSize(new Dimension(w, h));
+            } else if (c instanceof JComponent jc) {
+                jc.setAlignmentX(Component.LEFT_ALIGNMENT);
+                Dimension pref = jc.getPreferredSize();
+                jc.setMaximumSize(new Dimension(Math.max(620, pref.width), pref.height));
+            }
+            body.add(c);
+            body.add(Box.createVerticalStrut(4));
+        }
+        stack.add(body);
+        return body;
+    }
+
+    /** Add an already-built component as its own section. */
+    public void addSection(Component c) {
+        if (c instanceof JComponent jc) jc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        stack.add(c);
+    }
+
+    /** A labelled numeric or text field row. */
+    public static JPanel fieldRow(String label, JTextField field, String suffix) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        p.setOpaque(false);
+        p.add(Ui.label(label));
+        p.add(field);
+        if (suffix != null && !suffix.isEmpty()) p.add(Ui.label(suffix));
+        return p;
+    }
+
+    public static JPanel indent(Component c, int px) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setOpaque(false);
+        p.setBorder(Ui.pad(0, px, 0, 0));
+        p.add(c, BorderLayout.CENTER);
+        return p;
+    }
+}

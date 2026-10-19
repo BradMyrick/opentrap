@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=OpenTRAP
+GenericName=Intercepting Proxy
+Comment=Intercept, inspect, replay and scan HTTP and HTTPS traffic
+Icon=opentrap
+Terminal=false
+Categories=Development;Security;Network;
+Keywords=proxy;security;http;intercept;pentest;scanner;

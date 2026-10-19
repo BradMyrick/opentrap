@@ -1,0 +1,11 @@
+# Pinned versions of the tools OpenTRAP bundles or vendors.
+# This is the single source of truth: the fetch scripts install these versions,
+# and tools/check-updates.sh compares them against upstream. Bump a line here as
+# part of a release, then re-run the matching fetch script.
+
+CHROMIUM_REVISION=1721457
+BOUNCYCASTLE_VERSION=1.78.1
+BROTLI_DEC_VERSION=0.1.2
+
+# OWASP ZAP engine (crawl + active scan backend, run headless)
+ZAP_VERSION=2.17.0
