@@ -105,16 +105,27 @@ Right-click any request or response to send it between tools.
 
 ## Get started
 
-Download the latest release jar and run it with **Java 17 or newer**:
+Download the latest release and run it. Nothing to install.
+
+**Recommended: the AppImage.** One self-contained file that bundles its own Java
+runtime and the scan engine, no Java needed, just make it executable and run it
+(or double-click it in your file manager):
+
+```
+chmod +x OpenTRAP-x86_64.AppImage
+./OpenTRAP-x86_64.AppImage
+```
+
+**Or the jar**, if you already have **Java 17 or newer**:
 
 ```
 java -jar opentrap_<timestamp>.jar
 ```
 
-That single file is self-contained: the scan engine is built in and extracts
-itself on first use, and the interface detects your display and scales itself. The
-optional testing browser is an in-app download, offered only when you want it, so
-the release stays small.
+Either way the download is self-contained: the scan engine is built in and sets
+itself up on first use, and the interface detects your display and scales itself.
+The optional testing browser is an in-app download, offered only when you want it,
+so the release stays small.
 
 The fastest way to test a target is the built-in browser: on the **Proxy** tab
 click **open browser**. It launches a bundled Chromium in an isolated profile,

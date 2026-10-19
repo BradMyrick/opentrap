@@ -89,26 +89,35 @@ public final class UiScale {
      */
     public static boolean relaunchWith(double scale, String[] args) {
         double s = clamp(scale);
+        // Re-exec the exact command that launched this process, whether that was
+        // "java -jar ...", a jpackage launcher, or an AppImage, and inject the
+        // scale through JAVA_TOOL_OPTIONS, which every JVM reads at start-up no
+        // matter how it was launched. Reconstructing a "java -cp ..." line (the
+        // old approach) only worked from a plain jar; inside a self-contained app
+        // it failed silently and the UI came up unscaled.
         try {
-            String javaBin = System.getProperty("java.home")
-                    + java.io.File.separator + "bin" + java.io.File.separator + "java";
-            String cp = System.getProperty("java.class.path");
+            ProcessHandle.Info info = ProcessHandle.current().info();
             List<String> cmd = new ArrayList<>();
-            cmd.add(javaBin);
-            // Carry forward the original JVM arguments (-Dopentrap.port, -Xmx, etc.)
-            // so the relaunch for scaling does not drop them.
-            for (String arg : java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments()) {
-                if (arg.startsWith("-Dsun.java2d.uiScale") || arg.startsWith("-Dopentrap.scaled")
-                        || arg.startsWith("-javaagent") || arg.startsWith("-agentlib")) continue;
-                if (arg.startsWith("-D") || arg.startsWith("-X")) cmd.add(arg);
+            if (info.command().isPresent()) {
+                cmd.add(info.command().get());
+                info.arguments().ifPresent(a -> java.util.Collections.addAll(cmd, a));
+            } else {
+                // Fallback for platforms that hide the command line: rebuild a
+                // java invocation from the classpath.
+                cmd.add(System.getProperty("java.home") + java.io.File.separator
+                        + "bin" + java.io.File.separator + "java");
+                cmd.add("-cp");
+                cmd.add(System.getProperty("java.class.path"));
+                cmd.add("opentrap.ui.Main");
+                if (args != null) java.util.Collections.addAll(cmd, args);
             }
-            if (Math.abs(s - 1.0) > 0.001) cmd.add("-Dsun.java2d.uiScale=" + s);
-            cmd.add("-Dopentrap.scaled=" + s);
-            cmd.add("-cp");
-            cmd.add(cp);
-            cmd.add("opentrap.ui.Main");
-            if (args != null) for (String a : args) cmd.add(a);
-            new ProcessBuilder(cmd).inheritIO().start();
+            ProcessBuilder pb = new ProcessBuilder(cmd).inheritIO();
+            String opts = (Math.abs(s - 1.0) > 0.001 ? "-Dsun.java2d.uiScale=" + s + " " : "")
+                    + "-Dopentrap.scaled=" + s;
+            String prior = pb.environment().get("JAVA_TOOL_OPTIONS");
+            pb.environment().put("JAVA_TOOL_OPTIONS",
+                    (prior == null || prior.isBlank() ? "" : prior + " ") + opts);
+            pb.start();
             return true;
         } catch (Exception e) {
             return false;

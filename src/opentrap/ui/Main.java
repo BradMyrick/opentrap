@@ -36,6 +36,17 @@ public class Main {
     public static volatile String[] launchArgs = new String[0];
 
     public static void main(String[] args) {
+        // Headless probe: print the scale this display should use and exit. The
+        // AppImage launcher calls this to choose a scale before the real JVM
+        // starts, so it never relaunches inside the AppImage (relaunching there
+        // would tear down the AppImage mount and kill the app).
+        for (String a : args) {
+            if ("--print-scale".equals(a)) {
+                System.out.println(UiScale.desired());
+                return;
+            }
+        }
+
         launchArgs = args;
 
         // If a non-default interface scale is saved and this JVM has not had it

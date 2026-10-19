@@ -26,3 +26,7 @@
 
 # Local README preview (generated)
 /readme-preview.html
+
+# AppImage build scratch
+/AppDir/
+/appbuild/
