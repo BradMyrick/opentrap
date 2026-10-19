@@ -6,9 +6,9 @@
 
 <p><strong>Open Traffic Replay and Analysis Proxy</strong></p>
 
-<p>An open-source web security testing suite built around an intercepting proxy. A
-familiar workflow for finding and proving web vulnerabilities, with a trustworthy
-detection engine underneath, and nothing locked behind a licence.</p>
+<p>A free, open-source alternative to Burp Suite: the intercepting-proxy workflow you
+already know, on top of the trusted OWASP ZAP detection engine, with nothing locked
+behind a licence. If you have used Burp Suite, you will feel at home in minutes.</p>
 
 <p>
 <img src="https://img.shields.io/badge/licence-AGPL--3.0-e5484d" alt="Licence">
@@ -43,11 +43,13 @@ detection engine underneath, and nothing locked behind a licence.</p>
 
 ## Why we built it
 
-The most capable intercepting proxies are commercial and closed. The leading open
-alternative is powerful, but its interface is unfamiliar to many of the people who
-would benefit from it most. We wanted something different: a web security testing
-suite that is genuinely **open**, genuinely useful day to day, and immediately
-**familiar** to anyone who has worked with an intercepting proxy before.
+The most capable intercepting proxies, such as Burp Suite, are commercial and
+closed, with their most useful features behind a paid licence. OWASP ZAP is a
+powerful open engine, but its interface is unfamiliar to the many testers who work
+proxy-first. OpenTRAP brings the two together: the familiar Burp-style workflow on
+top of the trusted OWASP ZAP detection engine, genuinely **open**, genuinely useful
+day to day, and immediately **familiar** to anyone who has worked with an
+intercepting proxy before.
 
 OpenTRAP is that tool. A complete testing workspace with a clean, recognisable
 workflow, that any practitioner can run, inspect, and extend, with no licence gate
@@ -62,6 +64,10 @@ tamper with the traffic between a browser and a web application. Map an
 application's attack surface, and drive repeatable manual and automated testing
 from one window: interception, HTTP history, a target site map and scope, a request
 toolset, an out-of-band collaborator, and a complete log of everything that runs.
+
+It is built for penetration testers, bug bounty hunters, AppSec engineers and
+students who want a professional intercepting-proxy workflow without a commercial
+licence.
 
 ## See it in action
 
@@ -133,13 +139,13 @@ Point OpenTRAP at a target and it crawls the application, maps what it finds, an
 audits it for real vulnerabilities: injection, cross-site scripting, broken access
 control, information disclosure, misconfiguration and more. Findings land in a
 clear issue view with the request, response and the matched evidence highlighted,
-ready to triage or hand straight to a developer. The detection is built on a
-proven, industry-grade engine, so what OpenTRAP reports holds up.
+ready to triage or hand straight to a developer. The detection is built on the
+proven OWASP ZAP engine, so what OpenTRAP reports holds up.
 
 ## Highlights
 
 - **Proxy-first by design** - intercept, replay and edit live traffic, with the whole toolset one click away.
-- **Detection that stands up** - crawl and audit with a proven, industry-grade engine, so the findings you report carry weight.
+- **Detection that stands up** - crawl and audit with the proven OWASP ZAP engine, so the findings you report carry weight.
 - **Everything in one window** - repeater, intruder, sequencer, decoder, comparer, collaborator and a full logger.
 - **One self-contained file** - every release is a single Linux AppImage with its own runtime and the scan engine built in; download it and run it.
 - **Open and hackable** - AGPL v3.0: read it, change it, extend it, with no gate on its core capabilities.
@@ -213,6 +219,30 @@ The only compiled-in dependencies are BouncyCastle (the proxy CA) and a Brotli
 decoder. The scan engine and testing browser are fetched on demand by
 `./fetch-zap.sh` and `./fetch-browser.sh`; bundled-tool versions are pinned in
 `tools/versions`. See `DEPENDENCIES.md`.
+
+## FAQ
+
+**Is there a free, open-source alternative to Burp Suite?**
+Yes. OpenTRAP gives you the intercepting-proxy workflow Burp users know, with Proxy,
+Repeater, Intruder, Collaborator, Sequencer, Decoder and Comparer, under the AGPL-3.0
+with no paid tier and no feature gate.
+
+**What is the difference between OpenTRAP and OWASP ZAP?**
+OpenTRAP uses the OWASP ZAP engine for crawling and scanning, and puts a familiar,
+Burp-style interface and workflow on top of it. If you trust ZAP's detection but want
+a proxy-first workspace, OpenTRAP is that front end.
+
+**Does it have Repeater, Intruder and a Collaborator?**
+Yes, along with HTTP history, a target site map and scope, a sequencer, a decoder, a
+comparer and a full traffic logger, all in one window.
+
+**Which platforms does it run on?**
+Today OpenTRAP ships as a single self-contained Linux AppImage. It needs nothing
+installed: the Java runtime and the scan engine are inside the file.
+
+**Is it really free?**
+Yes. OpenTRAP is released under the GNU AGPL v3.0. Every capability is open, with
+nothing reserved for a paid edition.
 
 ## Licence
 

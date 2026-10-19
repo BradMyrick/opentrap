@@ -5,8 +5,9 @@ title: OpenTRAP
 
 # OpenTRAP
 
-**Open Traffic Replay and Analysis Proxy** - an open-source, community-driven web
-security testing suite built around an intercepting HTTP proxy.
+**Open Traffic Replay and Analysis Proxy** - a free, open-source alternative to Burp
+Suite: a community-driven web security testing suite built around an intercepting HTTP
+proxy, powered by the OWASP ZAP engine.
 
 Capture, inspect, replay and tamper with the traffic between a browser and a web
 application, map an application's attack surface, crawl and audit it for real
@@ -103,6 +104,16 @@ The download is complete: the Java runtime and the scan engine are inside the
 file and set themselves up on first use. Every release is this one AppImage, so
 nothing ships with parts missing. The optional testing browser is an in-app
 download when you want it.
+
+## FAQ
+
+**Is there a free, open-source alternative to Burp Suite?** Yes. OpenTRAP offers the intercepting-proxy workflow Burp users know, with Proxy, Repeater, Intruder, Collaborator, Sequencer, Decoder and Comparer, under the AGPL-3.0 with no paid tier.
+
+**How does OpenTRAP relate to OWASP ZAP?** It uses the OWASP ZAP engine for crawling and scanning and puts a familiar, Burp-style interface on top: ZAP's detection in a proxy-first workspace.
+
+**Which platforms does it run on?** A single self-contained Linux AppImage today, with the Java runtime and the scan engine inside the file.
+
+**Is it really free?** Yes, released under the GNU AGPL v3.0, with every capability open and nothing reserved for a paid edition.
 
 ## Learn more
 
