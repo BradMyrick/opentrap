@@ -166,7 +166,7 @@ public class SuiteFrame extends JFrame {
 
     private void showProxyHelp() {
         JOptionPane.showMessageDialog(this,
-            "1. Set your browser's HTTP and HTTPS proxy to 127.0.0.1 port 31337.\n" +
+            "1. Set your browser's HTTP and HTTPS proxy to 127.0.0.1 port " + opentrap.proxy.ProxyListener.DEFAULT_PORT + ".\n" +
             "2. Browse to http://opentrap/ and install the CA certificate.\n" +
             "3. Trust it for identifying websites, then reload your target.\n\n" +
             "Traffic appears on the proxy history tab and builds the target site map.",

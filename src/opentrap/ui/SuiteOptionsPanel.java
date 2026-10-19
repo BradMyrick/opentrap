@@ -48,7 +48,7 @@ public class SuiteOptionsPanel extends JPanel {
 
         JTextArea about = Ui.note(
             "OpenTRAP is an HTTP interception and testing suite.\n\n" +
-            "To use the proxy: set your browser to use 127.0.0.1 port 8080 for HTTP and HTTPS, "
+            "To use the proxy: set your browser to use 127.0.0.1 port " + opentrap.proxy.ProxyListener.DEFAULT_PORT + " for HTTP and HTTPS, "
             + "then browse to http://opentrap/ and install the certificate authority so that "
             + "TLS traffic can be inspected.");
         about.setPreferredSize(new Dimension(600, 90));

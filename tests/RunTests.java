@@ -13,6 +13,7 @@ public final class RunTests {
         System.out.println();
 
         new opentrap.engine.EngineMappingTest().run();
+        new opentrap.proxy.ProxyDefaultsTest().run();
 
         System.exit(Harness.report());
     }
