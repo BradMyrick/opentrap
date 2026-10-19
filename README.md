@@ -156,11 +156,21 @@ Download the latest release from the [releases page](https://github.com/opentrap
 runtime and the scan engine, no Java needed. This link always points at the
 latest release: [opentrap-x86_64.appimage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)
 
-Or fetch it, make it executable and run it from a terminal:
+Or from a terminal, fetch it:
 
 ```
 wget https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage
+```
+
+make it executable:
+
+```
 chmod +x opentrap-x86_64.appimage
+```
+
+and run it:
+
+```
 ./opentrap-x86_64.appimage
 ```
 
