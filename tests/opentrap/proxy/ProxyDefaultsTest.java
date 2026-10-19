@@ -34,5 +34,30 @@ public final class ProxyDefaultsTest {
             try { Expect.equal(ProxyServer.defaultPort(), 8080, "startup port"); }
             finally { System.clearProperty("opentrap.port"); }
         });
+
+        Harness.test("the status line names the address and port that is listening", () -> {
+            ProxyListener l = new ProxyListener();
+            Expect.equal(ProxyServer.summary(java.util.List.of(l)),
+                    "listening on 127.0.0.1:8080", "status line");
+        });
+
+        Harness.test("the status line lists every running listener and skips stopped ones", () -> {
+            ProxyListener a = new ProxyListener(8080);
+            ProxyListener b = new ProxyListener(8081);
+            b.loopbackOnly = false;
+            ProxyListener c = new ProxyListener(9000);
+            c.running = false;
+            Expect.equal(ProxyServer.summary(java.util.List.of(a, b, c)),
+                    "listening on 127.0.0.1:8080, 0.0.0.0:8081", "status line");
+        });
+
+        Harness.test("the status line says plainly when nothing is listening", () -> {
+            ProxyListener l = new ProxyListener();
+            l.running = false;
+            Expect.equal(ProxyServer.summary(java.util.List.of(l)),
+                    "no proxy listeners are running - add one on the options tab", "status line");
+            Expect.equal(ProxyServer.summary(java.util.List.of()),
+                    "no proxy listeners are running - add one on the options tab", "status line");
+        });
     }
 }
