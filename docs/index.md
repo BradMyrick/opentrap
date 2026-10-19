@@ -30,14 +30,25 @@ workspace, all with a familiar, recognisable workflow.
 
 ## Get started
 
-Download the latest release jar and run it:
+Download the latest release and run it. Nothing to install.
+
+**Recommended: the AppImage** - one self-contained file, no Java needed:
+
+```
+chmod +x opentrap-x86_64.appimage
+./opentrap-x86_64.appimage
+```
+
+Or double-click it in your file manager.
+
+**Or the jar**, if you already have Java 17 or newer:
 
 ```
 java -jar opentrap_<timestamp>.jar
 ```
 
-It needs only Java (17 or newer). The scan engine extracts itself on first use;
-the optional testing browser is an in-app download when you want it.
+The scan engine is built in and sets itself up on first run; the optional testing
+browser is an in-app download when you want it.
 
 ## Learn more
 
