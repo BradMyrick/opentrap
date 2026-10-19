@@ -19,7 +19,7 @@ detection engine underneath, and nothing locked behind a licence.</p>
 </p>
 
 <p>
-<a href="https://github.com/opentrap/opentrap"><img src="https://img.shields.io/badge/Star%20on%20GitHub-e5484d?style=for-the-badge&logo=github&logoColor=white" alt="Star on GitHub"></a>
+<a href="https://github.com/opentrap/opentrap/stargazers"><img src="https://img.shields.io/github/stars/opentrap/opentrap?style=for-the-badge&logo=github&logoColor=white&label=Star%20on%20GitHub&color=e5484d" alt="Star on GitHub"></a>
 <a href="https://twitter.com/intent/tweet?text=OpenTRAP%2C%20an%20open-source%20web%20security%20testing%20suite&url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/Share-X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Share on X"></a>
 <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/Share-LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Share on LinkedIn"></a>
 <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&title=OpenTRAP"><img src="https://img.shields.io/badge/Share-Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Share on Reddit"></a>

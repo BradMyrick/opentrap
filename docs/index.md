@@ -17,6 +17,9 @@ workspace, all with a familiar, recognisable workflow.
 
 *A live audit on the Dashboard: crawl complete, active scan running, high-severity findings arriving as they are confirmed.*
 
+<a class="github-button" href="https://github.com/opentrap/opentrap" data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star opentrap/opentrap on GitHub">Star</a>
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+
 **[Download the latest AppImage for Linux](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)** (one file, nothing to install), then see [Get started](#get-started) below. All releases are on the [releases page](https://github.com/opentrap/opentrap/releases/latest).
 
 ## Why OpenTRAP
