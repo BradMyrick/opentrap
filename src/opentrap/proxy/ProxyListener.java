@@ -6,8 +6,11 @@ import java.io.Serializable;
 public class ProxyListener implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    /** The port the proxy listens on unless told otherwise: the conventional 8080. */
+    public static final int DEFAULT_PORT = 8080;
+
     public boolean running = true;
-    public int port = 31337;
+    public int port = DEFAULT_PORT;
     public boolean loopbackOnly = true;
     public boolean invisible = false;
     public String redirectHost = "";

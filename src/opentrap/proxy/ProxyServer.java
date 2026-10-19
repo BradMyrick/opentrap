@@ -76,9 +76,19 @@ public class ProxyServer {
         responseRules.add(new ProxyRule(true, "or", "content type", "matches", "text"));
         responseRules.add(new ProxyRule(false, "or", "request", "was modified", ""));
         responseRules.add(new ProxyRule(false, "and", "response code", "does not match", "^304$"));
-        int defaultPort = 31337;
-        try { defaultPort = Integer.parseInt(System.getProperty("opentrap.port", "31337")); } catch (Exception ignored) {}
-        listeners.add(new ProxyListener(defaultPort));
+        listeners.add(new ProxyListener(defaultPort()));
+    }
+
+    /**
+     * The port of the listener created at startup: {@link ProxyListener#DEFAULT_PORT}
+     * unless the {@code opentrap.port} system property names a valid port.
+     */
+    public static int defaultPort() {
+        try {
+            int p = Integer.parseInt(System.getProperty("opentrap.port", "").trim());
+            if (p >= 1 && p <= 65535) return p;
+        } catch (Exception ignored) {}
+        return ProxyListener.DEFAULT_PORT;
     }
 
     public CertificateAuthority ca()       { return ca; }
