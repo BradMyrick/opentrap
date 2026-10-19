@@ -26,6 +26,11 @@ detection engine underneath, and nothing locked behind a licence.</p>
 <a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP"><img src="https://img.shields.io/badge/Share-Hacker%20News-FF6600?style=for-the-badge&logo=ycombinator&logoColor=white" alt="Share on Hacker News"></a>
 </p>
 
+<p>
+<a href="https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage"><img src="https://img.shields.io/badge/Download-AppImage%20for%20Linux-3fb950?style=for-the-badge&logo=linux&logoColor=white" alt="Download the latest AppImage for Linux"></a>
+<a href="https://github.com/opentrap/opentrap/releases/latest"><img src="https://img.shields.io/badge/All%20releases-9aa7b4?style=for-the-badge&logo=github&logoColor=white" alt="All releases"></a>
+</p>
+
 <br>
 
 <a href="docs/images/dashboard.png"><img src="docs/images/dashboard.png" width="100%" alt="OpenTRAP dashboard with a crawl finished, an active audit running, and the live table of the most serious vulnerabilities found"></a>
@@ -148,13 +153,18 @@ Right-click any request or response to send it between tools.
 Download the latest release from the [releases page](https://github.com/opentrap/opentrap/releases/latest) and run it. Nothing to install.
 
 **Recommended: the AppImage.** One self-contained file that bundles its own Java
-runtime and the scan engine, no Java needed, just make it executable and run it
-(or double-click it in your file manager):
+runtime and the scan engine, no Java needed. This link always points at the
+latest release: [opentrap-x86_64.appimage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)
+
+Or fetch it, make it executable and run it from a terminal:
 
 ```
+wget https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage
 chmod +x opentrap-x86_64.appimage
 ./opentrap-x86_64.appimage
 ```
+
+You can also double-click the downloaded file in your file manager.
 
 **Or the jar**, if you already have **Java 17 or newer**:
 
