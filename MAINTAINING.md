@@ -76,6 +76,54 @@ find squashfs-root -type f \( -name '*.so*' -o -perm -u+x \) \
   | sort -V | tail -1
 ```
 
+## How it fits together
+
+A few parts are non-obvious and worth knowing before changing them.
+
+**The scan engine runs as a separate process.** The release jar embeds the trimmed
+OWASP ZAP engine as a resource (`/opentrap/engine/engine.zip`, put there by
+`release.sh`). On first use `opentrap.engine.ZapEngine` extracts it once to
+`~/.opentrap/engine`, then launches it **headless as its own Java process** using
+the bundled runtime (`java.home/bin/java`). OpenTRAP never links ZAP in-process; it
+drives it over ZAP's local HTTP API (`opentrap.engine.ZapApi`, e.g.
+`http://127.0.0.1:8090`). This is why the bundled runtime must keep `bin/java` and
+a full module set: the engine is a second JVM, not a library call.
+
+**The testing browser is not bundled in the release.** It is large (~680 MB), so
+the release stays small. `opentrap.proxy.EmbeddedBrowser` uses a Chromium found in
+the product `browser/` folder (populated by `fetch-browser.sh`, or by the optional
+in-app download) or one already on the system `PATH`. It launches with an isolated
+profile under `~/.opentrap/browser`, pointed at the proxy
+(`--proxy-server=http://127.0.0.1:<port>`) and trusting the proxy CA, so TLS
+interception works with nothing to configure.
+
+**HiDPI scaling works by relaunching the JVM.** Java fixes `sun.java2d.uiScale` at
+startup, so the UI scales uniformly only if the factor is set before any window is
+built. `opentrap.ui.UiScale` picks the factor (the `-Dopentrap.scale` flag, else the
+saved preference, else a value detected from the screen) and, when it differs from
+the running JVM, relaunches a fresh JVM with the factor applied via
+`JAVA_TOOL_OPTIONS`. Inside the AppImage that relaunch is avoided: `AppRun` calls
+`OpenTRAP --print-scale` (a headless probe that prints the factor and exits) and
+sets the scale up front, because relaunching would tear down the AppImage mount and
+kill the app.
+
+**The build identifier is the jar manifest version.** `release.sh` stamps
+`Implementation-Version` with the UTC build timestamp; `opentrap.ui.Main.VERSION`
+reads it back (a dev build reports `dev`). It appears in the title bar and About
+box, and it is the release tag.
+
+## Known limitations and scope
+
+- **Linux x86_64 only.** The release is a single x86_64 Linux AppImage; there are no
+  Windows, macOS or ARM builds. The code is portable Java, but the packaging, the
+  bundled runtime and the AppImage target are x86_64 Linux.
+- **The AppImage requires glibc 2.17 or newer** (see above), which covers
+  mainstream distributions from roughly 2014 onward.
+- **The testing browser is a separate, optional download**, not part of the
+  release; without it OpenTRAP falls back to a system Chromium if one is installed.
+- **Local state lives in `~/.opentrap/`** (the extracted engine, the browser
+  profile, saved settings). Deleting it returns the app to first-run behaviour.
+
 ## Where things are
 
 - `src/opentrap/` - application source (Java)
