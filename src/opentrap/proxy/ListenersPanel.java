@@ -55,14 +55,36 @@ public class ListenersPanel extends JPanel {
         entry.add(remove);
         add(entry);
 
+        // Selecting a listener shows its port and address mode in the fields,
+        // so the running port is always visible here. The first listener is
+        // selected when the panel opens.
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting()) return;
+            int i = table.getSelectedRow();
+            if (i >= 0 && i < server.listeners().size()) {
+                ProxyListener l = server.listeners().get(i);
+                port.setText(String.valueOf(l.port));
+                loopback.setSelected(l.loopbackOnly);
+            }
+        });
+        if (model.getRowCount() > 0) table.setRowSelectionInterval(0, 0);
+
         add.addActionListener(e -> {
             try {
-                ProxyListener l = new ProxyListener(Integer.parseInt(port.getText().trim()));
+                int p = Integer.parseInt(port.getText().trim());
+                for (ProxyListener existing : server.listeners()) {
+                    if (existing.port == p) {
+                        JOptionPane.showMessageDialog(this, "there is already a listener on port " + p,
+                                "proxy listeners", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                }
+                ProxyListener l = new ProxyListener(p);
                 l.loopbackOnly = loopback.isSelected();
                 server.listeners().add(l);
                 server.start(l);
                 model.fireTableDataChanged();
-                port.setText("");
+                table.setRowSelectionInterval(model.getRowCount() - 1, model.getRowCount() - 1);
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "invalid port", "error", JOptionPane.ERROR_MESSAGE);
             }
@@ -74,6 +96,9 @@ public class ListenersPanel extends JPanel {
                 server.stop(l);
                 server.listeners().remove(i);
                 model.fireTableDataChanged();
+                int n = model.getRowCount();
+                if (n > 0) table.setRowSelectionInterval(Math.min(i, n - 1), Math.min(i, n - 1));
+                else { port.setText(""); }
             }
         });
 
