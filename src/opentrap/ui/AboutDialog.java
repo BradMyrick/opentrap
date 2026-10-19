@@ -3,7 +3,6 @@ package opentrap.ui;
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
 import java.awt.*;
-import java.io.InputStream;
 
 /**
  * The about box: the logo, the build, what it runs on, and where the project
@@ -75,15 +74,9 @@ public final class AboutDialog {
           .append("'>").append(label).append("</a><br>");
     }
 
-    /** The bundled engine's version, or a note when the build has none. */
     private static String engineVersion() {
-        try (InputStream in = AboutDialog.class.getResourceAsStream("/opentrap/engine/VERSION")) {
-            if (in != null) {
-                String v = new String(in.readAllBytes()).trim();
-                if (!v.isEmpty()) return "OWASP ZAP " + v + " (bundled)";
-            }
-        } catch (Exception ignored) {}
-        return "OWASP ZAP (not bundled in this build)";
+        try { return opentrap.engine.ZapEngine.describe(); }
+        catch (Exception e) { return "OWASP ZAP"; }
     }
 
     private static void open(String url) {

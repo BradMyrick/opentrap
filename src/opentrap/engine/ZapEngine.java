@@ -65,6 +65,26 @@ public final class ZapEngine {
         return null;
     }
 
+    /**
+     * The engine this build will run, for the about box: its version and where
+     * it comes from. A release carries the engine inside the jar and unpacks it
+     * on first use; a dev build uses an engine already on disk.
+     */
+    public static String describe() {
+        String bundled = readResource(BUNDLE_VERSION);
+        for (String dir : candidateDirs()) {
+            String j = findJar(dir);
+            if (j == null) continue;
+            String v = j.replaceAll(".*/zap-([0-9.]+)\\.jar$", "$1");
+            String where = dir.equals(extractDir().toString()) ? (bundled != null ? "bundled" : "unpacked under ~/.opentrap")
+                    : dir.endsWith("/engine") ? "fetched into the source tree"
+                    : "system install at " + dir;
+            return "OWASP ZAP " + v + " (" + where + ")";
+        }
+        if (bundled != null) return "OWASP ZAP " + bundled + " (bundled, unpacked on first scan)";
+        return "OWASP ZAP (none found: run fetch-zap.sh or use a release build)";
+    }
+
     private static List<String> candidateDirs() {
         List<String> l = new ArrayList<>();
         l.add(extractDir().toString());       // a previously-extracted bundled engine
