@@ -63,6 +63,10 @@ Every tool lives in one window. Click any screenshot for the full-size image.
 
 **Logger**<br>A complete record of every request OpenTRAP and the scan engine make, tagged by the tool that sent it, with the request and response viewers below. Nothing happens behind your back.
 
+<a href="images/decoder.png"><img src="images/decoder.png" alt="Decoder tab with a URL-encoded path-traversal string decoded to plain text through a transform pipeline" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
+
+**Decoder**<br>Paste a value and build a pipeline of URL, Base64, hex and hash transforms, in either direction, or let smart decode work out the encoding for you. The quickest way to read or craft an encoded parameter.
+
 <a href="images/about.png"><img src="images/about.png" alt="About OpenTRAP dialog showing the build, the scan engine in use and where it comes from, the runtime, the licence and project links" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
 
 **About**<br>The build, the scan engine in use and where it comes from, the runtime and the licence, stated plainly. OpenTRAP is open about what is inside it.
