@@ -35,8 +35,8 @@ public class ListenersPanel extends JPanel {
         Ui.styleTable(table);
         Ui.setWidths(table, 70, 70, 110, 110, 90);
         JScrollPane sp = Ui.scroll(table);
-        sp.setPreferredSize(new Dimension(560, 90));
-        sp.setMaximumSize(new Dimension(700, 90));
+        sp.setPreferredSize(new Dimension(640, 90));
+        sp.setMaximumSize(new Dimension(760, 90));
         sp.setAlignmentX(LEFT_ALIGNMENT);
         add(sp);
         add(Box.createVerticalStrut(8));
