@@ -5,11 +5,36 @@ of any size are welcome, from a one-line fix to a whole tool.
 
 ## How to contribute a change
 
-1. Make your change against a clean checkout and keep it focused on one thing.
-2. Build and run it (`./build.sh` then `./run.sh`) and confirm the app still
-   launches and your change behaves as intended.
-3. Send the patch, or a description of the change with the diff. It will be
-   reviewed, merged, and you will be credited in `CONTRIBUTORS.md`.
+Changes come in as pull requests from your own fork of the repository.
+
+1. **Fork the repository** with the Fork button at the top of the GitHub page.
+   That gives you a copy under your own account that you can push to.
+2. **Clone your fork** and add the main repository as `upstream`, so you can
+   keep your copy current:
+
+       git clone https://github.com/<your-user>/opentrap.git
+       cd opentrap
+       git remote add upstream https://github.com/opentrap/opentrap.git
+
+3. **Create a branch** for the change, starting from an up-to-date `main`:
+
+       git fetch upstream
+       git checkout -b my-change upstream/main
+
+4. **Make the change** and keep it focused on one thing. Build and run it
+   (`./build.sh` then `./run.sh`) and confirm the app still launches and your
+   change behaves as intended.
+5. **Commit and push** the branch to your fork:
+
+       git push -u origin my-change
+
+6. **Open a pull request** from that branch to `main` on `opentrap/opentrap`.
+   After the push, GitHub shows a "Compare & pull request" button on your fork.
+   Say what the change does and why.
+
+A maintainer reviews the pull request, may ask for adjustments, and merges it.
+The merged commit keeps you as its author, and you are credited in
+`CONTRIBUTORS.md`.
 
 Keep each change self-contained. Match the style of the surrounding code: the same
 naming, comment density and idioms. Do not reformat unrelated code.
