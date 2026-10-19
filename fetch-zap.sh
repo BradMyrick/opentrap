@@ -32,6 +32,18 @@ inner="$(ls -d "$tmp"/ZAP_* 2>/dev/null | head -1)"
 rm -rf "$DEST"; mkdir -p "$DEST"
 cp -a "$inner"/. "$DEST"/
 
+# Keep only the add-ons OpenTRAP actually drives (active + passive scan rules, the
+# spider, and the required infrastructure) and drop the rest, so the bundled engine
+# stays small. A clean checkout reproduces the exact engine the release ships.
+KEEP="ascanrules pscan pscanrules spider retire oast directorylistv1 commonlib network database callhome"
+for f in "$DEST"/plugin/*.zap; do
+    [ -e "$f" ] || continue
+    name="$(basename "$f" | sed -E 's/-(release|beta|alpha)-.*//')"
+    keep=0
+    for k in $KEEP; do [ "$name" = "$k" ] && keep=1; done
+    [ "$keep" = "0" ] && rm -f "$f"
+done
+
 JAR="$(ls "$DEST"/zap-*.jar 2>/dev/null | head -1)"
 [ -n "$JAR" ] || { echo "No zap jar after unpack" >&2; exit 1; }
 echo "ZAP engine ready: $JAR"
