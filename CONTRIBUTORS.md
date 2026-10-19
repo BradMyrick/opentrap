@@ -12,4 +12,4 @@ will be added.
 
 <!-- Add new contributors below, one per line: Name (or handle) - what they worked on. -->
 
-- conformance - documented the fork and pull request workflow in CONTRIBUTING.md
+- conformance - proxy listens on 8080 by default; documented the fork and pull request workflow
