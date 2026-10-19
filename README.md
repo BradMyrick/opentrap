@@ -69,27 +69,37 @@ toolset, an out-of-band collaborator, and a complete log of everything that runs
 <tr>
 <td width="50%" valign="top">
 <a href="docs/images/target.png"><img src="docs/images/target.png" alt="Target tab: site map tree, request list, and the issues found with a full advisory for a reflected cross-site scripting finding"></a>
-<br><sub><b>Target.</b> Site map, scope and every issue found, with the advisory, request and response beside it.</sub>
+<br><sub><b>Target</b><br>Site map, scope and every issue found, with the advisory, request and response beside it.</sub>
 </td>
 <td width="50%" valign="top">
-<a href="docs/images/browser.png"><img src="docs/images/browser.png" alt="Built-in Chromium browser opened from the Proxy tab, routed through the proxy and showing the certificate authority page"></a>
-<br><sub><b>Built-in browser.</b> One click opens Chromium already routed through the proxy and trusting its certificate authority, so TLS interception works with nothing to configure.</sub>
+<a href="docs/images/proxy.png"><img src="docs/images/proxy.png" alt="Proxy tab with interception, and the built-in Chromium browser opened from it, routed through the proxy and showing the certificate authority page"></a>
+<br><sub><b>Proxy and built-in browser</b><br>One click opens Chromium already routed through the proxy and trusting its certificate authority, so TLS interception works with nothing to configure.</sub>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 <a href="docs/images/collaborator.png"><img src="docs/images/collaborator.png" alt="Collaborator tab listing captured out-of-band DNS and HTTP interactions with the request to the collaborator shown"></a>
-<br><sub><b>Collaborator.</b> Out-of-band DNS and HTTP interactions captured for blind vulnerabilities, with every callback request on record.</sub>
+<br><sub><b>Collaborator</b><br>Out-of-band DNS and HTTP interactions captured for blind vulnerabilities, with every callback request on record.</sub>
 </td>
 <td width="50%" valign="top">
-<a href="docs/images/passive.png"><img src="docs/images/passive.png" alt="Passive tab listing the scan engine's detection rules with enabled checkboxes, quality and alert threshold columns"></a>
-<br><sub><b>Passive rules.</b> Every detection rule in the engine, in one list: switch rules on or off, tune thresholds, and add your own.</sub>
+<a href="docs/images/intruder.png"><img src="docs/images/intruder.png" alt="Intruder tab running a sniper attack, with the live attack table of payloads, status, length and timing"></a>
+<br><sub><b>Intruder</b><br>Four attack types with payload sets and processing; the live attack table shows status, length and timing per request.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<a href="docs/images/repeater.png"><img src="docs/images/repeater.png" alt="Repeater tab with a request and its response in numbered tabs for editing and reissuing"></a>
+<br><sub><b>Repeater</b><br>Edit and reissue a request, one numbered tab at a time, with the full response beside it.</sub>
+</td>
+<td width="50%" valign="top">
+<a href="docs/images/logger.png"><img src="docs/images/logger.png" alt="Logger tab with a filterable table of every request made by the audit, with request and response viewers below"></a>
+<br><sub><b>Logger</b><br>A complete, filterable record of every request OpenTRAP and the scan engine make.</sub>
 </td>
 </tr>
 <tr>
 <td colspan="2" align="center">
-<a href="docs/images/logger.png"><img src="docs/images/logger.png" width="50%" alt="Logger tab with a filterable table of every request made by the audit, with request and response viewers below"></a>
-<br><sub><b>Logger.</b> A complete, filterable record of every request OpenTRAP and the scan engine make.</sub>
+<a href="docs/images/about.png"><img src="docs/images/about.png" width="60%" alt="About OpenTRAP dialog showing the build, the scan engine in use and where it comes from, the runtime, the licence and project links"></a>
+<br><sub><b>About</b><br>The build, the scan engine in use and where it comes from, the runtime and the licence, stated plainly.</sub>
 </td>
 </tr>
 </table>

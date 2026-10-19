@@ -41,23 +41,31 @@ Every tool lives in one window. Click any screenshot for the full-size image.
 
 <a href="images/target.png"><img src="images/target.png" alt="Target tab: site map tree, request list, and the issues found with a full advisory for a reflected cross-site scripting finding" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
 
-**Target.** The site map and scope on the left, every request in the middle, and every issue found on the right. Select a finding and the advisory, request and response are beside it, with severity, confidence, parameter and CWE ready to hand to a developer.
+**Target**<br>The site map and scope on the left, every request in the middle, and every issue found on the right. Select a finding and the advisory, request and response are beside it, with severity, confidence, parameter and CWE ready to hand to a developer.
 
-<a href="images/browser.png"><img src="images/browser.png" alt="Built-in Chromium browser opened from the Proxy tab, routed through the proxy and showing the certificate authority page" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
+<a href="images/proxy.png"><img src="images/proxy.png" alt="Proxy tab with interception, and the built-in Chromium browser opened from it, routed through the proxy and showing the certificate authority page" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
 
-**Built-in browser.** Click *open browser* on the Proxy tab and a bundled Chromium starts in an isolated profile, already routed through the proxy and already trusting OpenTRAP's certificate authority. TLS interception works with nothing to configure and no certificate to install.
+**Proxy and built-in browser**<br>Click *open browser* on the Proxy tab and a bundled Chromium starts in an isolated profile, already routed through the proxy and already trusting OpenTRAP's certificate authority. TLS interception works with nothing to configure and no certificate to install.
 
 <a href="images/collaborator.png"><img src="images/collaborator.png" alt="Collaborator tab listing captured out-of-band DNS and HTTP interactions with the request to the collaborator shown" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
 
-**Collaborator.** Generate a payload, put it in a request, and watch the out-of-band DNS and HTTP interactions arrive. Every callback is recorded with its source and full request, so blind vulnerabilities can be proven, not guessed at.
+**Collaborator**<br>Generate a payload, put it in a request, and watch the out-of-band DNS and HTTP interactions arrive. Every callback is recorded with its source and full request, so blind vulnerabilities can be proven, not guessed at.
 
-<a href="images/passive.png"><img src="images/passive.png" alt="Passive tab listing the scan engine's detection rules with enabled checkboxes, quality and alert threshold columns" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
+<a href="images/intruder.png"><img src="images/intruder.png" alt="Intruder tab running a sniper attack, with the live attack table of payloads, status, length and timing" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
 
-**Passive rules.** Every detection rule in the engine in one filterable list. Switch rules on or off, move the alert threshold per rule, and add your own detection rules, with changes applied to the engine that runs your scans.
+**Intruder**<br>Mark the positions, choose one of four attack types, and drive a payload set through them. The live attack table shows status, length and timing for every request, so an interesting response stands out at a glance.
+
+<a href="images/repeater.png"><img src="images/repeater.png" alt="Repeater tab with a request and its response in numbered tabs for editing and reissuing" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
+
+**Repeater**<br>Edit a request and reissue it, one numbered tab at a time, with the full response beside it. The quickest way to probe a single endpoint by hand and watch exactly how it answers.
 
 <a href="images/logger.png"><img src="images/logger.png" alt="Logger tab with a filterable table of every request made by the audit, with request and response viewers below" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
 
-**Logger.** A complete record of every request OpenTRAP and the scan engine make, tagged by the tool that sent it, with the request and response viewers below. Nothing happens behind your back.
+**Logger**<br>A complete record of every request OpenTRAP and the scan engine make, tagged by the tool that sent it, with the request and response viewers below. Nothing happens behind your back.
+
+<a href="images/about.png"><img src="images/about.png" alt="About OpenTRAP dialog showing the build, the scan engine in use and where it comes from, the runtime, the licence and project links" style="width:100%;border:1px solid #dce6f0;border-radius:6px"></a>
+
+**About**<br>The build, the scan engine in use and where it comes from, the runtime and the licence, stated plainly. OpenTRAP is open about what is inside it.
 
 ## Get started
 
