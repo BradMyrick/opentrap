@@ -17,10 +17,21 @@ public class OptionsPage extends JPanel {
         stack.setLayout(new BoxLayout(stack, BoxLayout.Y_AXIS));
         stack.setBorder(Ui.pad(12, 14, 30, 14));
         stack.setOpaque(false);
-        JPanel holder = new JPanel(new BorderLayout());
+        // The page scrolls only when the user scrolls it. Text fields and
+        // tables inside it ask to be scrolled into view as they are built and
+        // focused, and honouring that opened pages part-way down with the
+        // first section hidden.
+        JPanel holder = new JPanel(new BorderLayout()) {
+            @Override public void scrollRectToVisible(Rectangle r) {}
+        };
         holder.setOpaque(false);
         holder.add(stack, BorderLayout.NORTH);
         JScrollPane sp = new JScrollPane(holder);
+        addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+                SwingUtilities.invokeLater(() -> sp.getViewport().setViewPosition(new Point(0, 0)));
+            }
+        });
         sp.setBorder(null);
         sp.getVerticalScrollBar().setUnitIncrement(25);
         sp.getViewport().setBackground(Color.WHITE);
