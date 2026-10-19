@@ -11,3 +11,5 @@ will be added.
 ## Contributors
 
 <!-- Add new contributors below, one per line: Name (or handle) - what they worked on. -->
+
+- conformance - documented the fork and pull request workflow in CONTRIBUTING.md
