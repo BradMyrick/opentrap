@@ -97,8 +97,12 @@ toolset, an out-of-band collaborator, and a complete log of everything that runs
 </td>
 </tr>
 <tr>
-<td colspan="2" align="center">
-<a href="docs/images/about.png"><img src="docs/images/about.png" width="60%" alt="About OpenTRAP dialog showing the build, the scan engine in use and where it comes from, the runtime, the licence and project links"></a>
+<td width="50%" valign="top">
+<a href="docs/images/decoder.png"><img src="docs/images/decoder.png" alt="Decoder tab with a URL-encoded path-traversal string decoded to plain text through a transform pipeline"></a>
+<br><sub><b>Decoder</b><br>Chain URL, Base64, hex and hash transforms on any value, or let smart decode work it out for you.</sub>
+</td>
+<td width="50%" valign="top">
+<a href="docs/images/about.png"><img src="docs/images/about.png" alt="About OpenTRAP dialog showing the build, the scan engine in use and where it comes from, the runtime, the licence and project links"></a>
 <br><sub><b>About</b><br>The build, the scan engine in use and where it comes from, the runtime and the licence, stated plainly.</sub>
 </td>
 </tr>
