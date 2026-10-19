@@ -16,12 +16,12 @@ public final class Ui {
     public static final Font MONO    = new Font(Font.MONOSPACED, Font.PLAIN, 12);
     public static final Font HEADING = new Font("Dialog", Font.BOLD, 13);
 
-    public static final Color ACCENT      = new Color(0x3C, 0x6E, 0xA5);
-    public static final Color PANEL_BG    = new Color(0xF5, 0xF5, 0xF5);
-    public static final Color GRID        = new Color(0xDD, 0xDD, 0xDD);
+    public static final Color ACCENT      = Theme.ACCENT;
+    public static final Color PANEL_BG    = Theme.SURFACE;
+    public static final Color GRID        = Theme.BORDER;
     public static final Color ERROR_RED   = new Color(0xCC, 0x00, 0x00);
-    public static final Color ZEBRA       = new Color(0xF7, 0xF7, 0xF9);
-    public static final Color SELECTION   = new Color(0xD6, 0xE4, 0xF7);
+    public static final Color ZEBRA       = Theme.ACCENT_FAINT;
+    public static final Color SELECTION   = Theme.ACCENT_LIGHT;
 
     // Severity palette, shared by the dashboard badges and the issue tree so a
     // finding's colour means the same thing everywhere.
@@ -126,6 +126,12 @@ public final class Ui {
         return b;
     }
 
+    /** The one button on a panel that starts its main action, filled with the accent. */
+    public static JButton primaryButton(String text, String tooltip) {
+        JButton b = button(text, tooltip);
+        return Theme.primary(b);
+    }
+
     public static JTextField field(String text, int columns) {
         JTextField f = new JTextField(text, columns);
         f.setFont(PLAIN);
@@ -176,8 +182,9 @@ public final class Ui {
     /** Configure a table with the conventions used throughout the suite. */
     public static void styleTable(JTable t) {
         t.setFont(PLAIN);
-        t.setRowHeight(19);
-        t.getTableHeader().setFont(PLAIN);
+        t.setRowHeight(22);
+        t.getTableHeader().setFont(BOLD);
+        t.getTableHeader().setReorderingAllowed(false);
         t.getTableHeader().setToolTipText("click column to sort ascending (SHIFT-click = descending)");
         t.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         t.setGridColor(GRID);

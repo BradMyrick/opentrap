@@ -34,6 +34,28 @@ public final class AppIcon {
         return out;
     }
 
+    /** The logo at one size as a Swing icon, for dialogs that show it. */
+    public static javax.swing.Icon icon(int size) {
+        BufferedImage img = load(size);
+        if (img == null) {
+            // Not a rasterised size: scale the smallest one that is larger.
+            for (int s : SIZES) {
+                if (s >= size) { img = load(s); if (img != null) break; }
+            }
+            if (img == null) img = fallback(size);
+            if (img.getWidth() != size) {
+                BufferedImage scaled = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+                java.awt.Graphics2D g = scaled.createGraphics();
+                g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                        java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                g.drawImage(img, 0, 0, size, size, null);
+                g.dispose();
+                img = scaled;
+            }
+        }
+        return new javax.swing.ImageIcon(img);
+    }
+
     private static BufferedImage load(int size) {
         String path = "/opentrap/ui/icons/opentrap_" + size + ".png";
         try (InputStream in = AppIcon.class.getResourceAsStream(path)) {
@@ -49,7 +71,7 @@ public final class AppIcon {
         java.awt.Graphics2D g = img.createGraphics();
         g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
                 java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(new java.awt.Color(0xDD, 0x47, 0x47));
+        g.setColor(Theme.ACCENT);
         double s = size, t = s * 0.14, cy1 = s * 0.38, cy2 = s * 0.62;
         g.setStroke(new java.awt.BasicStroke((float) t, java.awt.BasicStroke.CAP_ROUND,
                 java.awt.BasicStroke.JOIN_ROUND));

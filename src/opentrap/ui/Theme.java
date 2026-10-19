@@ -1,0 +1,237 @@
+package opentrap.ui;
+
+import opentrap.ui.theme.*;
+
+import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.plaf.ColorUIResource;
+import javax.swing.plaf.FontUIResource;
+import javax.swing.plaf.metal.DefaultMetalTheme;
+import javax.swing.plaf.metal.MetalLookAndFeel;
+import java.awt.*;
+
+/**
+ * The suite's visual theme: a flat, light interface with one blue accent.
+ *
+ * <p>Everything here is plain Swing. The cross-platform look and feel is the
+ * base, so the interface is identical on every desktop, and the parts of it
+ * that look dated (bevelled buttons, boxed tabs, chunky scrollbars) are
+ * replaced with flat delegates from {@code opentrap.ui.theme}. Colours and
+ * fonts live in this one class so the whole interface changes together.
+ */
+public final class Theme {
+    private Theme() {}
+
+    // ---- palette ----
+    /** Page background. */
+    public static final Color BG         = new Color(0xFF, 0xFF, 0xFF);
+    /** Raised surfaces: toolbars, table headers, cards, the status bar. */
+    public static final Color SURFACE    = new Color(0xF6, 0xF7, 0xF9);
+    /** Hover and pressed state of surfaces and secondary buttons. */
+    public static final Color SURFACE_2  = new Color(0xEA, 0xED, 0xF1);
+    public static final Color SURFACE_3  = new Color(0xDD, 0xE2, 0xE8);
+    /** Hairlines and outlines. */
+    public static final Color BORDER     = new Color(0xDF, 0xE3, 0xE8);
+    public static final Color TEXT       = new Color(0x1F, 0x23, 0x28);
+    public static final Color MUTED      = new Color(0x6B, 0x72, 0x80);
+    /** The accent: the same blue as the proxy's landing page. */
+    public static final Color ACCENT       = new Color(0x3C, 0x6E, 0xA5);
+    public static final Color ACCENT_DARK  = new Color(0x2F, 0x5A, 0x8A);
+    public static final Color ACCENT_LIGHT = new Color(0xE3, 0xED, 0xF8);
+    public static final Color ACCENT_FAINT = new Color(0xF1, 0xF6, 0xFB);
+
+    public static final Font FONT      = new Font("Dialog", Font.PLAIN, 12);
+    public static final Font FONT_BOLD = new Font("Dialog", Font.BOLD, 12);
+
+    /** Corner radius shared by buttons, fields and cards. */
+    public static final int RADIUS = 6;
+
+    /** Client property that marks a button as the primary action of its panel. */
+    public static final String PRIMARY = "opentrap.primary";
+
+    /** Install the theme. Call once, before any component is created. */
+    public static void install() {
+        MetalLookAndFeel.setCurrentTheme(new Palette());
+        try { UIManager.setLookAndFeel(new MetalLookAndFeel()); } catch (Exception ignored) {}
+
+        UIDefaults d = UIManager.getDefaults();
+        ColorUIResource bg = new ColorUIResource(BG), surface = new ColorUIResource(SURFACE),
+                border = new ColorUIResource(BORDER), text = new ColorUIResource(TEXT),
+                muted = new ColorUIResource(MUTED), sel = new ColorUIResource(ACCENT_LIGHT);
+        FontUIResource font = new FontUIResource(FONT);
+
+        for (String k : new String[]{"Button.font", "ToggleButton.font", "Label.font", "CheckBox.font",
+                "RadioButton.font", "ComboBox.font", "TextField.font", "TextArea.font", "TabbedPane.font",
+                "Table.font", "TableHeader.font", "Tree.font", "List.font", "Menu.font", "MenuItem.font",
+                "MenuBar.font", "ToolTip.font", "ProgressBar.font", "TitledBorder.font", "OptionPane.font",
+                "CheckBoxMenuItem.font", "RadioButtonMenuItem.font", "PopupMenu.font", "Spinner.font",
+                "PasswordField.font", "EditorPane.font", "TextPane.font", "FormattedTextField.font"}) {
+            d.put(k, font);
+        }
+
+        // Surfaces
+        d.put("Panel.background", bg);
+        d.put("Viewport.background", bg);
+        d.put("ScrollPane.background", bg);
+        d.put("SplitPane.background", bg);
+        d.put("TabbedPane.background", bg);
+        d.put("TabbedPane.contentAreaColor", bg);
+        d.put("OptionPane.background", bg);
+        d.put("Label.foreground", text);
+        d.put("control", bg);
+
+        // Tabs: text with an accent underline, no boxes.
+        d.put("TabbedPaneUI", FlatTabbedPaneUI.class.getName());
+        d.put("TabbedPane.foreground", muted);
+        d.put("TabbedPane.selectedForeground", text);
+        d.put("TabbedPane.tabInsets", new Insets(7, 14, 7, 14));
+        d.put("TabbedPane.tabAreaInsets", new Insets(0, 6, 0, 6));
+        d.put("TabbedPane.contentBorderInsets", new Insets(1, 0, 0, 0));
+        d.put("TabbedPane.selectedTabPadInsets", new Insets(0, 0, 0, 0));
+        d.put("TabbedPane.tabRunOverlay", 0);
+
+        // Buttons: flat, rounded, with a filled accent variant.
+        d.put("ButtonUI", FlatButtonUI.class.getName());
+        d.put("ToggleButtonUI", FlatButtonUI.class.getName());
+        d.put("Button.foreground", text);
+        d.put("ToggleButton.foreground", text);
+        d.put("Button.disabledText", muted);
+        d.put("ToggleButton.disabledText", muted);
+        // The padding lives in the border so the flat shape keeps its size.
+        d.put("Button.border", new javax.swing.plaf.BorderUIResource.EmptyBorderUIResource(5, 12, 5, 12));
+        d.put("ToggleButton.border", new javax.swing.plaf.BorderUIResource.EmptyBorderUIResource(5, 12, 5, 12));
+        d.put("Button.margin", new Insets(0, 0, 0, 0));
+        d.put("ToggleButton.margin", new Insets(0, 0, 0, 0));
+
+        // Inputs
+        Border fieldBorder = new RoundedBorder(BORDER, ACCENT, RADIUS, new Insets(4, 7, 4, 7));
+        d.put("TextField.border", fieldBorder);
+        d.put("PasswordField.border", fieldBorder);
+        d.put("FormattedTextField.border", fieldBorder);
+        d.put("TextField.background", bg);
+        d.put("TextArea.background", bg);
+        d.put("TextField.selectionBackground", sel);
+        d.put("TextArea.selectionBackground", sel);
+        d.put("TextField.selectionForeground", text);
+        d.put("TextArea.selectionForeground", text);
+        d.put("TextField.caretForeground", text);
+        d.put("ComboBoxUI", FlatComboBoxUI.class.getName());
+        d.put("ComboBox.background", bg);
+        d.put("ComboBox.foreground", text);
+        d.put("ComboBox.selectionBackground", sel);
+        d.put("ComboBox.selectionForeground", text);
+        d.put("ComboBox.border", new RoundedBorder(BORDER, ACCENT, RADIUS, new Insets(2, 6, 2, 2)));
+        d.put("ComboBox.squareButton", Boolean.FALSE);
+        d.put("ComboBox.padding", new Insets(0, 2, 0, 6));
+        d.put("CheckBox.icon", new CheckIcon(false));
+        d.put("RadioButton.icon", new CheckIcon(true));
+        d.put("CheckBox.foreground", text);
+        d.put("RadioButton.foreground", text);
+
+        // Scrollbars: thin, no arrow buttons.
+        d.put("ScrollBarUI", FlatScrollBarUI.class.getName());
+        d.put("ScrollBar.width", 10);
+        d.put("ScrollBar.background", bg);
+        d.put("ScrollBar.track", bg);
+
+        // Tables and trees
+        d.put("Table.background", bg);
+        d.put("Table.foreground", text);
+        d.put("Table.gridColor", border);
+        d.put("Table.selectionBackground", sel);
+        d.put("Table.selectionForeground", text);
+        d.put("Table.focusCellHighlightBorder", BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        d.put("TableHeader.background", surface);
+        d.put("TableHeader.foreground", text);
+        d.put("TableHeader.cellBorder", BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 1, BORDER), BorderFactory.createEmptyBorder(4, 6, 4, 6)));
+        d.put("Tree.background", bg);
+        d.put("Tree.selectionBackground", sel);
+        d.put("Tree.selectionForeground", text);
+        d.put("Tree.selectionBorderColor", sel);
+        d.put("Tree.rowHeight", 22);
+        d.put("List.selectionBackground", sel);
+        d.put("List.selectionForeground", text);
+
+        // Split panes: a plain hairline divider.
+        d.put("SplitPaneUI", "javax.swing.plaf.basic.BasicSplitPaneUI");
+        d.put("SplitPane.dividerSize", 6);
+        d.put("SplitPaneDivider.border", BorderFactory.createEmptyBorder());
+        d.put("SplitPane.border", BorderFactory.createEmptyBorder());
+        d.put("SplitPane.background", surface);
+
+        // Menus
+        d.put("MenuBar.gradient", null);
+        d.put("MenuBar.background", bg);
+        d.put("MenuBar.border", BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER));
+        d.put("Menu.background", bg);
+        d.put("Menu.foreground", text);
+        d.put("Menu.selectionBackground", sel);
+        d.put("Menu.selectionForeground", text);
+        d.put("Menu.border", BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        d.put("MenuItem.background", bg);
+        d.put("MenuItem.selectionBackground", sel);
+        d.put("MenuItem.selectionForeground", text);
+        d.put("MenuItem.border", BorderFactory.createEmptyBorder(4, 10, 4, 10));
+        d.put("PopupMenu.background", bg);
+        d.put("PopupMenu.border", BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER), BorderFactory.createEmptyBorder(4, 0, 4, 0)));
+        d.put("Separator.foreground", border);
+        d.put("Separator.background", bg);
+
+        // Progress, tooltips, dialogs
+        d.put("ProgressBarUI", "javax.swing.plaf.basic.BasicProgressBarUI");
+        d.put("ProgressBar.foreground", new ColorUIResource(ACCENT));
+        d.put("ProgressBar.background", new ColorUIResource(SURFACE_2));
+        d.put("ProgressBar.selectionForeground", bg);
+        d.put("ProgressBar.selectionBackground", text);
+        d.put("ProgressBar.border", BorderFactory.createEmptyBorder());
+        d.put("ToolTip.background", new ColorUIResource(TEXT));
+        d.put("ToolTip.foreground", bg);
+        d.put("ToolTip.border", BorderFactory.createEmptyBorder(5, 8, 5, 8));
+        d.put("OptionPane.messageForeground", text);
+        d.put("OptionPane.informationIcon", new DialogIcon(DialogIcon.Kind.INFO));
+        d.put("OptionPane.questionIcon", new DialogIcon(DialogIcon.Kind.QUESTION));
+        d.put("OptionPane.warningIcon", new DialogIcon(DialogIcon.Kind.WARNING));
+        d.put("OptionPane.errorIcon", new DialogIcon(DialogIcon.Kind.ERROR));
+        d.put("TitledBorder.titleColor", text);
+        d.put("TabbedPane.focus", new Color(0, 0, 0, 0));
+    }
+
+    /** A rounded hairline border for cards and grouped content. */
+    public static Border cardBorder() {
+        return new RoundedBorder(BORDER, null, RADIUS + 2, new Insets(10, 12, 10, 12));
+    }
+
+    /** Mark a button as the panel's primary action: filled with the accent. */
+    public static <B extends AbstractButton> B primary(B b) {
+        b.putClientProperty(PRIMARY, Boolean.TRUE);
+        return b;
+    }
+
+    /** The base colours the look and feel falls back to for anything not styled here. */
+    private static final class Palette extends DefaultMetalTheme {
+        private final ColorUIResource p1 = new ColorUIResource(ACCENT_DARK);
+        private final ColorUIResource p2 = new ColorUIResource(ACCENT);
+        private final ColorUIResource p3 = new ColorUIResource(ACCENT_LIGHT);
+        private final ColorUIResource s1 = new ColorUIResource(BORDER);
+        private final ColorUIResource s2 = new ColorUIResource(SURFACE_2);
+        private final ColorUIResource s3 = new ColorUIResource(BG);
+        private final ColorUIResource black = new ColorUIResource(TEXT);
+        private final FontUIResource font = new FontUIResource(FONT);
+        @Override public String getName() { return "OpenTRAP"; }
+        @Override protected ColorUIResource getPrimary1() { return p1; }
+        @Override protected ColorUIResource getPrimary2() { return p2; }
+        @Override protected ColorUIResource getPrimary3() { return p3; }
+        @Override protected ColorUIResource getSecondary1() { return s1; }
+        @Override protected ColorUIResource getSecondary2() { return s2; }
+        @Override protected ColorUIResource getSecondary3() { return s3; }
+        @Override protected ColorUIResource getBlack() { return black; }
+        @Override public FontUIResource getControlTextFont() { return font; }
+        @Override public FontUIResource getSystemTextFont() { return font; }
+        @Override public FontUIResource getUserTextFont() { return font; }
+        @Override public FontUIResource getMenuTextFont() { return font; }
+        @Override public FontUIResource getWindowTitleFont() { return font; }
+        @Override public FontUIResource getSubTextFont() { return font; }
+    }
+}

@@ -22,7 +22,7 @@ public class PayloadsPanel extends JPanel {
     private final JComboBox<Integer> setCombo = new JComboBox<>();
     private final JLabel payloadCount = Ui.label("0");
     private final JLabel requestCount = Ui.label("0");
-    private final JButton start = Ui.button("start attack", "launch the attack with the current configuration");
+    private final JButton start = Ui.primaryButton("start attack", "launch the attack with the current configuration");
 
     private AttackType attackType = AttackType.SNIPER;
     private int positions = 0;

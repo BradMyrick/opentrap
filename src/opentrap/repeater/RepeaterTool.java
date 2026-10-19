@@ -78,7 +78,7 @@ public class RepeaterTool implements ToolModule {
         private final JCheckBox sslBox;
         private final JLabel status = Ui.label("ready");
         private final JLabel lengthLabel = Ui.label("length: 0");
-        private final JButton go = Ui.button("go");
+        private final JButton go = Ui.primaryButton("go", "send the request");
         private final JButton cancel = Ui.button("cancel");
         private volatile Thread worker;
 

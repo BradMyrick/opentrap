@@ -9,6 +9,7 @@ import opentrap.core.ScanTask;
 import opentrap.core.SuiteContext;
 import opentrap.core.ToolModule;
 import opentrap.ui.MessageEditor;
+import opentrap.ui.Theme;
 import opentrap.ui.Ui;
 
 import javax.swing.*;
@@ -135,7 +136,7 @@ public class DashboardTool implements ToolModule {
         left.setBorder(Ui.pad(8, 8, 8, 8));
 
         // Header: bold "Tasks" + action buttons.
-        JButton newScan = Ui.button("New scan");
+        JButton newScan = Ui.primaryButton("New scan", "crawl and audit a target");
         JButton spiderBtn = Ui.button("Spider");
         accentise(newScan);
         accentise(spiderBtn);
@@ -398,9 +399,7 @@ public class DashboardTool implements ToolModule {
         TaskCard(ScanTask task) {
             super(new BorderLayout(0, 4));
             this.task = task;
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(CARD_BORDER),
-                    Ui.pad(8, 8, 8, 8)));
+            setBorder(Theme.cardBorder());
             setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredHeight()));
 
             JLabel title = Ui.bold(task.number + ". " + task.title());

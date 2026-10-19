@@ -94,7 +94,7 @@ public class CollaboratorTool implements ToolModule {
         statusLabel = Ui.bold("not started");
         JButton start = Ui.button("start", "register with the collaborator server and begin polling");
         JButton stop  = Ui.button("stop", "stop polling (start again gives a fresh session)");
-        JButton newPayload = Ui.button("new payload",
+        JButton newPayload = Ui.primaryButton("new payload",
                 "generate a fresh payload hostname, show it below, and copy it to the clipboard");
         JButton copy  = Ui.button("copy", "copy the payload shown below to the clipboard");
         JButton clear = Ui.button("clear", "remove the collected interactions");
