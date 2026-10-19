@@ -17,6 +17,8 @@ workspace, all with a familiar, recognisable workflow.
 
 *A live audit on the Dashboard: crawl complete, active scan running, high-severity findings arriving as they are confirmed.*
 
+**[Download the latest release](https://github.com/opentrap/opentrap/releases/latest)** for Linux, then see [Get started](#get-started) below.
+
 ## Why OpenTRAP
 
 - **A proxy-first testing suite.** Intercept, HTTP history, repeater, intruder,
@@ -58,7 +60,7 @@ Every tool lives in one window. Click any screenshot for the full-size image.
 
 ## Get started
 
-Download the latest release and run it. Nothing to install.
+Download the latest release from the [releases page](https://github.com/opentrap/opentrap/releases/latest) and run it. Nothing to install.
 
 **Recommended: the AppImage** - one self-contained file, no Java needed:
 

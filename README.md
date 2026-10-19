@@ -145,7 +145,7 @@ Right-click any request or response to send it between tools.
 
 ## Get started
 
-Download the latest release and run it. Nothing to install.
+Download the latest release from the [releases page](https://github.com/opentrap/opentrap/releases/latest) and run it. Nothing to install.
 
 **Recommended: the AppImage.** One self-contained file that bundles its own Java
 runtime and the scan engine, no Java needed, just make it executable and run it
