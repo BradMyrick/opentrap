@@ -27,10 +27,8 @@ workspace, all with a familiar, recognisable workflow.
 - **Scanning that holds up.** Crawl and audit for real vulnerabilities, with
   findings in a clear issue view and the evidence highlighted, built on a proven,
   industry-grade engine.
-- **One self-contained file.** The release is a single Linux jar with the scan
-  engine built in. Download it, run it, scan, there is nothing else to install.
-- **Looks right on any screen.** The interface detects your display and scales
-  itself, crisp on a 4K panel, normal on 1080p.
+- **One self-contained file.** The release is a single Linux AppImage with its
+  own runtime and the scan engine built in. Download it, run it, scan.
 - **Genuinely open.** Licensed under the GNU AGPL v3.0, so it stays open and
   hackable, with no licence gate on its core capabilities.
 

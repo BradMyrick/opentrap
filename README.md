@@ -127,7 +127,7 @@ proven, industry-grade engine, so what OpenTRAP reports holds up.
 - **Proxy-first by design** - intercept, replay and edit live traffic, with the whole toolset one click away.
 - **Detection that stands up** - crawl and audit with a proven, industry-grade engine, so the findings you report carry weight.
 - **Everything in one window** - repeater, intruder, sequencer, decoder, comparer, collaborator and a full logger.
-- **One self-contained file** - a single Linux jar with the scan engine built in; download it and run it.
+- **One self-contained file** - a single Linux AppImage with its own runtime and the scan engine built in; download it and run it.
 - **Open and hackable** - AGPL v3.0: read it, change it, extend it, with no gate on its core capabilities.
 - **Built to be improved** - shaped by the people who use it, with every contribution credited.
 
@@ -173,7 +173,7 @@ java -jar opentrap_<timestamp>.jar
 ```
 
 Either way the download is self-contained: the scan engine is built in and sets
-itself up on first use, and the interface detects your display and scales itself.
+itself up on first use.
 The optional testing browser is an in-app download, offered only when you want it,
 so the release stays small.
 
