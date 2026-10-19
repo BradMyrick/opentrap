@@ -218,9 +218,17 @@ public final class Ui {
                 .setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
     }
 
+    /**
+     * Set initial column widths and let the columns stretch in proportion to
+     * fill the table's pane, so no table sits in a strip of empty space. A
+     * table that needs a different mode sets it after calling this.
+     */
     public static void setWidths(JTable t, int... widths) {
+        t.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         for (int i = 0; i < widths.length && i < t.getColumnCount(); i++) {
-            t.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+            javax.swing.table.TableColumn c = t.getColumnModel().getColumn(i);
+            c.setPreferredWidth(widths[i]);
+            c.setMinWidth(Math.max(24, widths[i] / 3));
         }
     }
 
@@ -246,6 +254,12 @@ public final class Ui {
         JScrollPane s = new JScrollPane(c);
         s.getVerticalScrollBar().setUnitIncrement(16);
         s.setBorder(BorderFactory.createLineBorder(GRID));
+        if (c instanceof JTable t) {
+            // The space under the last row reads as part of the table, not a
+            // grey hole: same background, and the table paints to the bottom.
+            t.setFillsViewportHeight(true);
+            s.getViewport().setBackground(t.getBackground());
+        }
         return s;
     }
 
