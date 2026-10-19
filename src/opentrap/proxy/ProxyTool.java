@@ -127,14 +127,16 @@ public class ProxyTool implements ToolModule {
                 public void exchangeLogged(LogEntry entry) {}
                 public void statusChanged(String text) {}
             });
+            // Keep the port on screen: refresh the idle line whenever a listener
+            // starts or stops, unless an intercepted message is being shown.
+            server.onListenersChanged(() -> { if (current == null) status.setText(server.listeningSummary()); });
             showIdle();
         }
 
         private void showIdle() {
             SwingUtilities.invokeLater(() -> {
                 current = null;
-                status.setText(server.anyRunning() ? " "
-                        : "No proxy listeners are running - enable one on the options tab");
+                status.setText(server.listeningSummary());
                 editor.setMessage(null, new HttpMessage(new byte[0]));
                 forward.setEnabled(false); drop.setEnabled(false); action.setEnabled(false);
             });
@@ -152,8 +154,7 @@ public class ProxyTool implements ToolModule {
         @Override public void cleared(InterceptQueue.Pending p) {
             SwingUtilities.invokeLater(() -> {
                 current = null;
-                status.setText(server.anyRunning() ? " "
-                        : "No proxy listeners are running - enable one on the options tab");
+                status.setText(server.listeningSummary());
                 editor.setMessage(null, new HttpMessage(new byte[0]));
                 forward.setEnabled(false); drop.setEnabled(false); action.setEnabled(false);
             });

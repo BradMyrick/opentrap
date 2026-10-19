@@ -122,6 +122,7 @@ public class ProxyServer {
             ctx.alert("proxy", "failed to start proxy service on port " + cfg.port
                     + ". Check whether another service is already using this port.");
         }
+        listenersChanged();
     }
 
     public synchronized void stop(ProxyListener cfg) {
@@ -131,6 +132,7 @@ public class ProxyServer {
             try { ss.close(); } catch (IOException ignored) {}
             ctx.alert("proxy", "proxy service stopped on port " + cfg.port);
         }
+        listenersChanged();
     }
 
     public void stopAll() {
@@ -139,6 +141,35 @@ public class ProxyServer {
     }
 
     public boolean anyRunning() { return !sockets.isEmpty(); }
+
+    private final List<Runnable> listenerHooks = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** Run {@code r} on the event thread whenever a listener starts or stops. */
+    public void onListenersChanged(Runnable r) { listenerHooks.add(r); }
+
+    private void listenersChanged() {
+        for (Runnable r : listenerHooks) javax.swing.SwingUtilities.invokeLater(r);
+    }
+
+    /** What the proxy is listening on right now, e.g. "listening on 127.0.0.1:8080". */
+    public String listeningSummary() { return summary(listeners); }
+
+    /**
+     * Describe the running listeners in {@code list}: every address and port, or
+     * a clear statement that none is running. Shown on the intercept and options
+     * tabs so the port is never in doubt.
+     */
+    public static String summary(List<ProxyListener> list) {
+        StringBuilder sb = new StringBuilder();
+        for (ProxyListener l : list) {
+            if (!l.running) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(l.loopbackOnly ? "127.0.0.1" : "0.0.0.0").append(':').append(l.port);
+        }
+        return sb.length() == 0
+                ? "no proxy listeners are running - add one on the options tab"
+                : "listening on " + sb;
+    }
 
     private void acceptLoop(ProxyListener cfg, ServerSocket ss) {
         while (!ss.isClosed()) {

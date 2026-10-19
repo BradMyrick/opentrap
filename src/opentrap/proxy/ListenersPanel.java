@@ -22,7 +22,15 @@ public class ListenersPanel extends JPanel {
         JLabel h = Ui.heading("proxy listeners");
         h.setAlignmentX(LEFT_ALIGNMENT);
         add(h);
+        add(Box.createVerticalStrut(4));
+        JLabel status = Ui.bold(server.listeningSummary());
+        status.setAlignmentX(LEFT_ALIGNMENT);
+        add(status);
         add(Box.createVerticalStrut(8));
+        server.onListenersChanged(() -> {
+            status.setText(server.listeningSummary());
+            model.fireTableDataChanged();
+        });
 
         Ui.styleTable(table);
         Ui.setWidths(table, 70, 70, 110, 110, 90);
