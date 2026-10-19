@@ -127,7 +127,7 @@ proven, industry-grade engine, so what OpenTRAP reports holds up.
 - **Proxy-first by design** - intercept, replay and edit live traffic, with the whole toolset one click away.
 - **Detection that stands up** - crawl and audit with a proven, industry-grade engine, so the findings you report carry weight.
 - **Everything in one window** - repeater, intruder, sequencer, decoder, comparer, collaborator and a full logger.
-- **One self-contained file** - a single Linux AppImage with its own runtime and the scan engine built in; download it and run it.
+- **One self-contained file** - every release is a single Linux AppImage with its own runtime and the scan engine built in; download it and run it.
 - **Open and hackable** - AGPL v3.0: read it, change it, extend it, with no gate on its core capabilities.
 - **Built to be improved** - shaped by the people who use it, with every contribution credited.
 
@@ -152,9 +152,8 @@ Right-click any request or response to send it between tools.
 
 Download the latest release from the [releases page](https://github.com/opentrap/opentrap/releases/latest) and run it. Nothing to install.
 
-**Recommended: the AppImage.** One self-contained file that bundles its own Java
-runtime and the scan engine, no Java needed. This link always points at the
-latest release: [opentrap-x86_64.appimage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)
+**One file: the AppImage.** It bundles its own Java runtime and the scan engine,
+so there is no Java to install. This link always points at the latest release: [opentrap-x86_64.appimage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)
 
 Or from a terminal, fetch it:
 
@@ -176,16 +175,9 @@ and run it:
 
 You can also double-click the downloaded file in your file manager.
 
-**Or the jar**, if you already have **Java 17 or newer**. This link also always points at the latest release: [opentrap.jar](https://github.com/opentrap/opentrap/releases/latest/download/opentrap.jar)
-
-Run it with:
-
-```
-java -jar opentrap.jar
-```
-
-Either way the download is self-contained: the scan engine is built in and sets
-itself up on first use.
+The download is complete: the Java runtime and the scan engine are inside the
+file and set themselves up on first use. Every release is this one AppImage, so
+nothing ships with parts missing.
 The optional testing browser is an in-app download, offered only when you want it,
 so the release stays small.
 
@@ -197,9 +189,10 @@ authority, so there is nothing to configure and no certificate to install.
 ## Build from source
 
 ```
-./build.sh      # compile src/ into a lean dev jar
+./build.sh      # compile src/ into a lean dev jar (uses an engine already on disk)
 ./test.sh       # run the test suite
-./release.sh    # build the self-contained, timestamped release jar
+./release.sh    # build the self-contained release jar the AppImage is made from
+./package-appimage.sh   # build the AppImage, the only artefact that is released
 ```
 
 The only compiled-in dependencies are BouncyCastle (the proxy CA) and a Brotli

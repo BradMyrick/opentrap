@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Publish a release to GitHub from the artefacts in dist/.
 #
-# Run this only after the AppImage in dist/ has been tested by hand. Both
-# assets are uploaded under fixed names, so the permanent links
+# Run this only after the AppImage in dist/ has been tested by hand.
+#
+# A release is exactly one file, the AppImage, which carries the Java runtime
+# and the scan engine. Nothing is ever shipped with parts missing, so the jar
+# is not published. The asset keeps a fixed name, so the permanent link
 #   https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage
-#   https://github.com/opentrap/opentrap/releases/latest/download/opentrap.jar
-# always serve the newest release. The version is the release tag, and the
-# app shows it in its title bar.
+# always serves the newest release. The version is the release tag, and the
+# app shows it in its title bar and about box.
 #
 # Usage: ./publish.sh <timestamp> <notes-file>
 #   timestamp   the build to publish, e.g. 20261019-085441 (dist/opentrap_<timestamp>.jar)
@@ -34,16 +36,15 @@ if [ ! -f "$STAGE/squashfs-root/usr/lib/app/opentrap_${TS}.jar" ]; then
 fi
 rm -rf "$STAGE/squashfs-root"
 
-# Fixed asset names.
-cp "$JAR" "$STAGE/opentrap.jar"
+# Fixed asset name.
 cp "$APP" "$STAGE/opentrap-x86_64.appimage"
 
 echo ">> publishing $TS"
-gh release create "$TS" "$STAGE/opentrap-x86_64.appimage" "$STAGE/opentrap.jar" \
+gh release create "$TS" "$STAGE/opentrap-x86_64.appimage" \
     --repo "$REPO" --title "OpenTRAP $TS" --notes-file "$NOTES" --latest
 
 echo ">> verifying"
-for name in opentrap-x86_64.appimage opentrap.jar; do
+for name in opentrap-x86_64.appimage; do
     local_sum="$(sha256sum "$STAGE/$name" | cut -d' ' -f1)"
     remote_sum="$(gh release view "$TS" --repo "$REPO" --json assets \
         --jq ".assets[] | select(.name==\"$name\") | .digest" | sed 's/^sha256://')"

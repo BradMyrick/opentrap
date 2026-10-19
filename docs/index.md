@@ -30,7 +30,7 @@ workspace, all with a familiar, recognisable workflow.
 - **Scanning that holds up.** Crawl and audit for real vulnerabilities, with
   findings in a clear issue view and the evidence highlighted, built on a proven,
   industry-grade engine.
-- **One self-contained file.** The release is a single Linux AppImage with its
+- **One self-contained file.** Every release is a single Linux AppImage with its
   own runtime and the scan engine built in. Download it, run it, scan.
 - **Genuinely open.** Licensed under the GNU AGPL v3.0, so it stays open and
   hackable, with no licence gate on its core capabilities.
@@ -63,8 +63,8 @@ Every tool lives in one window. Click any screenshot for the full-size image.
 
 Download the latest release from the [releases page](https://github.com/opentrap/opentrap/releases/latest) and run it. Nothing to install.
 
-**Recommended: the AppImage** - one self-contained file, no Java needed. This
-link always points at the latest release:
+**One file: the AppImage** - it bundles its own Java runtime and the scan engine,
+so there is no Java to install. This link always points at the latest release:
 [opentrap-x86_64.appimage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)
 
 Or from a terminal, fetch it:
@@ -87,16 +87,10 @@ and run it:
 
 You can also double-click the downloaded file in your file manager.
 
-**Or the jar**, if you already have Java 17 or newer. This link also always points at the latest release: [opentrap.jar](https://github.com/opentrap/opentrap/releases/latest/download/opentrap.jar)
-
-Run it with:
-
-```
-java -jar opentrap.jar
-```
-
-The scan engine is built in and sets itself up on first run; the optional testing
-browser is an in-app download when you want it.
+The download is complete: the Java runtime and the scan engine are inside the
+file and set themselves up on first use. Every release is this one AppImage, so
+nothing ships with parts missing. The optional testing browser is an in-app
+download when you want it.
 
 ## Learn more
 
