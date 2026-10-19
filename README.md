@@ -112,8 +112,8 @@ runtime and the scan engine, no Java needed, just make it executable and run it
 (or double-click it in your file manager):
 
 ```
-chmod +x OpenTRAP-x86_64.AppImage
-./OpenTRAP-x86_64.AppImage
+chmod +x opentrap-x86_64.appimage
+./opentrap-x86_64.appimage
 ```
 
 **Or the jar**, if you already have **Java 17 or newer**:

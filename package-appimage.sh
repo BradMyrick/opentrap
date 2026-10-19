@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build a single-file, self-contained OpenTRAP AppImage for Linux.
 #
-# The result (dist/OpenTRAP-x86_64.AppImage) bundles a Java runtime and the scan
+# The result (dist/opentrap-x86_64.appimage) bundles a Java runtime and the scan
 # engine, so a user downloads one file and runs it, with nothing installed, no
 # Java, no terminal. It works across distributions.
 #
@@ -66,8 +66,8 @@ Terminal=false
 DESK
 
 echo ">> packing the AppImage"
-ARCH=x86_64 "$AIT" --appimage-extract-and-run AppDir dist/OpenTRAP-x86_64.AppImage
+ARCH=x86_64 "$AIT" --appimage-extract-and-run AppDir dist/opentrap-x86_64.appimage
 
 echo
-echo "Built dist/OpenTRAP-x86_64.AppImage"
-echo "Run it with:  chmod +x dist/OpenTRAP-x86_64.AppImage && ./dist/OpenTRAP-x86_64.AppImage"
+echo "Built dist/opentrap-x86_64.appimage"
+echo "Run it with:  chmod +x dist/opentrap-x86_64.appimage && ./dist/opentrap-x86_64.appimage"
