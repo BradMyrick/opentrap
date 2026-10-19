@@ -2,7 +2,10 @@
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
-rm -rf build/opentrap && mkdir -p build dist
+# Start from an empty build/ so nothing left by an earlier build or by the
+# AppImage packaging (its runtime and staging directories live under build/)
+# is packed into the jar.
+rm -rf build && mkdir -p build dist
 echo "Compiling..."
 javac -d build -cp "lib/*:build" $(find src -name '*.java')
 echo "Copying resources..."
