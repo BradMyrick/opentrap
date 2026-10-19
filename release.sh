@@ -16,6 +16,13 @@ set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
+# Prefer the pinned portable JDK (fetch-jdk.sh) so the release bytecode matches
+# the runtime the AppImage bundles. Falls back to the system JDK if jdk/ is absent.
+if [ -x "$DIR/jdk/bin/javac" ]; then
+    export JAVA_HOME="$DIR/jdk"
+    export PATH="$DIR/jdk/bin:$PATH"
+fi
+
 TS="$(date -u +%Y%m%d-%H%M%S)"
 echo "Release build $TS (UTC)"
 

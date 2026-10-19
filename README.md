@@ -216,9 +216,11 @@ authority, so there is nothing to configure and no certificate to install.
 ```
 
 The only compiled-in dependencies are BouncyCastle (the proxy CA) and a Brotli
-decoder. The scan engine and testing browser are fetched on demand by
-`./fetch-zap.sh` and `./fetch-browser.sh`; bundled-tool versions are pinned in
-`tools/versions`. See `DEPENDENCIES.md`.
+decoder. The scan engine, testing browser and a portable JDK are fetched on
+demand by `./fetch-zap.sh`, `./fetch-browser.sh` and `./fetch-jdk.sh`; bundled
+versions are pinned in `tools/versions`. The portable JDK (Eclipse Temurin, built
+on an old glibc) is what lets the AppImage run across distributions rather than
+only on the build host. See `DEPENDENCIES.md`.
 
 ## FAQ
 

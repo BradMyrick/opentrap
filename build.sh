@@ -2,6 +2,13 @@
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
+# Prefer the pinned portable JDK (fetch-jdk.sh) when present, so the dev build
+# matches the toolchain the release and AppImage use. Falls back to the system
+# JDK if jdk/ is absent.
+if [ -x "$DIR/jdk/bin/javac" ]; then
+    export JAVA_HOME="$DIR/jdk"
+    export PATH="$DIR/jdk/bin:$PATH"
+fi
 # Start from an empty build/ so nothing left by an earlier build or by the
 # AppImage packaging (its runtime and staging directories live under build/)
 # is packed into the jar.

@@ -11,6 +11,14 @@ set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
+# The AppImage runtime must be built from the pinned portable JDK (old glibc),
+# or the packaged app only starts on machines as new as the build host (it quits
+# before showing a window on older distributions). Fetch it if missing, then use
+# it for the release build below and for jlink, jpackage and the module list.
+[ -x "$DIR/jdk/bin/javac" ] || ./fetch-jdk.sh
+export JAVA_HOME="$DIR/jdk"
+export PATH="$DIR/jdk/bin:$PATH"
+
 echo ">> building the self-contained release jar"
 ./release.sh
 JAR="$(ls -t dist/opentrap_*.jar | head -1)"
@@ -23,15 +31,18 @@ if [ ! -x "$AIT" ]; then
     chmod +x "$AIT"
 fi
 
-echo ">> jlink: a complete Java runtime (keeps bin/java)"
+echo ">> assembling a portable Java runtime from the bundled JDK"
 rm -rf build/otin build/appimage build/runtime AppDir
 mkdir -p build/otin
 cp "$JAR" build/otin/
-# The runtime must keep bin/java and carry a full module set: the bundled scan
-# engine runs as its own Java process (launched with java.home/bin/java), and
-# jpackage's default runtime strips bin/java and trims modules, which breaks it.
-ALLMODS="$(java --list-modules | sed 's/@.*//' | paste -sd,)"
-jlink --add-modules "$ALLMODS" --strip-debug --no-man-pages --no-header-files --output build/runtime
+# The runtime must keep bin/java and a full module set: the bundled scan engine
+# runs as its own Java process (launched with java.home/bin/java), and jpackage's
+# default runtime strips bin/java and trims modules, which breaks it. The portable
+# Temurin JDK (old glibc) ships without jmods, so jlink cannot repackage it; copy
+# it as the runtime image instead and drop only parts not needed at run time.
+cp -a jdk build/runtime
+rm -rf build/runtime/lib/src.zip build/runtime/include build/runtime/man \
+       build/runtime/demo build/runtime/sample build/runtime/jmods
 
 echo ">> jpackage: self-contained app image using that runtime"
 jpackage --type app-image --name OpenTRAP \

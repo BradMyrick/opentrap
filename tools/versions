@@ -9,3 +9,7 @@ BROTLI_DEC_VERSION=0.1.2
 
 # OWASP ZAP engine (crawl + active scan backend, run headless)
 ZAP_VERSION=2.17.0
+
+# Portable JDK used to compile OpenTRAP and build the AppImage runtime.
+# Temurin is built on an old glibc, so the AppImage runs on mainstream Linux.
+JDK_VERSION=25

@@ -30,3 +30,6 @@
 # AppImage build scratch
 /AppDir/
 /appbuild/
+
+# Portable JDK (large; fetched on demand by fetch-jdk.sh)
+/jdk/
