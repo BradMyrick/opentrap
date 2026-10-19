@@ -87,10 +87,12 @@ and run it:
 
 You can also double-click the downloaded file in your file manager.
 
-**Or the jar**, if you already have Java 17 or newer:
+**Or the jar**, if you already have Java 17 or newer. This link also always points at the latest release: [opentrap.jar](https://github.com/opentrap/opentrap/releases/latest/download/opentrap.jar)
+
+Run it with:
 
 ```
-java -jar opentrap_<timestamp>.jar
+java -jar opentrap.jar
 ```
 
 The scan engine is built in and sets itself up on first run; the optional testing

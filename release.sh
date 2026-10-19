@@ -4,7 +4,8 @@
 # Unlike build.sh (a lean ~10 MB dev jar), this embeds the trimmed OWASP ZAP scan
 # engine inside the jar as a resource. On first run the app extracts it once to
 # ~/.opentrap/engine and runs it headless, so the single jar is self-contained:
-# download one file, `java -jar opentrap_<timestamp>.jar`, and scanning works.
+# download one file, `java -jar opentrap.jar`, and scanning works. The local
+# file keeps the timestamp in its name; publish.sh uploads it as opentrap.jar.
 #
 # The build is identified by a UTC timestamp (YYYYMMDD-HHMMSS) used for both the
 # filename and the jar's Implementation-Version, which the app shows in its title.
