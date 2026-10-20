@@ -100,10 +100,21 @@ final class CompareWindow extends JFrame {
         legend.add(Ui.bold("  "));
         legend.add(chip(" added ", ADDED));
 
+        // Ticked, the right bar drives off the left bar's model, so one thumb
+        // moves both panes together. Unticking hands its own model back, carrying
+        // the current position over first: without that the pane keeps the synced
+        // position while its thumb springs back to the top.
         BoundedRangeModel ownScroll = right.getVerticalScrollBar().getModel();
         JCheckBox sync = Ui.check("sync views", false);
-        sync.addActionListener(e -> right.getVerticalScrollBar()
-                .setModel(sync.isSelected() ? left.getVerticalScrollBar().getModel() : ownScroll));
+        sync.addActionListener(e -> {
+            JScrollBar bar = right.getVerticalScrollBar();
+            if (sync.isSelected()) {
+                bar.setModel(left.getVerticalScrollBar().getModel());
+            } else {
+                ownScroll.setValue(bar.getValue());
+                bar.setModel(ownScroll);
+            }
+        });
 
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);

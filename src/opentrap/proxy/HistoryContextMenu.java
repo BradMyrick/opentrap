@@ -68,9 +68,23 @@ public class HistoryContextMenu {
 
         if (single) {
             for (String tool : ctx.sinkNames()) {
-                add(menu, "send to " + tool, () -> ctx.sendTo(tool, first.service(),
-                        first.request() == null ? null : first.request().copy(),
-                        first.response() == null ? null : first.response().copy(), null));
+                if (ctx.sinkTakesSingleItem(tool)) {
+                    // A table row has no focused pane to infer a choice from, so
+                    // the two halves are offered separately. One click still
+                    // loads one item.
+                    if (first.request() != null) {
+                        add(menu, "send to " + tool + " (request)", () -> ctx.sendTo(tool,
+                                first.service(), first.request().copy(), null, null));
+                    }
+                    if (first.response() != null) {
+                        add(menu, "send to " + tool + " (response)", () -> ctx.sendTo(tool,
+                                first.service(), null, first.response().copy(), null));
+                    }
+                } else {
+                    add(menu, "send to " + tool, () -> ctx.sendTo(tool, first.service(),
+                            first.request() == null ? null : first.request().copy(),
+                            first.response() == null ? null : first.response().copy(), null));
+                }
             }
             menu.addSeparator();
         }

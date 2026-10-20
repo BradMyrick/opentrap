@@ -14,6 +14,7 @@ public final class RunTests {
 
         new opentrap.engine.EngineMappingTest().run();
         new opentrap.proxy.ProxyDefaultsTest().run();
+        new opentrap.ui.SendToComparerTest().run();
 
         System.exit(Harness.report());
     }
