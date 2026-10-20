@@ -264,26 +264,58 @@ public class MessageEditor extends JPanel {
         });
     }
 
+    /**
+     * Whether this editor is showing a request. The flags settle it for the
+     * single-purpose views; the intercept editor is built with both, so there
+     * the loaded message decides. Without this an intercepted message was sent
+     * as request *and* response, which handed the comparer the same bytes twice.
+     */
+    private boolean showsRequest(HttpMessage shown) {
+        if ((flags & REQUEST) == 0) return false;
+        if ((flags & RESPONSE) == 0) return true;
+        return shown.isRequest();
+    }
+
     /** Build the action menu. Also used by toolbar "action" buttons. */
     public JPopupMenu buildMenu() {
         JPopupMenu menu = new JPopupMenu();
         boolean haveRequest = (flags & REQUEST) != 0 || relatedRequest != null;
+        boolean haveMessage = message != null && message.raw().length > 0;
+        boolean anySend = false;
 
-        if (service != null && haveRequest) {
-            for (String tool : ctx.sinkNames()) {
-                JMenuItem mi = new JMenuItem("send to " + tool);
+        for (String tool : ctx.sinkNames()) {
+            final String t = tool;
+            if (ctx.sinkTakesSingleItem(t)) {
+                // One item per send: the comparer gets exactly the view that was
+                // right-clicked, never its counterpart. Sending the pair would
+                // load two rows and leave the user comparing a request against
+                // its own response.
+                if (!haveMessage) continue;
+                JMenuItem mi = new JMenuItem("send to " + t);
                 mi.setFont(Ui.PLAIN);
-                final String t = tool;
                 mi.addActionListener(e -> {
-                    HttpMessage req = (flags & REQUEST) != 0 ? message.copy()
+                    HttpMessage own = message.copy();
+                    boolean asRequest = showsRequest(own);
+                    ctx.sendTo(t, service, asRequest ? own : null, asRequest ? null : own, null);
+                });
+                menu.add(mi);
+                anySend = true;
+            } else if (service != null && haveRequest) {
+                JMenuItem mi = new JMenuItem("send to " + t);
+                mi.setFont(Ui.PLAIN);
+                mi.addActionListener(e -> {
+                    HttpMessage own = message.copy();
+                    boolean asRequest = showsRequest(own);
+                    HttpMessage req = asRequest ? own
                             : (relatedRequest == null ? null : relatedRequest.copy());
-                    HttpMessage resp = (flags & RESPONSE) != 0 ? message.copy() : null;
+                    HttpMessage resp = asRequest ? null : own;
                     ctx.sendTo(t, service, req, resp, null);
                 });
                 menu.add(mi);
+                anySend = true;
             }
-            menu.addSeparator();
         }
+        if (anySend) menu.addSeparator();
 
         if ((flags & REQUEST) != 0 && editable) {
             JMenuItem m1 = new JMenuItem("change request method");

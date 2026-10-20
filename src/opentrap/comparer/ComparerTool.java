@@ -1,12 +1,15 @@
 package opentrap.comparer;
 
 import opentrap.core.Bytes;
+import opentrap.core.HttpMessage;
+import opentrap.core.HttpService;
 import opentrap.core.SuiteContext;
 import opentrap.core.ToolModule;
 import opentrap.ui.Ui;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
@@ -24,6 +27,9 @@ public class ComparerTool implements ToolModule {
     private static final String PLACEHOLDER =
             "load, paste, or send data here from other tools to perform a compare";
     private static final int PREVIEW_CHARS = 120;
+
+    /** Text colour for the row the other list has already taken. */
+    private static final Color TAKEN = new Color(0xA8, 0xAE, 0xB8);
 
     /** One loaded blob, numbered in the order it arrived. */
     record Item(int id, byte[] data) {}
@@ -54,8 +60,19 @@ public class ComparerTool implements ToolModule {
         root.add(lists, BorderLayout.CENTER);
         root.add(buttons(), BorderLayout.EAST);
 
-        firstList.getSelectionModel().addListSelectionListener(e -> refreshButtons());
-        secondList.getSelectionModel().addListSelectionListener(e -> refreshButtons());
+        dim(firstList, secondList);
+        dim(secondList, firstList);
+
+        // Each list repaints when the other's selection moves, so the row that
+        // is spoken for is always the greyed one.
+        firstList.getSelectionModel().addListSelectionListener(e -> {
+            refreshButtons();
+            secondList.repaint();
+        });
+        secondList.getSelectionModel().addListSelectionListener(e -> {
+            refreshButtons();
+            firstList.repaint();
+        });
         refreshButtons();
         showCards();
     }
@@ -66,10 +83,19 @@ public class ComparerTool implements ToolModule {
 
     @Override public void init(SuiteContext ctx) {
         this.ctx = ctx;
-        ctx.registerSink("comparer", (svc, req, resp, caption) -> SwingUtilities.invokeLater(() -> {
-            if (req != null) add(req.raw());
-            if (resp != null) add(resp.raw());
-        }));
+        ctx.registerSink("comparer", new SuiteContext.MessageSink() {
+            @Override public void receive(HttpService svc, HttpMessage req,
+                                         HttpMessage resp, String caption) {
+                // One send is one item. Senders honour singleItem() and pass a
+                // single half; if both arrive anyway the request wins, so a
+                // stray caller can never load two rows from one click.
+                byte[] data = req != null ? req.raw() : resp != null ? resp.raw() : null;
+                if (data == null) return;
+                SwingUtilities.invokeLater(() -> add(data));
+            }
+
+            @Override public boolean singleItem() { return true; }
+        });
     }
 
     // ---- layout ----
@@ -89,6 +115,25 @@ public class ComparerTool implements ToolModule {
     private static void pin(TableColumn column, int width) {
         column.setMinWidth(width);
         column.setMaxWidth(width);
+    }
+
+    /**
+     * Grey, in {@code table}, whichever row {@code other} has selected. An item
+     * cannot be compared with itself, so showing it as spoken for saves the user
+     * picking it and finding the compare buttons dead.
+     */
+    private void dim(JTable table, JTable other) {
+        for (int column = 0; column < model.getColumnCount(); column++) {
+            TableCellRenderer base = table.getDefaultRenderer(model.getColumnClass(column));
+            table.getColumnModel().getColumn(column).setCellRenderer(
+                    (t, value, selected, focus, row, col) -> {
+                        Component c = base.getTableCellRendererComponent(
+                                t, value, selected, focus, row, col);
+                        c.setForeground(!selected && row == other.getSelectedRow()
+                                ? TAKEN : Color.BLACK);
+                        return c;
+                    });
+        }
     }
 
     private static JComponent placeholder() {
@@ -153,9 +198,24 @@ public class ComparerTool implements ToolModule {
     private void add(byte[] data) {
         if (data == null) return;
         items.add(new Item(nextId++, data));
-        model.fireTableRowsInserted(items.size() - 1, items.size() - 1);
+        int row = items.size() - 1;
+        model.fireTableRowsInserted(row, row);
         showCards();
+        select(row);
         refreshButtons();
+    }
+
+    /**
+     * Point a list at the item that just arrived. The first fills item 1 and
+     * every later one becomes item 2, so two sends in a row are ready to compare
+     * without the user having to click into both lists first.
+     */
+    private void select(int row) {
+        if (firstList.getSelectedRow() < 0) {
+            firstList.setRowSelectionInterval(row, row);
+        } else if (firstList.getSelectedRow() != row) {
+            secondList.setRowSelectionInterval(row, row);
+        }
     }
 
     private void paste() {

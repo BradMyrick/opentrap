@@ -15,6 +15,16 @@ public class SuiteContext {
     public interface MessageSink {
         /** Receive a message sent from another tool. */
         void receive(HttpService service, HttpMessage request, HttpMessage response, String caption);
+
+        /**
+         * True when the tool stores one blob per send rather than a
+         * request/response pair, so the sender must pick exactly one of the two
+         * and leave the other null. The comparer is the only such tool: it
+         * compares two items the user chose, so handing it both halves of one
+         * exchange loads two items from a single click and makes a pair the user
+         * never asked for.
+         */
+        default boolean singleItem() { return false; }
     }
 
     public interface AlertListener { void alertRaised(Alert a); }
@@ -76,6 +86,12 @@ public class SuiteContext {
     public void registerSink(String toolName, MessageSink sink) { sinks.put(toolName, sink); }
 
     public boolean hasSink(String toolName) { return sinks.containsKey(toolName); }
+
+    /** See {@link MessageSink#singleItem()}. False for an unknown tool. */
+    public boolean sinkTakesSingleItem(String toolName) {
+        MessageSink s = sinks.get(toolName);
+        return s != null && s.singleItem();
+    }
 
     public List<String> sinkNames() { return new ArrayList<>(sinks.keySet()); }
 
