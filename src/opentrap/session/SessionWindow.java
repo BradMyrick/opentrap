@@ -6,7 +6,7 @@ import javax.swing.JFrame;
 import java.awt.BorderLayout;
 
 /**
- * Session handling lives in Settings in Burp, not as a main tab, so here it is a
+ * Session handling lives under Settings, not as a main tab, so here it is a
  * window reached from the menu. A single instance is reused and refreshed each
  * time it is shown.
  */

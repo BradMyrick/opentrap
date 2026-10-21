@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * The Target > Issues tab: a catalogue of every issue the scan engine can
- * detect, mirroring Burp's "Issue definitions". Populated from the engine's
+ * detect, an "Issue definitions" reference. Populated from the engine's
  * active and passive scan rules, loaded lazily the first time it is shown.
  */
 public class IssueDefinitionsPanel extends JPanel {

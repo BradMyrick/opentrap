@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Live passive scanning of proxy traffic, Burp-style. When enabled, in-scope
+ * Live passive scanning of proxy traffic. When enabled, in-scope
  * requests are routed through the ZAP engine's own proxy, which passively scans
  * everything that flows through it; a background poller turns ZAP's alerts into
  * OpenTRAP issues. Routing is fail-safe: if the engine is not reachable the proxy

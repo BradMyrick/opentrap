@@ -8,7 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * The New scan wizard, laid out like Burp's: a left step rail (Scan type, Scan
+ * The New scan wizard: a left step rail (Scan type, Scan
  * details, Scan configuration, Application login, Resource pool) and a content
  * area, with Cancel / Previous / Next / Scan along the bottom. The dialog only
  * gathers configuration; the caller reads the getters and starts the scan.
@@ -173,7 +173,7 @@ public class NewScanWizard extends JDialog {
         JScrollPane sp = Ui.scroll(urls);
         sp.setPreferredSize(new Dimension(500, 260));
         body.add(sp, BorderLayout.CENTER);
-        body.add(Ui.note("Burp will begin crawling from these URLs, and by default includes "
+        body.add(Ui.note("OpenTRAP will begin crawling from these URLs, and by default includes "
                 + "everything beneath the specified URLs' folders. One URL per line."), BorderLayout.SOUTH);
         return stepPanel("URLs to scan", "Define the URLs to scan.", body);
     }
@@ -207,7 +207,7 @@ public class NewScanWizard extends JDialog {
         text.add(descArea, BorderLayout.CENTER);
         row.add(text, BorderLayout.CENTER);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
-        // Click anywhere on the row (not just the radio) to select it, like Burp.
+        // Click anywhere on the row (not just the radio) to select it.
         row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         java.awt.event.MouseAdapter pick = new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) {

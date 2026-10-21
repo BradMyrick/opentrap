@@ -37,10 +37,10 @@ public final class Theme {
     public static Color BORDER     = new Color(0xD4, 0xD4, 0xD4);
     public static Color TEXT       = new Color(0x1A, 0x1A, 0x1A);
     public static Color MUTED      = new Color(0x6B, 0x6B, 0x6B);
-    /** The accent: Burp's orange, used on primary buttons and the active tab. */
+    /** The accent: orange, used on primary buttons and the active tab. */
     public static Color ACCENT       = new Color(0xDB, 0x61, 0x2F);
     public static Color ACCENT_DARK  = new Color(0xC0, 0x4E, 0x20);
-    /** Row selection: Burp keeps a light blue selection even with the orange accent. */
+    /** Row selection: a light blue selection that stays legible against the orange accent. */
     public static Color ACCENT_LIGHT = new Color(0xCA, 0xDA, 0xF0);
     public static Color ACCENT_FAINT = new Color(0xF7, 0xF7, 0xF7);
 

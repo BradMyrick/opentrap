@@ -15,7 +15,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * WebSocket traffic, shown as a sub-tab of the Proxy tool (where Burp puts it):
+ * WebSocket traffic, shown as a sub-tab of the Proxy tool:
  * a history of every frame relayed, a viewer, a replay box to inject frames into
  * a live connection, and a frame interceptor that pauses text/binary frames so
  * they can be edited or dropped in flight.

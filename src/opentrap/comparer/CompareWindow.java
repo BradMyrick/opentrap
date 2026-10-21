@@ -14,7 +14,7 @@ import java.util.List;
 /** Two panes side by side with the differences between them coloured in. */
 final class CompareWindow extends JFrame {
 
-    // Burp's comparer key: modified = blue, deleted = red, added = green.
+    // Comparer colour key: modified = blue, deleted = red, added = green.
     private static final Color DELETED  = new Color(0xF7, 0xC9, 0xC9);
     private static final Color ADDED    = new Color(0xCB, 0xE8, 0xCB);
     private static final Color MODIFIED = new Color(0xC7, 0xDC, 0xF5);

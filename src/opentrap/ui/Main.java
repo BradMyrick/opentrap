@@ -71,7 +71,7 @@ public class Main {
 
         SwingUtilities.invokeLater(() -> {
             // Ask the user to choose a project before the main window is built,
-            // the way Burp does. Cancelling here exits the app.
+            // as a startup step. Cancelling here exits the app.
             ProjectStartupDialog startup = new ProjectStartupDialog(TITLE);
             startup.setVisible(true);
             if (!startup.proceeded()) {

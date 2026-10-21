@@ -121,7 +121,7 @@ public class DashboardTool implements ToolModule {
         ctx.addTask(liveAudit);
 
         // Live passive scanning: route in-scope proxy traffic through the engine
-        // and poll its alerts into issues. On by default, like Burp's live audit.
+        // and poll its alerts into issues. On by default.
         passiveScanner = new opentrap.engine.LivePassiveScanner(ctx);
         ctx.setLiveScanRouter(passiveScanner::routeFor);
         passiveScanner.setEnabled(true);
@@ -733,7 +733,7 @@ public class DashboardTool implements ToolModule {
     // ------------------------------------------------------------- actions
 
     private void newScan() {
-        // The Burp-style wizard: scan type, URLs, configuration, login, resource pool.
+        // The scan wizard: scan type, URLs, configuration, login, resource pool.
         NewScanWizard w = new NewScanWizard(ctx, ctx == null ? null : ctx.frame());
         w.setVisible(true);
         if (!w.started()) return;
@@ -836,7 +836,7 @@ public class DashboardTool implements ToolModule {
     /** Backs both the summary and issues tables from a shared issue list. */
     private static final class IssueTableModel extends AbstractTableModel {
         private final String[] columns;
-        private final boolean full;   // the Issues tab: the full Burp column set
+        private final boolean full;   // the Issues tab: the full column set
         private List<Issue> rows = new ArrayList<>();
         private final java.text.DateFormat fmt = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM);
 

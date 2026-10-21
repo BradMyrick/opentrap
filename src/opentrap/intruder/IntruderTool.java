@@ -48,7 +48,7 @@ public class IntruderTool implements ToolModule {
     }
 
     @Override public Tab[] tabs() {
-        // Burp's single-view layout: positions/request on the left, the Payloads
+        // Single-view layout: positions/request on the left, the Payloads
         // configuration (and Settings/Target) as panels on the right.
         JTabbedPane right = new JTabbedPane();
         right.setFont(Ui.PLAIN);

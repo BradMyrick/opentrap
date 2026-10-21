@@ -97,7 +97,7 @@ public class RepeaterTool implements ToolModule {
             respEditor = new MessageEditor(ctx, MessageEditor.RESPONSE, false);
             reqEditor.setMessage(svc, req);
 
-            // Burp's layout: send controls on the left, the target on the right.
+            // Layout: send controls on the left, the target on the right.
             cancel.setEnabled(false);
             hostField = Ui.field(svc.host(), 16);
             portField = Ui.field(String.valueOf(svc.port()), 5);
@@ -134,7 +134,7 @@ public class RepeaterTool implements ToolModule {
             JPanel respPanel = new JPanel(new BorderLayout());
             respPanel.add(bold(" response"), BorderLayout.NORTH);
             respPanel.add(respEditor, BorderLayout.CENTER);
-            // Request and response side by side, like Burp.
+            // Request and response side by side.
             JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, reqPanel, respPanel);
             split.setResizeWeight(0.5);
             split.addComponentListener(new java.awt.event.ComponentAdapter() {

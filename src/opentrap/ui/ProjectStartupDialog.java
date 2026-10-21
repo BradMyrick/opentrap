@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * The startup screen, shown before the main window, where the user chooses a
  * project: a temporary in-memory session, a new project saved to disk, or an
- * existing project to reopen. Mirrors Burp's welcome dialog.
+ * existing project to reopen. Shown as a welcome dialog when the app starts.
  */
 public final class ProjectStartupDialog extends JDialog {
 

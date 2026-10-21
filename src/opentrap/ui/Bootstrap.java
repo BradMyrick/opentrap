@@ -9,7 +9,7 @@ public final class Bootstrap {
     private Bootstrap() {}
 
     public static void registerTools(SuiteContext ctx, SuiteFrame frame, Path home) throws Exception {
-        // Top-level tabs correspond to Burp's ToolType tools. WebSockets lives
+        // Top-level tabs, one per tool. WebSockets lives
         // under Proxy; session handling is a window from the menu; CSRF PoC and
         // content discovery are right-click engagement tools (registered below).
         frame.register(new opentrap.dashboard.DashboardTool());
@@ -29,7 +29,7 @@ public final class Bootstrap {
     }
 
     /**
-     * Right-click actions that open their own window (Burp's engagement tools),
+     * Right-click actions that open their own window (engagement tools),
      * plus the session-macro recorder, all surfaced through the "send to ..."
      * context menu rather than as main tabs.
      */

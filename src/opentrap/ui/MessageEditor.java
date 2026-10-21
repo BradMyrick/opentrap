@@ -16,7 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * The shared request/response viewer and editor, laid out like Burp's: a
+ * The shared request/response viewer and editor: a
  * Pretty (syntax-highlighted) / Raw / Hex (+ Render) tab set, an Inspector panel
  * docked on the right with collapsible parameter and header sections, and a
  * search bar along the bottom.
@@ -32,7 +32,7 @@ public class MessageEditor extends JPanel {
 
     public interface ActionProvider { void contribute(JPopupMenu menu); }
 
-    // Syntax colours sampled from Burp.
+    // Syntax colours for request and response highlighting.
     private static final Color C_HEADER_NAME = new Color(0x33, 0x33, 0x8D);
     private static final Color C_STARTLINE   = new Color(0x8A, 0x1F, 0x1F);
     private static final Color C_STRING      = new Color(0x1A, 0x7F, 0x37);
@@ -99,7 +99,7 @@ public class MessageEditor extends JPanel {
 
         add(editorSide, BorderLayout.CENTER);
         // One Inspector per request/response pair, on the far-right (response)
-        // editor, as in Burp. Request-only editors (the left pane) show no strip.
+        // editor. Request-only editors (the left pane) show no strip.
         if ((flags & RESPONSE) != 0) add(buildRightDock(), BorderLayout.EAST);
         add(buildFooter(), BorderLayout.SOUTH);
 
@@ -486,7 +486,7 @@ public class MessageEditor extends JPanel {
         void rebuild() {
             stack.removeAll();
             // One inspector for the pair: request sections (from the shown request
-            // or its related request) then response sections, exactly as Burp does.
+            // or its related request) then response sections.
             HttpMessage req = message.isRequest() ? message : relatedRequest;
             HttpMessage resp = message.isRequest() ? null : message;
             if (req != null) {
@@ -518,7 +518,7 @@ public class MessageEditor extends JPanel {
 
         private void addSection(String titleText, List<String[]> data) {
             final JComponent body = buildTable(data);
-            body.setVisible(false); // collapsed by default, like Burp
+            body.setVisible(false); // collapsed by default
 
             JLabel chevron = new JLabel("▾");
             chevron.setForeground(Theme.MUTED);
@@ -554,7 +554,7 @@ public class MessageEditor extends JPanel {
             stack.add(body);
         }
 
-        /** A small rounded grey count badge, like Burp's. */
+        /** A small rounded grey count badge. */
         private JComponent countPill(int n) {
             JLabel l = new JLabel(String.valueOf(n)) {
                 @Override protected void paintComponent(Graphics g) {
@@ -628,13 +628,13 @@ public class MessageEditor extends JPanel {
         return shown.isRequest();
     }
 
-    /** Build the right-click action menu, laid out like Burp's. */
+    /** Build the right-click action menu. */
     public JPopupMenu buildMenu() {
         JPopupMenu menu = new JPopupMenu();
         boolean haveRequest = (flags & REQUEST) != 0 || relatedRequest != null;
         boolean haveMessage = message != null && message.raw().length > 0;
 
-        // "Send to <tool>" for the standard tools (shortcuts where Burp has them).
+        // "Send to <tool>" for the standard tools, with keyboard shortcuts.
         boolean anySend = false;
         for (String tool : ctx.sinkNames()) {
             if (Engagement.isEngagement(tool)) continue; // engagement tools go in their submenu

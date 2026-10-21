@@ -327,7 +327,7 @@ public class ProxyTool implements ToolModule {
             logoos.addActionListener(e -> server.logOutOfScope = logoos.isSelected());
             page.section("misc", http10, unpack, logoos);
 
-            // Upstream proxy chaining lives in settings (Burp: Settings > Network).
+            // Upstream proxy chaining lives in settings, under Network.
             page.addSection(new UpstreamProxyPanel(ctx));
 
             add(page, BorderLayout.CENTER);

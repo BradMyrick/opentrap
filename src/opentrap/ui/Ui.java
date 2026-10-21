@@ -180,7 +180,7 @@ public final class Ui {
     }
 
     /**
-     * A neat column of equal-width, equal-height buttons (Burp style), hugging
+     * A neat column of equal-width, equal-height buttons, hugging
      * the top. Use this for any vertical group of buttons so they line up instead
      * of each being sized to its own text.
      */
