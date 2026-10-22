@@ -258,11 +258,11 @@ OpenTRAP is free and open source software. If you find it useful, consider
 supporting the organisations that make free and open source software possible.
 
 <table>
-<tr><td><img src="docs/images/orgs/fsf.svg" width="36" alt=""></td><td><a href="https://www.fsf.org/"><b>Free Software Foundation</b></a> - steward of the GNU Project and the GPL family of licences</td></tr>
-<tr><td><img src="docs/images/orgs/osi.svg" width="36" alt=""></td><td><a href="https://opensource.org/"><b>Open Source Initiative</b></a> - maintains the Open Source Definition and approves open source licences</td></tr>
-<tr><td><img src="docs/images/orgs/sfc.svg" width="36" alt=""></td><td><a href="https://sfconservancy.org/"><b>Software Freedom Conservancy</b></a> - legal and fiscal home for free software projects, and the main body enforcing the GPL</td></tr>
-<tr><td><img src="docs/images/orgs/fsfe.svg" width="36" alt=""></td><td><a href="https://fsfe.org/"><b>Free Software Foundation Europe</b></a> - policy and advocacy for software freedom in Europe</td></tr>
-<tr><td><img src="docs/images/orgs/eff.svg" width="36" alt=""></td><td><a href="https://www.eff.org/"><b>Electronic Frontier Foundation</b></a> - digital rights, including software freedom, DRM and right to repair</td></tr>
+<tr><td width="160" align="center"><img src="docs/images/orgs/fsf.png" height="30" alt="FSF"></td><td><a href="https://www.fsf.org/"><b>Free Software Foundation</b></a> - steward of the GNU Project and the GPL family of licences</td></tr>
+<tr><td width="160" align="center"><img src="docs/images/orgs/osi.svg" height="34" alt="OSI"></td><td><a href="https://opensource.org/"><b>Open Source Initiative</b></a> - maintains the Open Source Definition and approves open source licences</td></tr>
+<tr><td width="160" align="center"><img src="docs/images/orgs/sfc.svg" height="38" alt="Software Freedom Conservancy"></td><td><a href="https://sfconservancy.org/"><b>Software Freedom Conservancy</b></a> - legal and fiscal home for free software projects, and the main body enforcing the GPL</td></tr>
+<tr><td width="160" align="center"><img src="docs/images/orgs/fsfe.svg" height="36" alt="FSFE"></td><td><a href="https://fsfe.org/"><b>Free Software Foundation Europe</b></a> - policy and advocacy for software freedom in Europe</td></tr>
+<tr><td width="160" align="center"><img src="docs/images/orgs/eff.svg" height="30" alt="EFF"></td><td><a href="https://www.eff.org/"><b>Electronic Frontier Foundation</b></a> - digital rights, including software freedom, DRM and right to repair</td></tr>
 </table>
 
 ## Licence

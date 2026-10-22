@@ -83,10 +83,10 @@ title: OpenTRAP
     <p>OpenTRAP is free and open source software. If you find it useful, consider supporting the organisations that make free and open source software possible.</p>
   </div>
   <ul class="orgs">
-    <li><img src="images/orgs/fsf.svg" alt=""><div><a href="https://www.fsf.org/"><b>Free Software Foundation</b></a><div class="d">Steward of the GNU Project and the GPL family of licences.</div></div></li>
-    <li><img src="images/orgs/osi.svg" alt=""><div><a href="https://opensource.org/"><b>Open Source Initiative</b></a><div class="d">Maintains the Open Source Definition and approves open source licences.</div></div></li>
-    <li><img src="images/orgs/sfc.svg" alt=""><div><a href="https://sfconservancy.org/"><b>Software Freedom Conservancy</b></a><div class="d">Legal and fiscal home for free software projects, and the main body enforcing the GPL.</div></div></li>
-    <li><img src="images/orgs/fsfe.svg" alt=""><div><a href="https://fsfe.org/"><b>Free Software Foundation Europe</b></a><div class="d">Policy and advocacy for software freedom in Europe.</div></div></li>
-    <li><img src="images/orgs/eff.svg" alt=""><div><a href="https://www.eff.org/"><b>Electronic Frontier Foundation</b></a><div class="d">Digital rights, including software freedom, DRM and right to repair.</div></div></li>
+    <li><span class="logo"><img src="images/orgs/fsf.png" alt="FSF"></span><div><a href="https://www.fsf.org/"><b>Free Software Foundation</b></a><div class="d">Steward of the GNU Project and the GPL family of licences.</div></div></li>
+    <li><span class="logo"><img src="images/orgs/osi.svg" alt="OSI"></span><div><a href="https://opensource.org/"><b>Open Source Initiative</b></a><div class="d">Maintains the Open Source Definition and approves open source licences.</div></div></li>
+    <li><span class="logo"><img src="images/orgs/sfc.svg" alt="Software Freedom Conservancy"></span><div><a href="https://sfconservancy.org/"><b>Software Freedom Conservancy</b></a><div class="d">Legal and fiscal home for free software projects, and the main body enforcing the GPL.</div></div></li>
+    <li><span class="logo"><img src="images/orgs/fsfe.svg" alt="FSFE"></span><div><a href="https://fsfe.org/"><b>Free Software Foundation Europe</b></a><div class="d">Policy and advocacy for software freedom in Europe.</div></div></li>
+    <li><span class="logo"><img src="images/orgs/eff.svg" alt="EFF"></span><div><a href="https://www.eff.org/"><b>Electronic Frontier Foundation</b></a><div class="d">Digital rights, including software freedom, DRM and right to repair.</div></div></li>
   </ul>
 </div></section>

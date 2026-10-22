@@ -31,6 +31,20 @@ than packed into the jar:
 - **Chromium**, the embedded testing browser, BSD-licensed open-source build,
   fetched by `fetch-browser.sh`.
 
+# Organisation logos
+
+The logos in the "Supporting software freedom" section are each organisation's
+own mark, shown to credit and link to them. Trademarks remain the property of
+their respective owners.
+
+- **Electronic Frontier Foundation**, **Software Freedom Conservancy** and the
+  **Free Software Foundation** logos are each organisation's own, from their
+  websites.
+- The **Open Source Initiative** keyhole is from Wikimedia Commons, licensed
+  CC BY 2.5.
+- The **Free Software Foundation Europe** logo is from Wikimedia Commons, by
+  FSFE, licensed CC BY-SA 3.0.
+
 # Contributors
 
 OpenTRAP is built by its community, and every contribution is credited. The
