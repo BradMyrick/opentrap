@@ -16,6 +16,9 @@ public final class ProjectStartupDialog extends JDialog {
 
     public enum Mode { TEMPORARY, NEW, OPEN }
 
+    /** Fixed width of the "Name:" / "File:" label column so every field aligns. */
+    private static final int LABEL_W = 56;
+
     private final JRadioButton temporary = new JRadioButton("Temporary project in memory", true);
     private final JRadioButton newOnDisk = new JRadioButton("New project on disk");
     private final JRadioButton openExisting = new JRadioButton("Open existing project");
@@ -32,6 +35,7 @@ public final class ProjectStartupDialog extends JDialog {
     public ProjectStartupDialog(String title) {
         super((Frame) null, title, true);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setIconImages(AppIcon.images());
 
         ButtonGroup g = new ButtonGroup();
         g.add(temporary); g.add(newOnDisk); g.add(openExisting);
@@ -39,94 +43,184 @@ public final class ProjectStartupDialog extends JDialog {
             r.setFont(Ui.BOLD); r.setOpaque(false); r.setFocusable(false);
         }
 
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        // A two-column grid: radio labels in a left column, their inputs in an
+        // aligned right column, with a thin separator between each section.
+        JPanel body = new JPanel(new GridBagLayout());
         body.setBackground(Theme.BG);
-        body.setBorder(Ui.pad(18, 22, 12, 22));
+        body.setBorder(Ui.pad(14, 20, 10, 20));
+        int y = 0;
 
-        body.add(header());
-        body.add(Box.createVerticalStrut(16));
-        body.add(left(temporary));
-        body.add(Box.createVerticalStrut(14));
-        body.add(left(newOnDisk));
-        body.add(left(indent(Ui.form("Name:", newName, "File:", fileRow(newFile)))));
-        body.add(Box.createVerticalStrut(14));
-        body.add(left(openExisting));
-        body.add(left(indent(openSection())));
-
-        JScrollPane bodyScroll = new JScrollPane(body,
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        bodyScroll.setBorder(BorderFactory.createEmptyBorder());
-        bodyScroll.getVerticalScrollBar().setUnitIncrement(16);
+        addSpan(body, header(), y++);
+        addSeparator(body, y++);
+        addRow(body, temporary, null, y++);
+        addSeparator(body, y++);
+        addRow(body, newOnDisk, newFields(), y++);
+        addSeparator(body, y++);
+        addRow(body, openExisting, openFields(), y++);
 
         setLayout(new BorderLayout());
-        add(bodyScroll, BorderLayout.CENTER);
+        add(body, BorderLayout.CENTER);
         add(buttons(), BorderLayout.SOUTH);
+        // Open at the form's natural size so the whole thing is visible at once,
+        // with no scroll bar. The dialog stays resizable if the user wants room.
         pack();
-        setSize(Math.max(760, getWidth()), Math.min(720, getHeight()));
+        setSize(Math.max(780, getWidth()), getHeight());
         setLocationRelativeTo(null);
+
+        // pack() runs before the window manager adds its title bar, so on many
+        // Linux desktops the decoration insets are still zero and the window
+        // opens a title-bar's-worth too short, clipping the bottom controls.
+        // Once the window is actually shown the real insets are known, so grow
+        // it then to guarantee the whole form fits.
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            private boolean fixed;
+            @Override public void windowOpened(java.awt.event.WindowEvent e) {
+                if (fixed) return;
+                fixed = true;
+                SwingUtilities.invokeLater(() -> {
+                    Dimension pref = getContentPane().getPreferredSize();
+                    Insets in = getInsets();
+                    int top = in.top > 0 ? in.top : 34;
+                    int wantW = Math.max(780, pref.width + in.left + in.right);
+                    int wantH = pref.height + top + in.bottom + 6;
+                    if (getWidth() < wantW || getHeight() < wantH) {
+                        setSize(Math.max(getWidth(), wantW), Math.max(getHeight(), wantH));
+                        setLocationRelativeTo(null);
+                    }
+                });
+            }
+        });
     }
+
+    // ---- grid helpers ----
+
+    /** A section row: the radio label at the top of the left column, inputs on the right. */
+    private void addRow(JPanel grid, JComponent label, JComponent fields, int y) {
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0; c.gridy = y; c.anchor = GridBagConstraints.NORTHWEST;
+        c.insets = new Insets(8, 0, 8, 20);
+        grid.add(label, c);
+        if (fields != null) {
+            c.gridx = 1; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL;
+            c.insets = new Insets(8, 0, 8, 0);
+            grid.add(fields, c);
+        }
+    }
+
+    private void addSpan(JPanel grid, JComponent comp, int y) {
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0; c.gridy = y; c.gridwidth = 2; c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL; c.insets = new Insets(0, 0, 4, 0);
+        grid.add(comp, c);
+    }
+
+    private void addSeparator(JPanel grid, int y) {
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0; c.gridy = y; c.gridwidth = 2; c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL; c.insets = new Insets(2, 0, 2, 0);
+        JSeparator s = new JSeparator();
+        s.setForeground(Ui.GRID);
+        grid.add(s, c);
+    }
+
+    /** A labelled input row with a fixed-width right-aligned label so fields align. */
+    private JComponent formRow(String label, JComponent field) {
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        JLabel l = new JLabel(label, SwingConstants.RIGHT);
+        l.setFont(Ui.PLAIN);
+        l.setPreferredSize(new Dimension(LABEL_W, l.getPreferredSize().height));
+        row.add(l, BorderLayout.WEST);
+        row.add(field, BorderLayout.CENTER);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+        return row;
+    }
+
+    // ---- sections ----
 
     private JComponent header() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
+        JPanel leftSide = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        leftSide.setOpaque(false);
+        leftSide.add(helpGlyph());
         JLabel welcome = new JLabel("Welcome to OpenTRAP. Use the options below to create or open a project.");
         welcome.setFont(Ui.PLAIN);
-        p.add(welcome, BorderLayout.WEST);
+        leftSide.add(welcome);
+        p.add(leftSide, BorderLayout.WEST);
         JLabel logo = new JLabel("OpenTRAP", AppIcon.icon(32), SwingConstants.RIGHT);
         logo.setFont(Ui.HEADING.deriveFont(18f));
         logo.setForeground(Theme.ACCENT);
         logo.setIconTextGap(8);
         p.add(logo, BorderLayout.EAST);
-        p.setAlignmentX(Component.LEFT_ALIGNMENT);
         return p;
     }
 
-    private JComponent openSection() {
+    private JComponent newFields() {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setOpaque(false);
+        p.add(formRow("Name:", newName));
+        p.add(Box.createVerticalStrut(6));
+        p.add(formRow("File:", fileRow(newFile)));
+        return p;
+    }
+
+    private JComponent openFields() {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setOpaque(false);
 
         // Recent-projects table: Name, File, Last Accessed. Clicking a row fills
-        // the File field below and selects the "Open existing project" option.
-        String[] cols = {"Name", "File", "Last Accessed"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
-        };
-        SimpleDateFormat fmt = new SimpleDateFormat("MMM d, yyyy");
-        for (RecentProjects.Entry e : recents) {
-            model.addRow(new Object[]{e.name(), e.file().getAbsolutePath(), fmt.format(e.lastAccessed())});
-        }
-        recentsTable.setModel(model);
-        recentsTable.setFont(Ui.PLAIN);
-        recentsTable.getTableHeader().setReorderingAllowed(false);
-        recentsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        recentsTable.getColumnModel().getColumn(0).setPreferredWidth(140);
-        recentsTable.getColumnModel().getColumn(1).setPreferredWidth(360);
-        recentsTable.getColumnModel().getColumn(2).setPreferredWidth(120);
-        recentsTable.getSelectionModel().addListSelectionListener(ev -> {
-            if (ev.getValueIsAdjusting()) return;
-            int row = recentsTable.getSelectedRow();
-            if (row >= 0) {
-                openFile.setText((String) model.getValueAt(row, 1));
-                openExisting.setSelected(true);
+        // the File field and selects this option. Shown only when there are
+        // recents, so first launch stays compact.
+        if (!recents.isEmpty()) {
+            String[] cols = {"Name", "File", "Last Accessed"};
+            DefaultTableModel model = new DefaultTableModel(cols, 0) {
+                @Override public boolean isCellEditable(int r, int c) { return false; }
+            };
+            SimpleDateFormat fmt = new SimpleDateFormat("MMM d, yyyy");
+            for (RecentProjects.Entry e : recents) {
+                model.addRow(new Object[]{e.name(), e.file().getAbsolutePath(), fmt.format(e.lastAccessed())});
             }
-        });
-        JScrollPane sp = new JScrollPane(recentsTable);
-        sp.setPreferredSize(new Dimension(640, 150));
-        sp.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(sp);
-        p.add(Box.createVerticalStrut(6));
-        p.add(left(Ui.form("File:", fileRow(openFile))));
+            recentsTable.setModel(model);
+            recentsTable.setFont(Ui.PLAIN);
+            recentsTable.getTableHeader().setReorderingAllowed(false);
+            recentsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            recentsTable.getColumnModel().getColumn(0).setPreferredWidth(140);
+            recentsTable.getColumnModel().getColumn(1).setPreferredWidth(360);
+            recentsTable.getColumnModel().getColumn(2).setPreferredWidth(120);
+            recentsTable.getSelectionModel().addListSelectionListener(ev -> {
+                if (ev.getValueIsAdjusting()) return;
+                int row = recentsTable.getSelectedRow();
+                if (row >= 0) {
+                    openFile.setText((String) model.getValueAt(row, 1));
+                    openExisting.setSelected(true);
+                }
+            });
+            JScrollPane sp = new JScrollPane(recentsTable);
+            sp.setPreferredSize(new Dimension(620, 150));
+            sp.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+            sp.setAlignmentX(Component.LEFT_ALIGNMENT);
+            p.add(sp);
+            p.add(Box.createVerticalStrut(8));
+        }
+        p.add(formRow("File:", fileRow(openFile)));
 
+        // Checkboxes, indented so they line up under the field, not the label.
         trust.setFont(Ui.PLAIN); trust.setOpaque(false); trust.setEnabled(false);
         pause.setFont(Ui.PLAIN); pause.setOpaque(false);
         trust.setAlignmentX(Component.LEFT_ALIGNMENT);
         pause.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(Box.createVerticalStrut(4));
-        p.add(trust);
-        p.add(pause);
+        JPanel checks = new JPanel();
+        checks.setLayout(new BoxLayout(checks, BoxLayout.Y_AXIS));
+        checks.setOpaque(false);
+        checks.setBorder(Ui.pad(6, LABEL_W + 8, 0, 0));
+        checks.setAlignmentX(Component.LEFT_ALIGNMENT);
+        checks.add(trust);
+        checks.add(pause);
+        p.add(checks);
         return p;
     }
 
@@ -140,11 +234,31 @@ public final class ProjectStartupDialog extends JDialog {
                 if (field == openFile) openExisting.setSelected(true);
             }
         });
-        JPanel row = new JPanel(new BorderLayout(6, 0));
+        JPanel row = new JPanel(new BorderLayout(8, 0));
         row.setOpaque(false);
         row.add(field, BorderLayout.CENTER);
         row.add(choose, BorderLayout.EAST);
         return row;
+    }
+
+    /** A small grey question-mark glyph, matching the welcome header. */
+    private static JComponent helpGlyph() {
+        JComponent c = new JComponent() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(Theme.MUTED);
+                g2.setStroke(new BasicStroke(1.4f));
+                g2.drawOval(2, 2, 19, 19);
+                g2.setFont(Ui.BOLD);
+                FontMetrics fm = g2.getFontMetrics();
+                int sw = fm.stringWidth("?");
+                g2.drawString("?", (24 - sw) / 2f, 2 + (19 + fm.getAscent()) / 2f - 1);
+                g2.dispose();
+            }
+        };
+        c.setPreferredSize(new Dimension(24, 24));
+        return c;
     }
 
     private JComponent buttons() {
@@ -198,14 +312,4 @@ public final class ProjectStartupDialog extends JDialog {
 
     /** Whether to open without automatically starting scanning tasks. */
     public boolean pauseTasks() { return pause.isSelected(); }
-
-    private static JComponent left(JComponent c) { c.setAlignmentX(Component.LEFT_ALIGNMENT); return c; }
-
-    private static JComponent indent(JComponent c) {
-        JPanel p = new JPanel(new BorderLayout());
-        p.setOpaque(false);
-        p.setBorder(Ui.pad(4, 26, 0, 0));
-        p.add(c, BorderLayout.CENTER);
-        return p;
-    }
 }
