@@ -18,6 +18,20 @@ title: OpenTRAP
   </div>
 </div></section>
 
+<section class="osband" id="software-freedom"><div class="wrap">
+  <div class="os-head">
+    <h2>Proudly free and open source</h2>
+    <p>OpenTRAP is free and open source software, released under the GNU AGPL v3.0 with no licence gate on anything. We stand with the organisations that make free and open source software possible - if OpenTRAP is useful to you, consider supporting them.</p>
+  </div>
+  <div class="os-logos">
+    <a href="https://www.fsf.org/" title="Free Software Foundation"><img src="images/orgs/fsf.png" alt="Free Software Foundation"></a>
+    <a href="https://opensource.org/" title="Open Source Initiative"><img src="images/orgs/osi.svg" alt="Open Source Initiative"></a>
+    <a href="https://sfconservancy.org/" title="Software Freedom Conservancy"><img src="images/orgs/sfc.svg" alt="Software Freedom Conservancy"></a>
+    <a href="https://fsfe.org/" title="Free Software Foundation Europe"><img src="images/orgs/fsfe.svg" alt="Free Software Foundation Europe"></a>
+    <a href="https://www.eff.org/" title="Electronic Frontier Foundation"><img src="images/orgs/eff.svg" alt="Electronic Frontier Foundation"></a>
+  </div>
+</div></section>
+
 <section class="band" id="features"><div class="wrap">
   <h2>Everything in one window</h2>
   <p class="lead">A proxy-first workspace with the whole toolset one click away, built around a detection engine that holds up.</p>
@@ -75,18 +89,4 @@ title: OpenTRAP
     <div class="q"><b>Which platforms does it run on?</b><span>A single self-contained Linux AppImage today, with the Java runtime and the scan engine inside the file.</span></div>
     <div class="q"><b>Is it really free?</b><span>Yes, released under the GNU AGPL v3.0, with every capability open and nothing reserved for a paid edition.</span></div>
   </div>
-</div></section>
-
-<section class="pad soft" id="software-freedom"><div class="wrap">
-  <div class="section-head">
-    <h2>Supporting software freedom</h2>
-    <p>OpenTRAP is free and open source software. If you find it useful, consider supporting the organisations that make free and open source software possible.</p>
-  </div>
-  <ul class="orgs">
-    <li><span class="logo"><img src="images/orgs/fsf.png" alt="FSF"></span><div><a href="https://www.fsf.org/"><b>Free Software Foundation</b></a><div class="d">Steward of the GNU Project and the GPL family of licences.</div></div></li>
-    <li><span class="logo"><img src="images/orgs/osi.svg" alt="OSI"></span><div><a href="https://opensource.org/"><b>Open Source Initiative</b></a><div class="d">Maintains the Open Source Definition and approves open source licences.</div></div></li>
-    <li><span class="logo"><img src="images/orgs/sfc.svg" alt="Software Freedom Conservancy"></span><div><a href="https://sfconservancy.org/"><b>Software Freedom Conservancy</b></a><div class="d">Legal and fiscal home for free software projects, and the main body enforcing the GPL.</div></div></li>
-    <li><span class="logo"><img src="images/orgs/fsfe.svg" alt="FSFE"></span><div><a href="https://fsfe.org/"><b>Free Software Foundation Europe</b></a><div class="d">Policy and advocacy for software freedom in Europe.</div></div></li>
-    <li><span class="logo"><img src="images/orgs/eff.svg" alt="EFF"></span><div><a href="https://www.eff.org/"><b>Electronic Frontier Foundation</b></a><div class="d">Digital rights, including software freedom, DRM and right to repair.</div></div></li>
-  </ul>
 </div></section>

@@ -41,6 +41,26 @@ behind a licence. If you have used Burp Suite, you will feel at home in minutes.
 
 ---
 
+## Proudly free and open source
+
+OpenTRAP is free and open source software, released under the GNU AGPL v3.0 with
+no licence gate on anything. We stand with the organisations that make free and
+open source software possible - if OpenTRAP is useful to you, consider supporting them.
+
+<p align="center">
+<a href="https://www.fsf.org/"><img src="docs/images/orgs/fsf.png" height="32" alt="Free Software Foundation"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://opensource.org/"><img src="docs/images/orgs/osi.svg" height="44" alt="Open Source Initiative"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://sfconservancy.org/"><img src="docs/images/orgs/sfc.svg" height="40" alt="Software Freedom Conservancy"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://fsfe.org/"><img src="docs/images/orgs/fsfe.svg" height="44" alt="Free Software Foundation Europe"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://www.eff.org/"><img src="docs/images/orgs/eff.svg" height="32" alt="Electronic Frontier Foundation"></a>
+</p>
+
+---
+
 ## Why we built it
 
 The most capable intercepting proxies, such as Burp Suite, are commercial and
@@ -251,19 +271,6 @@ installed: the Java runtime and the scan engine are inside the file.
 **Is it really free?**
 Yes. OpenTRAP is released under the GNU AGPL v3.0. Every capability is open, with
 nothing reserved for a paid edition.
-
-## Supporting software freedom
-
-OpenTRAP is free and open source software. If you find it useful, consider
-supporting the organisations that make free and open source software possible.
-
-<table>
-<tr><td width="160" align="center"><img src="docs/images/orgs/fsf.png" height="30" alt="FSF"></td><td><a href="https://www.fsf.org/"><b>Free Software Foundation</b></a> - steward of the GNU Project and the GPL family of licences</td></tr>
-<tr><td width="160" align="center"><img src="docs/images/orgs/osi.svg" height="34" alt="OSI"></td><td><a href="https://opensource.org/"><b>Open Source Initiative</b></a> - maintains the Open Source Definition and approves open source licences</td></tr>
-<tr><td width="160" align="center"><img src="docs/images/orgs/sfc.svg" height="38" alt="Software Freedom Conservancy"></td><td><a href="https://sfconservancy.org/"><b>Software Freedom Conservancy</b></a> - legal and fiscal home for free software projects, and the main body enforcing the GPL</td></tr>
-<tr><td width="160" align="center"><img src="docs/images/orgs/fsfe.svg" height="36" alt="FSFE"></td><td><a href="https://fsfe.org/"><b>Free Software Foundation Europe</b></a> - policy and advocacy for software freedom in Europe</td></tr>
-<tr><td width="160" align="center"><img src="docs/images/orgs/eff.svg" height="30" alt="EFF"></td><td><a href="https://www.eff.org/"><b>Electronic Frontier Foundation</b></a> - digital rights, including software freedom, DRM and right to repair</td></tr>
-</table>
 
 ## Licence
 
