@@ -149,24 +149,30 @@ proven OWASP ZAP engine, so what OpenTRAP reports holds up.
 - **Everything in one window** - repeater, intruder, sequencer, decoder, comparer, collaborator and a full logger.
 - **One self-contained file** - every release is a single Linux AppImage with its own runtime and the scan engine built in; download it and run it.
 - **Open and hackable** - AGPL v3.0: read it, change it, extend it, with no gate on its core capabilities.
+- **Guided from the start** - open or create a project at launch, then drive crawl-and-audit scans through a step-by-step wizard.
 - **Built to be improved** - shaped by the people who use it, with every contribution credited.
 
 ## The toolset
 
 | Tool | What it does |
 |------|--------------|
-| **Dashboard** | Live tasks, issues and event log; start a scan |
+| **Dashboard** | Live tasks, issues and event log; start a scan from the guided wizard |
 | **Target** | Site map tree and the suite-wide scope that governs every tool |
-| **Proxy** | Intercept, HTTP history, per-host certificate authority |
-| **Passive** | Configure the scan engine's rules (enable, disable, threshold) |
+| **Proxy** | Intercept, HTTP history, WebSocket capture, per-host certificate authority |
+| **Scanner** | Configure the engine's active and passive rules (enable, disable, threshold) |
 | **Logger** | A complete record of every request OpenTRAP and the engine make |
 | **Intruder** | Four attack types with payload sets and processing |
 | **Repeater** | Edit and reissue a request, one numbered tab at a time |
 | **Collaborator** | Out-of-band interaction capture for blind vulnerabilities |
+| **Organizer** | Stash and annotate interesting requests for later |
 | **Sequencer** | Token randomness analysis with entropy tests |
 | **Decoder / Comparer** | Chained encode/decode/hash transforms, and item diffs |
 
 Right-click any request or response to send it between tools.
+
+Open or create a project when OpenTRAP starts, kick off a crawl-and-audit scan
+through a step-by-step wizard, and let in-scope proxy traffic be passively
+audited as you browse.
 
 ## Get started
 
@@ -245,6 +251,19 @@ installed: the Java runtime and the scan engine are inside the file.
 **Is it really free?**
 Yes. OpenTRAP is released under the GNU AGPL v3.0. Every capability is open, with
 nothing reserved for a paid edition.
+
+## Supporting software freedom
+
+OpenTRAP is free and open source software. If you find it useful, consider
+supporting the organisations that make free and open source software possible.
+
+<table>
+<tr><td><img src="docs/images/orgs/fsf.svg" width="36" alt=""></td><td><a href="https://www.fsf.org/"><b>Free Software Foundation</b></a> - steward of the GNU Project and the GPL family of licences</td></tr>
+<tr><td><img src="docs/images/orgs/osi.svg" width="36" alt=""></td><td><a href="https://opensource.org/"><b>Open Source Initiative</b></a> - maintains the Open Source Definition and approves open source licences</td></tr>
+<tr><td><img src="docs/images/orgs/sfc.svg" width="36" alt=""></td><td><a href="https://sfconservancy.org/"><b>Software Freedom Conservancy</b></a> - legal and fiscal home for free software projects, and the main body enforcing the GPL</td></tr>
+<tr><td><img src="docs/images/orgs/fsfe.svg" width="36" alt=""></td><td><a href="https://fsfe.org/"><b>Free Software Foundation Europe</b></a> - policy and advocacy for software freedom in Europe</td></tr>
+<tr><td><img src="docs/images/orgs/eff.svg" width="36" alt=""></td><td><a href="https://www.eff.org/"><b>Electronic Frontier Foundation</b></a> - digital rights, including software freedom, DRM and right to repair</td></tr>
+</table>
 
 ## Licence
 

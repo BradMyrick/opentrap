@@ -30,3 +30,17 @@ than packed into the jar:
   `fetch-zap.sh`. Apache 2.0 is compatible with OpenTRAP's AGPL-3.0 licence.
 - **Chromium**, the embedded testing browser, BSD-licensed open-source build,
   fetched by `fetch-browser.sh`.
+
+# Contributors
+
+OpenTRAP is built by its community, and every contribution is credited. The
+people who have shaped it so far:
+
+- **scottsturrock** - project maintainer
+- **conformance** - proxy defaults and the fork and pull request workflow
+- **exploit-development** - the modern themed interface and UI refresh
+- **codesec-ops** - the project startup screen, new scan wizard, live passive
+  scanning, message-editor inspector, WebSocket capture, and the project site
+
+The full list, with what each person worked on, is in
+[CONTRIBUTORS.md](CONTRIBUTORS.md).

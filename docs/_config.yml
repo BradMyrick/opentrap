@@ -1,9 +1,11 @@
 # GitHub Pages configuration.
 #
 # Enable Pages in the repo settings with "Deploy from a branch", source
-# "main" / "/docs". This renders docs/index.md as a themed landing page using
-# the content below, so there is one source of truth and nothing to keep in
-# sync by hand. The README stays the developer-facing document in the repo root.
+# "main" / "/docs". The landing page is docs/index.md, rendered through the
+# custom layout in docs/_layouts/default.html, so the whole look lives in the
+# repo with nothing to keep in sync by hand. The README stays the
+# developer-facing document in the repo root.
 title: OpenTRAP
 description: A free, open-source alternative to Burp Suite - an intercepting proxy and web application security testing suite with Repeater, Intruder and Collaborator, powered by the OWASP ZAP engine.
-theme: jekyll-theme-cayman
+url: https://opentrap.github.io
+baseurl: /opentrap
