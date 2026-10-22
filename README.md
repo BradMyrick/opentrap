@@ -11,24 +11,27 @@ already know, on top of the trusted OWASP ZAP detection engine, with nothing loc
 behind a licence. If you have used Burp Suite, you will feel at home in minutes.</p>
 
 <p>
-<img src="https://img.shields.io/badge/licence-AGPL--3.0-e5484d" alt="Licence">
-<img src="https://img.shields.io/badge/Java-17%2B-5b8def" alt="Java">
-<img src="https://img.shields.io/badge/platform-Linux-9aa7b4" alt="Platform">
-<img src="https://img.shields.io/badge/status-active%20development-3fb950" alt="Status">
-<img src="https://img.shields.io/badge/contributions-welcome-ff6a5f" alt="Contributions welcome">
-</p>
-
-<p>
-<a href="https://github.com/opentrap/opentrap"><img src="https://img.shields.io/github/stars/opentrap/opentrap?style=for-the-badge&logo=github&logoColor=white&label=Star%20on%20GitHub&color=e5484d" alt="Star on GitHub"></a>
-<a href="https://twitter.com/intent/tweet?text=OpenTRAP%2C%20an%20open-source%20web%20security%20testing%20suite&url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/Share-X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Share on X"></a>
-<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/Share-LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Share on LinkedIn"></a>
-<a href="https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&title=OpenTRAP"><img src="https://img.shields.io/badge/Share-Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Share on Reddit"></a>
-<a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP"><img src="https://img.shields.io/badge/Share-Hacker%20News-FF6600?style=for-the-badge&logo=ycombinator&logoColor=white" alt="Share on Hacker News"></a>
+<img src="https://img.shields.io/badge/licence-AGPL--3.0-e5484d?style=flat-square" alt="Licence">
+<img src="https://img.shields.io/badge/Java-17%2B-5b8def?style=flat-square" alt="Java">
+<img src="https://img.shields.io/badge/platform-Linux-9aa7b4?style=flat-square&logo=linux&logoColor=white" alt="Platform">
+<img src="https://img.shields.io/badge/status-active%20development-3fb950?style=flat-square" alt="Status">
+<img src="https://img.shields.io/badge/contributions-welcome-ff6a5f?style=flat-square" alt="Contributions welcome">
 </p>
 
 <p>
 <a href="https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage"><img src="https://img.shields.io/badge/Download-AppImage%20for%20Linux-3fb950?style=for-the-badge&logo=linux&logoColor=white" alt="Download the latest AppImage for Linux"></a>
-<a href="https://github.com/opentrap/opentrap/releases/latest"><img src="https://img.shields.io/badge/All%20releases-9aa7b4?style=for-the-badge&logo=github&logoColor=white" alt="All releases"></a>
+&nbsp;
+<a href="https://github.com/opentrap/opentrap/stargazers"><img src="https://img.shields.io/github/stars/opentrap/opentrap?style=for-the-badge&logo=github&logoColor=white&label=Star&color=e5484d" alt="Star on GitHub"></a>
+&nbsp;
+<a href="https://github.com/opentrap/opentrap/releases/latest"><img src="https://img.shields.io/badge/All%20releases-30363d?style=for-the-badge&logo=github&logoColor=white" alt="All releases"></a>
+</p>
+
+<p>
+<sub><b>Share</b></sub>&nbsp;&nbsp;
+<a href="https://twitter.com/intent/tweet?text=OpenTRAP%2C%20an%20open-source%20web%20security%20testing%20suite&url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/X-000000?style=flat-square&logo=x&logoColor=white" alt="Share on X"></a>
+<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=linkedin&logoColor=white" alt="Share on LinkedIn"></a>
+<a href="https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&title=OpenTRAP"><img src="https://img.shields.io/badge/Reddit-FF4500?style=flat-square&logo=reddit&logoColor=white" alt="Share on Reddit"></a>
+<a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP"><img src="https://img.shields.io/badge/Hacker%20News-FF6600?style=flat-square&logo=ycombinator&logoColor=white" alt="Share on Hacker News"></a>
 </p>
 
 <br>
