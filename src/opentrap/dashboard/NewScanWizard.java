@@ -41,9 +41,8 @@ public class NewScanWizard extends JDialog {
     private final JSpinner threads = new JSpinner(new SpinnerNumberModel(10, 1, 50, 1));
 
     // Custom tier controls, seeded from "Balanced" as a sensible starting point.
-    // Shown only while Custom is the selected tier; read by config() to build a
-    // ScanConfig straight from the engine knobs the user set.
-    private JComponent customBox;
+    // Read by config() to build a ScanConfig straight from the engine knobs the
+    // user set in the Custom configuration dialog.
     private final JComboBox<String> cStrength =
             new JComboBox<>(new String[]{"LOW", "MEDIUM", "HIGH", "INSANE"});
     private final JComboBox<String> cThreshold =
@@ -85,6 +84,14 @@ public class NewScanWizard extends JDialog {
 
     public NewScanWizard(SuiteContext ctx, Frame owner) {
         super(owner, "New scan", true);
+
+        // Seed the Custom controls from a thorough, Balanced-like starting point,
+        // and keep the AJAX budget inputs in step with the AJAX checkbox.
+        cStrength.setSelectedItem("HIGH");
+        cThreshold.setSelectedItem("MEDIUM");
+        cStrength.setFont(Ui.PLAIN);
+        cThreshold.setFont(Ui.PLAIN);
+        cAjax.addActionListener(e -> syncAjaxEnabled());
 
         content.add(buildScanType(), STEPS[0]);
         content.add(buildScanDetails(ctx), STEPS[1]);
@@ -360,12 +367,6 @@ public class NewScanWizard extends JDialog {
         listWrap.add(list, BorderLayout.NORTH);
         body.add(listWrap, BorderLayout.NORTH);
 
-        // The Custom knob panel sits below the tier list and appears only while
-        // Custom is selected.
-        customBox = Ui.scroll(buildCustomPanel());
-        customBox.setVisible(false);
-        body.add(customBox, BorderLayout.CENTER);
-
         // Save / Load named configurations is not implemented, so disabled.
         JButton save = Ui.button("Save");
         JButton load = Ui.button("Load");
@@ -417,12 +418,21 @@ public class NewScanWizard extends JDialog {
 
     private void selectConfig(String name) {
         if (name == null) return;
-        configPreset = name;
-        for (var e : configCards.entrySet()) {
-            boolean on = e.getKey().equals(name);
-            e.getValue().setBackground(on ? Ui.SELECTION : Theme.BG);
+        // Custom opens its own configuration screen; only adopt it if the user
+        // confirms there, otherwise leave the previously chosen tier selected.
+        if ("Custom".equals(name)) {
+            if (openCustomConfig()) configPreset = "Custom";
+            highlightConfig(configPreset);
+            return;
         }
-        if (customBox != null) customBox.setVisible("Custom".equals(name));
+        configPreset = name;
+        highlightConfig(name);
+    }
+
+    private void highlightConfig(String name) {
+        for (var e : configCards.entrySet()) {
+            e.getValue().setBackground(e.getKey().equals(name) ? Ui.SELECTION : Theme.BG);
+        }
     }
 
     private JComponent buildApplicationLogin() {
@@ -453,31 +463,80 @@ public class NewScanWizard extends JDialog {
     }
 
     /**
-     * The Custom tier's editor: every engine knob a scan can set, grouped into
-     * discovery, attack, and the injection points. Seeded from "Balanced" so it
-     * starts from a sensible, thorough configuration the user then adjusts.
+     * The Custom configuration screen: a modal dialog with a left category list
+     * and a right settings pane holding every engine knob a scan can set, grouped
+     * into crawl, audit and injection points. Returns true if the user confirmed
+     * with OK; on Cancel the controls are restored to how they were on entry, so
+     * the edit is discarded. Controls are seeded from "Balanced" the first time.
      */
-    private JComponent buildCustomPanel() {
-        cStrength.setSelectedItem("HIGH");
-        cThreshold.setSelectedItem("MEDIUM");
-        cStrength.setFont(Ui.PLAIN);
-        cThreshold.setFont(Ui.PLAIN);
+    private boolean openCustomConfig() {
+        Object[] snapshot = snapshotCustom();
+        syncAjaxEnabled();
 
-        // The AJAX budget inputs follow the AJAX checkbox.
-        Runnable syncAjax = () -> {
-            boolean on = cAjax.isSelected();
-            cAjaxDuration.setEnabled(on);
-            cAjaxDepth.setEnabled(on);
-            cAjaxStates.setEnabled(on);
-        };
-        cAjax.addActionListener(e -> syncAjax.run());
-        syncAjax.run();
+        JComponent split = customConfigView();
+        final boolean[] confirmed = {false};
+        final JDialog dlg = new JDialog(this, "Custom scan configuration", true);
+        JButton cancel = Ui.button("Cancel");
+        JButton ok = Ui.button("OK");
+        cancel.addActionListener(e -> dlg.dispose());
+        ok.addActionListener(e -> { confirmed[0] = true; dlg.dispose(); });
+        ok.putClientProperty(Theme.PRIMARY, Boolean.TRUE);
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
+        bar.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Ui.GRID));
+        bar.add(cancel);
+        bar.add(ok);
 
-        JPanel col = new JPanel();
-        col.setLayout(new BoxLayout(col, BoxLayout.Y_AXIS));
-        col.setOpaque(false);
+        dlg.setLayout(new BorderLayout());
+        dlg.add(split, BorderLayout.CENTER);
+        dlg.add(bar, BorderLayout.SOUTH);
+        dlg.setSize(720, 540);
+        dlg.setLocationRelativeTo(this);
+        dlg.setVisible(true);   // modal: blocks until OK or Cancel
 
-        col.add(left(sectionLabel("Discovery")));
+        if (!confirmed[0]) restoreCustom(snapshot);
+        return confirmed[0];
+    }
+
+    /** The Custom dialog's body: a left category list and a right settings pane. */
+    JComponent customConfigView() {
+        final String[] cats = {"Crawl", "Audit", "Injection points"};
+        CardLayout rightCards = new CardLayout();
+        JPanel right = new JPanel(rightCards);
+        right.setBackground(Theme.BG);
+        right.add(stepPanel("Crawl",
+                "How much of the site the scan discovers before it audits.", crawlSection()), cats[0]);
+        right.add(stepPanel("Audit",
+                "How hard each rule probes what the crawl found.", auditSection()), cats[1]);
+        right.add(stepPanel("Injection points",
+                "Where the audit injects its payloads.", injectionSection()), cats[2]);
+
+        JList<String> nav = new JList<>(cats);
+        nav.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        nav.setFont(Ui.PLAIN);
+        nav.setFixedCellHeight(34);
+        nav.setBorder(Ui.pad(6, 4, 6, 4));
+        nav.setBackground(Theme.SURFACE);
+        nav.setSelectionBackground(Ui.SELECTION);
+        nav.setSelectionForeground(Theme.TEXT);
+        nav.setSelectedIndex(0);
+        nav.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && nav.getSelectedValue() != null) {
+                rightCards.show(right, nav.getSelectedValue());
+            }
+        });
+        JScrollPane navScroll = Ui.scroll(nav);
+        navScroll.setPreferredSize(new Dimension(176, 10));
+        navScroll.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Ui.GRID));
+
+        JPanel split = new JPanel(new BorderLayout());
+        split.setBackground(Theme.BG);
+        split.add(navScroll, BorderLayout.WEST);
+        split.add(Ui.scroll(right), BorderLayout.CENTER);
+        return split;
+    }
+
+    private JComponent crawlSection() {
+        JPanel col = column();
         col.add(left(Ui.form(
                 "Crawl depth:", compact(cCrawlDepth),
                 "Crawl time budget (min):", compact(cCrawlDuration))));
@@ -487,28 +546,80 @@ public class NewScanWizard extends JDialog {
                 "AJAX time budget (min):", compact(cAjaxDuration),
                 "AJAX depth:", compact(cAjaxDepth),
                 "AJAX states:", compact(cAjaxStates))));
-        col.add(left(Ui.note("0 means unlimited depth and states, and no time limit.")));
+        col.add(noteRow("0 means unlimited depth and states, and no time limit."));
+        return col;
+    }
 
-        col.add(Box.createVerticalStrut(10));
-        col.add(left(sectionLabel("Attack")));
+    private JComponent auditSection() {
+        JPanel col = column();
         col.add(left(Ui.form(
                 "Attack strength:", compact(cStrength),
                 "Alert threshold:", compact(cThreshold),
                 "Request delay (ms):", compact(cDelay),
                 "Active-scan cap (min):", compact(cScanDuration))));
-        col.add(left(Ui.note("Keep the active-scan cap at 0 so every test runs to completion.")));
+        col.add(noteRow("Keep the active-scan cap at 0 so every test runs to completion."));
+        return col;
+    }
 
-        col.add(Box.createVerticalStrut(10));
-        col.add(left(sectionLabel("Injection points")));
+    private JComponent injectionSection() {
+        JPanel col = column();
+        col.add(left(sectionLabel("Parameter locations")));
         col.add(left(row(vQuery, vBody, vPath, vHeaders, vCookie)));
+        col.add(Box.createVerticalStrut(10));
         col.add(left(sectionLabel("Request body types")));
         col.add(left(row(rMultipart, rXml, rJson, rGwt, rOdata)));
+        col.add(noteRow("Body types only apply when a request actually carries that content."));
+        return col;
+    }
 
-        JPanel wrap = new JPanel(new BorderLayout());
-        wrap.setOpaque(false);
-        wrap.setBorder(Ui.pad(6, 0, 0, 0));
-        wrap.add(col, BorderLayout.NORTH);
-        return wrap;
+    /** A help note that spans the settings column rather than wrapping narrowly. */
+    private static JComponent noteRow(String text) {
+        JTextArea n = Ui.note(text);
+        n.setAlignmentX(Component.LEFT_ALIGNMENT);
+        n.setBorder(Ui.pad(8, 0, 0, 0));
+        n.setMaximumSize(new Dimension(460, Integer.MAX_VALUE));
+        return n;
+    }
+
+    /** Enable the AJAX budget inputs only while the AJAX spider is ticked. */
+    private void syncAjaxEnabled() {
+        boolean on = cAjax.isSelected();
+        cAjaxDuration.setEnabled(on);
+        cAjaxDepth.setEnabled(on);
+        cAjaxStates.setEnabled(on);
+    }
+
+    private Object[] snapshotCustom() {
+        return new Object[]{
+                cStrength.getSelectedItem(), cThreshold.getSelectedItem(),
+                cCrawlDepth.getValue(), cCrawlDuration.getValue(),
+                cSubmitForms.isSelected(), cAjax.isSelected(),
+                cAjaxDuration.getValue(), cAjaxDepth.getValue(), cAjaxStates.getValue(),
+                vQuery.isSelected(), vBody.isSelected(), vPath.isSelected(), vHeaders.isSelected(), vCookie.isSelected(),
+                rMultipart.isSelected(), rXml.isSelected(), rJson.isSelected(), rGwt.isSelected(), rOdata.isSelected(),
+                cDelay.getValue(), cScanDuration.getValue()
+        };
+    }
+
+    private void restoreCustom(Object[] s) {
+        int i = 0;
+        cStrength.setSelectedItem(s[i++]); cThreshold.setSelectedItem(s[i++]);
+        cCrawlDepth.setValue(s[i++]); cCrawlDuration.setValue(s[i++]);
+        cSubmitForms.setSelected((Boolean) s[i++]); cAjax.setSelected((Boolean) s[i++]);
+        cAjaxDuration.setValue(s[i++]); cAjaxDepth.setValue(s[i++]); cAjaxStates.setValue(s[i++]);
+        vQuery.setSelected((Boolean) s[i++]); vBody.setSelected((Boolean) s[i++]); vPath.setSelected((Boolean) s[i++]);
+        vHeaders.setSelected((Boolean) s[i++]); vCookie.setSelected((Boolean) s[i++]);
+        rMultipart.setSelected((Boolean) s[i++]); rXml.setSelected((Boolean) s[i++]); rJson.setSelected((Boolean) s[i++]);
+        rGwt.setSelected((Boolean) s[i++]); rOdata.setSelected((Boolean) s[i++]);
+        cDelay.setValue(s[i++]); cScanDuration.setValue(s[i++]);
+        syncAjaxEnabled();
+    }
+
+    private static JPanel column() {
+        JPanel c = new JPanel();
+        c.setLayout(new BoxLayout(c, BoxLayout.Y_AXIS));
+        c.setOpaque(false);
+        return c;
     }
 
     /** Wrap a component flush-left for a vertical BoxLayout column. */
