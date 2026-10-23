@@ -1,11 +1,8 @@
 <div align="center">
 
-<table align="center" border="0" cellspacing="0" cellpadding="0">
-<tr>
-<td valign="middle"><img src="icon/opentrap.svg" height="60" alt="OpenTRAP logo"></td>
-<td valign="middle">&nbsp;&nbsp;<h1>OpenTRAP</h1></td>
-</tr>
-</table>
+<h1>
+<img src="icon/opentrap.svg" height="46" align="middle" alt="OpenTRAP logo">&nbsp;&nbsp;OpenTRAP
+</h1>
 
 <p><strong>Open Traffic Replay and Analysis Proxy</strong><br>
 A free and open-source alternative to Burp Suite, built on the trusted OWASP ZAP engine.</p>
@@ -204,30 +201,25 @@ audited as you browse.
 
 ## Get started
 
-Download the latest release from the [releases page](https://github.com/opentrap/opentrap/releases/latest) and run it. Nothing to install.
+Download the one file and run it. There is nothing to install: the AppImage
+carries its own Java runtime and the scan engine inside it.
 
-**One file: the AppImage.** It bundles its own Java runtime and the scan engine,
-so there is no Java to install. This link always points at the latest release: [opentrap-x86_64.appimage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)
+**[Download the latest AppImage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)** - this link always points at the newest release.
 
-Or from a terminal, fetch it:
+Linux does not let a freshly downloaded file run until you allow it, so the
+first time you need to mark it runnable. The quickest way, no terminal needed:
+
+1. Right-click the downloaded **opentrap-x86_64.appimage** and choose **Properties**.
+2. On the **Permissions** tab, tick **Allow executing file as a program**.
+3. Close, then **double-click** the file to launch OpenTRAP.
+
+Prefer the terminal? Three lines do the same:
 
 ```
 wget https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage
-```
-
-make it executable:
-
-```
 chmod +x opentrap-x86_64.appimage
-```
-
-and run it:
-
-```
 ./opentrap-x86_64.appimage
 ```
-
-You can also double-click the downloaded file in your file manager.
 
 The download is complete: the Java runtime and the scan engine are inside the
 file and set themselves up on first use. Every release is this one AppImage, so
