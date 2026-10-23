@@ -333,20 +333,44 @@ public class SequencerTool implements ToolModule {
         startDelim = Ui.field("", 16);
         endDelim   = Ui.field("", 16);
 
-        JPanel delims = Ui.vbox(
-            Ui.bold("token starts:"),
-            Ui.row(Ui.label("after expression:"), startDelim),
-            Box.createVerticalStrut(8),
-            Ui.bold("token ends:"),
-            Ui.row(Ui.label("at delimiter:"), endDelim)
-        );
-        delims.setBorder(Ui.pad(10, 0, 0, 10));
+        // Lay the two delimiter fields on one grid so the labels share a column
+        // and the fields start at the same x.
+        JPanel delims = new JPanel(new GridBagLayout());
+        delims.setOpaque(false);
+        GridBagConstraints dc = new GridBagConstraints();
+        dc.insets = new Insets(2, 0, 2, 8);
+        dc.gridx = 0; dc.gridy = 0; dc.gridwidth = 2; dc.anchor = GridBagConstraints.LINE_START;
+        delims.add(Ui.bold("token delimiters"), dc);
+        dc.gridwidth = 1;
+        dc.gridx = 0; dc.gridy = 1; dc.anchor = GridBagConstraints.LINE_END;
+        delims.add(Ui.label("token starts after:"), dc);
+        dc.gridx = 1; dc.anchor = GridBagConstraints.LINE_START;
+        delims.add(startDelim, dc);
+        dc.gridx = 0; dc.gridy = 2; dc.anchor = GridBagConstraints.LINE_END;
+        delims.add(Ui.label("token ends at:"), dc);
+        dc.gridx = 1; dc.anchor = GridBagConstraints.LINE_START;
+        delims.add(endDelim, dc);
+        // Absorb spare width on the right so the fields stay packed to the left,
+        // under the radios above, rather than centring in the panel.
+        dc.gridx = 2; dc.gridy = 0; dc.weightx = 1; dc.fill = GridBagConstraints.HORIZONTAL;
+        dc.insets = new Insets(0, 0, 0, 0);
+        delims.add(Box.createHorizontalGlue(), dc);
+        delims.setBorder(Ui.pad(14, 0, 0, 10));
+
+        // Stack the location and delimiter blocks at the top, so nothing is
+        // stretched into the empty space below (the gap the old layout showed).
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setOpaque(false);
+        loc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        delims.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(loc);
+        content.add(delims);
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
         panel.setBorder(Ui.pad(10, 10, 15, 15));
-        panel.add(loc, BorderLayout.NORTH);
-        panel.add(delims, BorderLayout.CENTER);
+        panel.add(content, BorderLayout.NORTH);
         return panel;
     }
 
