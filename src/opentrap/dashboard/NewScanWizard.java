@@ -40,6 +40,34 @@ public class NewScanWizard extends JDialog {
     private final java.util.Map<String, JPanel> configCards = new java.util.LinkedHashMap<>();
     private final JSpinner threads = new JSpinner(new SpinnerNumberModel(10, 1, 50, 1));
 
+    // Custom tier controls, seeded from "Balanced" as a sensible starting point.
+    // Shown only while Custom is the selected tier; read by config() to build a
+    // ScanConfig straight from the engine knobs the user set.
+    private JComponent customBox;
+    private final JComboBox<String> cStrength =
+            new JComboBox<>(new String[]{"LOW", "MEDIUM", "HIGH", "INSANE"});
+    private final JComboBox<String> cThreshold =
+            new JComboBox<>(new String[]{"OFF", "LOW", "MEDIUM", "HIGH"});
+    private final JSpinner cCrawlDepth = new JSpinner(new SpinnerNumberModel(10, 0, 100, 1));
+    private final JSpinner cCrawlDuration = new JSpinner(new SpinnerNumberModel(0, 0, 1440, 5));
+    private final JCheckBox cSubmitForms = Ui.check("Submit forms while crawling", true);
+    private final JCheckBox cAjax = Ui.check("AJAX spider (crawl JavaScript applications)", true);
+    private final JSpinner cAjaxDuration = new JSpinner(new SpinnerNumberModel(30, 0, 600, 5));
+    private final JSpinner cAjaxDepth = new JSpinner(new SpinnerNumberModel(10, 0, 100, 1));
+    private final JSpinner cAjaxStates = new JSpinner(new SpinnerNumberModel(0, 0, 10000, 10));
+    private final JCheckBox vQuery   = Ui.check("Query string", true);
+    private final JCheckBox vBody    = Ui.check("POST body", true);
+    private final JCheckBox vPath    = Ui.check("URL path", true);
+    private final JCheckBox vHeaders = Ui.check("Headers", true);
+    private final JCheckBox vCookie  = Ui.check("Cookies", true);
+    private final JCheckBox rMultipart = Ui.check("Multipart", true);
+    private final JCheckBox rXml       = Ui.check("XML", true);
+    private final JCheckBox rJson      = Ui.check("JSON", true);
+    private final JCheckBox rGwt       = Ui.check("GWT", true);
+    private final JCheckBox rOdata     = Ui.check("OData", true);
+    private final JSpinner cDelay = new JSpinner(new SpinnerNumberModel(0, 0, 5000, 50));
+    private final JSpinner cScanDuration = new JSpinner(new SpinnerNumberModel(0, 0, 1440, 5));
+
     private JButton prevButton, nextButton, scanButton;
     private boolean started;
 
@@ -52,11 +80,8 @@ public class NewScanWizard extends JDialog {
         {"Fast",        "Full coverage at medium strength over a wider crawl. A good first pass on most targets."},
         {"Balanced",    "Full coverage at high strength with JavaScript crawling. Thorough without running unbounded."},
         {"Deep",        "Full coverage at maximum strength over an unlimited crawl. The most comprehensive scan; time depends on the target's size."},
-        {"Custom",      "Configure every engine setting yourself. Coming soon."},
+        {"Custom",      "Set every engine knob yourself: crawl depth, AJAX budget, attack strength, threshold and injection points."},
     };
-
-    // Tiers the user cannot select yet because their configuration UI is not built.
-    private static boolean configEnabled(String name) { return !"Custom".equals(name); }
 
     public NewScanWizard(SuiteContext ctx, Frame owner) {
         super(owner, "New scan", true);
@@ -94,7 +119,31 @@ public class NewScanWizard extends JDialog {
 
     /** The real engine settings implied by the chosen configuration tier. */
     public opentrap.engine.ScanConfig config() {
-        return opentrap.engine.ScanConfig.preset(configPreset);
+        if (!"Custom".equals(configPreset)) return opentrap.engine.ScanConfig.preset(configPreset);
+        int inject = (vQuery.isSelected()   ? opentrap.engine.ScanConfig.INJECT_QUERY   : 0)
+                   | (vBody.isSelected()    ? opentrap.engine.ScanConfig.INJECT_BODY    : 0)
+                   | (vPath.isSelected()    ? opentrap.engine.ScanConfig.INJECT_PATH    : 0)
+                   | (vHeaders.isSelected() ? opentrap.engine.ScanConfig.INJECT_HEADERS : 0)
+                   | (vCookie.isSelected()  ? opentrap.engine.ScanConfig.INJECT_COOKIE  : 0);
+        int rpc = (rMultipart.isSelected() ? opentrap.engine.ScanConfig.RPC_MULTIPART : 0)
+                | (rXml.isSelected()       ? opentrap.engine.ScanConfig.RPC_XML       : 0)
+                | (rJson.isSelected()      ? opentrap.engine.ScanConfig.RPC_JSON      : 0)
+                | (rGwt.isSelected()       ? opentrap.engine.ScanConfig.RPC_GWT       : 0)
+                | (rOdata.isSelected()     ? opentrap.engine.ScanConfig.RPC_ODATA     : 0);
+        return new opentrap.engine.ScanConfig(
+                "Custom",
+                (Integer) cCrawlDepth.getValue(),
+                (Integer) cCrawlDuration.getValue(),
+                cSubmitForms.isSelected(),
+                cAjax.isSelected(),
+                (Integer) cAjaxDuration.getValue(),
+                (Integer) cAjaxDepth.getValue(),
+                (Integer) cAjaxStates.getValue(),
+                (String) cStrength.getSelectedItem(),
+                (String) cThreshold.getSelectedItem(),
+                inject, rpc,
+                (Integer) cDelay.getValue(),
+                (Integer) cScanDuration.getValue());
     }
 
     // ---- left rail ----
@@ -299,7 +348,7 @@ public class NewScanWizard extends JDialog {
         list.setAlignmentX(Component.LEFT_ALIGNMENT);
         list.setBorder(BorderFactory.createLineBorder(Ui.GRID));
         for (String[] c : CONFIGS) {
-            JPanel card = configCard(c[0], c[1], configEnabled(c[0]));
+            JPanel card = configCard(c[0], c[1], true);
             configCards.put(c[0], card);
             list.add(card);
         }
@@ -310,6 +359,12 @@ public class NewScanWizard extends JDialog {
         listWrap.setOpaque(false);
         listWrap.add(list, BorderLayout.NORTH);
         body.add(listWrap, BorderLayout.NORTH);
+
+        // The Custom knob panel sits below the tier list and appears only while
+        // Custom is selected.
+        customBox = Ui.scroll(buildCustomPanel());
+        customBox.setVisible(false);
+        body.add(customBox, BorderLayout.CENTER);
 
         // Save / Load named configurations is not implemented, so disabled.
         JButton save = Ui.button("Save");
@@ -367,6 +422,7 @@ public class NewScanWizard extends JDialog {
             boolean on = e.getKey().equals(name);
             e.getValue().setBackground(on ? Ui.SELECTION : Theme.BG);
         }
+        if (customBox != null) customBox.setVisible("Custom".equals(name));
     }
 
     private JComponent buildApplicationLogin() {
@@ -394,6 +450,92 @@ public class NewScanWizard extends JDialog {
         body.add(Ui.note("The number of requests the scan engine sends at once. Lower this to "
                 + "be gentler on the target; raise it to scan faster."), BorderLayout.CENTER);
         return stepPanel("Resource pool", "Specify the resources the scan may use.", body);
+    }
+
+    /**
+     * The Custom tier's editor: every engine knob a scan can set, grouped into
+     * discovery, attack, and the injection points. Seeded from "Balanced" so it
+     * starts from a sensible, thorough configuration the user then adjusts.
+     */
+    private JComponent buildCustomPanel() {
+        cStrength.setSelectedItem("HIGH");
+        cThreshold.setSelectedItem("MEDIUM");
+        cStrength.setFont(Ui.PLAIN);
+        cThreshold.setFont(Ui.PLAIN);
+
+        // The AJAX budget inputs follow the AJAX checkbox.
+        Runnable syncAjax = () -> {
+            boolean on = cAjax.isSelected();
+            cAjaxDuration.setEnabled(on);
+            cAjaxDepth.setEnabled(on);
+            cAjaxStates.setEnabled(on);
+        };
+        cAjax.addActionListener(e -> syncAjax.run());
+        syncAjax.run();
+
+        JPanel col = new JPanel();
+        col.setLayout(new BoxLayout(col, BoxLayout.Y_AXIS));
+        col.setOpaque(false);
+
+        col.add(left(sectionLabel("Discovery")));
+        col.add(left(Ui.form(
+                "Crawl depth:", compact(cCrawlDepth),
+                "Crawl time budget (min):", compact(cCrawlDuration))));
+        col.add(left(cSubmitForms));
+        col.add(left(cAjax));
+        col.add(left(Ui.form(
+                "AJAX time budget (min):", compact(cAjaxDuration),
+                "AJAX depth:", compact(cAjaxDepth),
+                "AJAX states:", compact(cAjaxStates))));
+        col.add(left(Ui.note("0 means unlimited depth and states, and no time limit.")));
+
+        col.add(Box.createVerticalStrut(10));
+        col.add(left(sectionLabel("Attack")));
+        col.add(left(Ui.form(
+                "Attack strength:", compact(cStrength),
+                "Alert threshold:", compact(cThreshold),
+                "Request delay (ms):", compact(cDelay),
+                "Active-scan cap (min):", compact(cScanDuration))));
+        col.add(left(Ui.note("Keep the active-scan cap at 0 so every test runs to completion.")));
+
+        col.add(Box.createVerticalStrut(10));
+        col.add(left(sectionLabel("Injection points")));
+        col.add(left(row(vQuery, vBody, vPath, vHeaders, vCookie)));
+        col.add(left(sectionLabel("Request body types")));
+        col.add(left(row(rMultipart, rXml, rJson, rGwt, rOdata)));
+
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.setOpaque(false);
+        wrap.setBorder(Ui.pad(6, 0, 0, 0));
+        wrap.add(col, BorderLayout.NORTH);
+        return wrap;
+    }
+
+    /** Wrap a component flush-left for a vertical BoxLayout column. */
+    private static JComponent left(JComponent c) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        p.setOpaque(false);
+        p.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(c);
+        return p;
+    }
+
+    /** Keep a spinner or combo at its natural (small) width rather than stretched. */
+    private static JComponent compact(JComponent c) {
+        Dimension d = c.getPreferredSize();
+        c.setPreferredSize(new Dimension(Math.max(d.width, 90), d.height));
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        p.setOpaque(false);
+        p.add(c);
+        return p;
+    }
+
+    /** A left-aligned row of check boxes. */
+    private static JComponent row(JCheckBox... boxes) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
+        p.setOpaque(false);
+        for (JCheckBox b : boxes) { b.setOpaque(false); p.add(b); }
+        return p;
     }
 
     private JComponent stepPanel(String title, String subtitle, JComponent body) {
