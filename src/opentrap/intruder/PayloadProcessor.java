@@ -57,23 +57,57 @@ public class PayloadProcessor extends JPanel {
         add(heading);
         add(Box.createVerticalStrut(6));
 
-        add(left(Ui.row(Ui.label("case:"), caseCombo)));
-        add(left(Ui.row(Ui.label("match regex:"), matchField,
-                Ui.label("replace with:"), replaceField, replaceAll)));
-        add(left(Ui.row(Ui.label("add prefix:"), prefixField,
-                Ui.label("add suffix:"), suffixField)));
+        // Lay the labelled fields on one grid: labels right-aligned in a shared
+        // column, fields at their natural width in the next column, one per row
+        // so nothing overflows this narrow panel.
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints c = new GridBagConstraints();
+        int y = 0;
+        y = formRow(form, c, y, "case:", caseCombo);
+        y = formRow(form, c, y, "match regex:", matchField);
+        y = formRow(form, c, y, "replace with:", Ui.row(replaceField, replaceAll));
+        y = formRow(form, c, y, "add prefix:", prefixField);
+        y = formRow(form, c, y, "add suffix:", suffixField);
+        // Absorb spare width on the right so the label/field columns stay packed
+        // to the left under the heading instead of centring in the panel.
+        c.gridx = 2; c.gridy = 0; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(0, 0, 0, 0);
+        form.add(Box.createHorizontalGlue(), c);
+        add(left(form));
+
+        add(Box.createVerticalStrut(10));
         add(left(Ui.bold("encoding")));
-        add(left(encNone));
-        add(left(Ui.row(encUrl, urlChars)));
-        add(left(encB64));
-        add(left(Ui.row(encHash, hashAlgo)));
-        add(left(encUrlDec));
-        add(left(encB64Dec));
-        add(Box.createVerticalStrut(6));
+        add(Box.createVerticalStrut(2));
+        // Every encoding choice is wrapped the same way so the radios line up at
+        // one left margin, whether or not they carry a trailing field.
+        JPanel enc2 = new JPanel();
+        enc2.setOpaque(false);
+        enc2.setLayout(new BoxLayout(enc2, BoxLayout.Y_AXIS));
+        for (JComponent r : new JComponent[]{
+                Ui.row(encNone), Ui.row(encUrl, urlChars), Ui.row(encB64),
+                Ui.row(encHash, hashAlgo), Ui.row(encUrlDec), Ui.row(encB64Dec)}) {
+            enc2.add(left(r));
+        }
+        add(left(enc2));
+
+        add(Box.createVerticalStrut(10));
         add(left(Ui.row(Ui.label("skip payload if it matches regex:"), skipField)));
     }
 
     private JComponent left(JComponent c) { c.setAlignmentX(LEFT_ALIGNMENT); return c; }
+
+    /** One label/field row on a shared grid: label right-aligned in column 0,
+     *  field at its natural width in column 1. Returns the next row index. */
+    private static int formRow(JPanel grid, GridBagConstraints c, int y, String label, JComponent field) {
+        c.gridy = y;
+        c.gridx = 0; c.weightx = 0; c.fill = GridBagConstraints.NONE;
+        c.anchor = GridBagConstraints.LINE_END; c.insets = new Insets(2, 0, 2, 8);
+        grid.add(Ui.label(label), c);
+        c.gridx = 1; c.anchor = GridBagConstraints.LINE_START; c.insets = new Insets(2, 0, 2, 0);
+        grid.add(field, c);
+        return y + 1;
+    }
 
     // ---------------- processing ----------------
 
