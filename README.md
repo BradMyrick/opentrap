@@ -29,7 +29,15 @@ A free and open-source alternative to Burp Suite, built on the trusted OWASP ZAP
 <a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP">Hacker News</a>
 </sub>
 
-<br>
+</div>
+
+<p align="center"><b>One command to download and run the tool:</b></p>
+
+```
+wget https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage && chmod +x opentrap-x86_64.appimage && ./opentrap-x86_64.appimage
+```
+
+<div align="center">
 
 <a href="docs/images/dashboard.png"><img src="docs/images/dashboard.png" width="100%" alt="OpenTRAP dashboard with a crawl finished, an active audit running, and the live table of the most serious vulnerabilities found"></a>
 
