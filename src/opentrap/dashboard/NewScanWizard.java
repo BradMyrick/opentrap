@@ -261,7 +261,7 @@ public class NewScanWizard extends JDialog {
                     onTypeChosen();
                 }
             };
-            for (Component c : new Component[]{card, head, titleLabel, d}) c.addMouseListener(pick);
+            addClickToTree(card, pick);
             radio.addActionListener(e -> onTypeChosen());
         }
         return card;
@@ -390,6 +390,16 @@ public class NewScanWizard extends JDialog {
         return panel;
     }
 
+    /** Add a mouse listener to a component and all of its descendants, so a
+     *  click anywhere inside a card is handled rather than only on the gaps
+     *  between its child components. */
+    private static void addClickToTree(Component c, java.awt.event.MouseListener l) {
+        c.addMouseListener(l);
+        if (c instanceof Container cont) {
+            for (Component child : cont.getComponents()) addClickToTree(child, l);
+        }
+    }
+
     private JPanel configCard(String name, String desc, boolean enabled) {
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(true);
@@ -415,8 +425,9 @@ public class NewScanWizard extends JDialog {
         java.awt.event.MouseAdapter pick = new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) { selectConfig(name); }
         };
-        for (Component c : row.getComponents()) c.addMouseListener(pick);
-        row.addMouseListener(pick);
+        // Attach to every descendant so a click anywhere in the rectangle
+        // selects the tier, including on the description text.
+        addClickToTree(row, pick);
         return row;
     }
 
