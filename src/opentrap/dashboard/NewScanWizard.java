@@ -78,7 +78,7 @@ public class NewScanWizard extends JDialog {
         {"Lightweight", "Full coverage at low attack strength over a shallow crawl. The quickest way to surface obvious issues."},
         {"Fast",        "Full coverage at medium strength over a wider crawl. A good first pass on most targets."},
         {"Balanced",    "Full coverage at high strength with JavaScript crawling. Thorough without running unbounded."},
-        {"Deep",        "Full coverage at maximum strength over an unlimited crawl. The most comprehensive scan; time depends on the target's size."},
+        {"Deep",        "Full coverage at maximum strength over an unlimited crawl. The most comprehensive scan available."},
         {"Custom",      "Set every engine knob yourself: crawl depth, AJAX budget, attack strength, threshold and injection points."},
     };
 
@@ -219,9 +219,9 @@ public class NewScanWizard extends JDialog {
         JPanel cardsRow = new JPanel(new GridLayout(1, 3, 16, 0));
         cardsRow.setOpaque(false);
         cardsRow.add(typeCard(typeCrawlAudit, "Crawl and audit",
-                "Maps the attack surface and identifies vulnerabilities. Scans the web application and any detected APIs.", true));
+                "Maps the attack surface and tests it for vulnerabilities, including any detected APIs.", true));
         cardsRow.add(typeCard(typeCrawl, "Crawl",
-                "Maps the attack surface of the web application and any detected APIs.", true));
+                "Maps the attack surface of the application and any detected APIs.", true));
         // API-only scanning is not implemented yet, so the card is shown but not
         // selectable, rather than pretending to offer it.
         cardsRow.add(typeCard(typeApiOnly, "API-only scan",
@@ -249,6 +249,10 @@ public class NewScanWizard extends JDialog {
         JTextArea d = Ui.note(desc);
         card.add(head, BorderLayout.NORTH);
         card.add(d, BorderLayout.CENTER);
+        // A wrapping text area reports a single-line preferred height, which would
+        // clip the description; fix a height that fits the wrapped text so the
+        // three cards stay equal and nothing is cut off.
+        card.setPreferredSize(new Dimension(230, 104));
         if (enabled) {
             card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             java.awt.event.MouseAdapter pick = new java.awt.event.MouseAdapter() {
@@ -334,8 +338,8 @@ public class NewScanWizard extends JDialog {
         c.gridy = row++; c.insets = new Insets(6, 0, 16, 0); body.add(urlsNote, c);
         c.gridy = row++; c.insets = new Insets(0, 0, 6, 0); body.add(sectionLabel("Protocol settings"), c);
         c.gridy = row++; c.insets = new Insets(0, 0, 6, 0); body.add(protoRow, c);
-        c.gridy = row++; c.insets = new Insets(0, 0, 0, 0); body.add(scopeToggle, c);
-        c.gridy = row++; c.insets = new Insets(2, 0, 16, 0); body.add(scopeInfo, c);
+        c.gridy = row++; c.insets = new Insets(0, 0, 14, 0); body.add(scopeToggle, c);
+        c.gridy = row++; c.insets = new Insets(0, 0, 14, 0); body.add(scopeInfo, c);
         c.gridy = row++; c.insets = new Insets(0, 0, 6, 0); body.add(sectionLabel("Advanced scan parameters"), c);
         c.gridy = row++; c.insets = new Insets(0, 0, 4, 0);
         body.add(Ui.note("Isolate the scan so its results do not appear in the main site map or issue log."), c);
@@ -536,49 +540,99 @@ public class NewScanWizard extends JDialog {
     }
 
     private JComponent crawlSection() {
-        JPanel col = column();
-        col.add(left(Ui.form(
-                "Crawl depth:", compact(cCrawlDepth),
-                "Crawl time budget (min):", compact(cCrawlDuration))));
-        col.add(left(cSubmitForms));
-        col.add(left(cAjax));
-        col.add(left(Ui.form(
-                "AJAX time budget (min):", compact(cAjaxDuration),
-                "AJAX depth:", compact(cAjaxDepth),
-                "AJAX states:", compact(cAjaxStates))));
-        col.add(noteRow("0 means unlimited depth and states, and no time limit."));
-        return col;
+        return new Grid()
+                .field("Crawl depth:", fld(cCrawlDepth, 80))
+                .field("Crawl time budget (min):", fld(cCrawlDuration, 80))
+                .full(cSubmitForms)
+                .full(cAjax)
+                .field("AJAX time budget (min):", fld(cAjaxDuration, 80))
+                .field("AJAX depth:", fld(cAjaxDepth, 80))
+                .field("AJAX states:", fld(cAjaxStates, 80))
+                .gap()
+                .full(Ui.note("0 means unlimited depth and states, and no time limit."))
+                .done();
     }
 
     private JComponent auditSection() {
-        JPanel col = column();
-        col.add(left(Ui.form(
-                "Attack strength:", compact(cStrength),
-                "Alert threshold:", compact(cThreshold),
-                "Request delay (ms):", compact(cDelay),
-                "Active-scan cap (min):", compact(cScanDuration))));
-        col.add(noteRow("Keep the active-scan cap at 0 so every test runs to completion."));
-        return col;
+        return new Grid()
+                .field("Attack strength:", fld(cStrength, 110))
+                .field("Alert threshold:", fld(cThreshold, 110))
+                .field("Request delay (ms):", fld(cDelay, 80))
+                .field("Active-scan cap (min):", fld(cScanDuration, 80))
+                .gap()
+                .full(Ui.note("Keep the active-scan cap at 0 so every test runs to completion."))
+                .done();
     }
 
     private JComponent injectionSection() {
-        JPanel col = column();
-        col.add(left(sectionLabel("Parameter locations")));
-        col.add(left(row(vQuery, vBody, vPath, vHeaders, vCookie)));
-        col.add(Box.createVerticalStrut(10));
-        col.add(left(sectionLabel("Request body types")));
-        col.add(left(row(rMultipart, rXml, rJson, rGwt, rOdata)));
-        col.add(noteRow("Body types only apply when a request actually carries that content."));
-        return col;
+        return new Grid()
+                .full(sectionLabel("Parameter locations"))
+                .full(row(vQuery, vBody, vPath, vHeaders, vCookie))
+                .gap()
+                .full(sectionLabel("Request body types"))
+                .full(row(rMultipart, rXml, rJson, rGwt, rOdata))
+                .gap()
+                .full(Ui.note("Body types only apply when a request actually carries that content."))
+                .done();
     }
 
-    /** A help note that spans the settings column rather than wrapping narrowly. */
-    private static JComponent noteRow(String text) {
-        JTextArea n = Ui.note(text);
-        n.setAlignmentX(Component.LEFT_ALIGNMENT);
-        n.setBorder(Ui.pad(8, 0, 0, 0));
-        n.setMaximumSize(new Dimension(460, Integer.MAX_VALUE));
-        return n;
+    /**
+     * A tidy settings grid: labels left-aligned in one column, their fields in a
+     * second column that lines up across every row, and full-width rows for
+     * checkboxes, section labels and notes. Keeps a whole section on one grid so
+     * nothing drifts out of alignment.
+     */
+    private static final class Grid {
+        private final JPanel panel = new JPanel(new GridBagLayout());
+        private int row;
+
+        Grid() { panel.setOpaque(false); }
+
+        Grid field(String label, JComponent field) {
+            GridBagConstraints c = new GridBagConstraints();
+            c.gridx = 0; c.gridy = row; c.anchor = GridBagConstraints.LINE_START;
+            c.insets = new Insets(5, 0, 5, 12);
+            panel.add(Ui.label(label), c);
+            c.gridx = 1; c.weightx = 1; c.anchor = GridBagConstraints.LINE_START;
+            c.insets = new Insets(5, 0, 5, 0);
+            panel.add(field, c);
+            row++;
+            return this;
+        }
+
+        Grid full(JComponent comp) {
+            GridBagConstraints c = new GridBagConstraints();
+            c.gridx = 0; c.gridy = row; c.gridwidth = 2; c.weightx = 1;
+            c.anchor = GridBagConstraints.LINE_START; c.fill = GridBagConstraints.HORIZONTAL;
+            c.insets = new Insets(5, 0, 5, 0);
+            panel.add(comp, c);
+            row++;
+            return this;
+        }
+
+        Grid gap() {
+            GridBagConstraints c = new GridBagConstraints();
+            c.gridx = 0; c.gridy = row; c.gridwidth = 2;
+            panel.add(Box.createVerticalStrut(6), c);
+            row++;
+            return this;
+        }
+
+        JComponent done() {
+            JPanel wrap = new JPanel(new BorderLayout());
+            wrap.setOpaque(false);
+            wrap.add(panel, BorderLayout.NORTH);
+            return wrap;
+        }
+    }
+
+    /** Fix a field's width so the field column lines up down the grid. */
+    private static JComponent fld(JComponent c, int width) {
+        Dimension d = c.getPreferredSize();
+        Dimension fixed = new Dimension(width, d.height);
+        c.setPreferredSize(fixed);
+        c.setMinimumSize(fixed);
+        return c;
     }
 
     /** Enable the AJAX budget inputs only while the AJAX spider is ticked. */
@@ -615,31 +669,6 @@ public class NewScanWizard extends JDialog {
         syncAjaxEnabled();
     }
 
-    private static JPanel column() {
-        JPanel c = new JPanel();
-        c.setLayout(new BoxLayout(c, BoxLayout.Y_AXIS));
-        c.setOpaque(false);
-        return c;
-    }
-
-    /** Wrap a component flush-left for a vertical BoxLayout column. */
-    private static JComponent left(JComponent c) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        p.setOpaque(false);
-        p.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(c);
-        return p;
-    }
-
-    /** Keep a spinner or combo at its natural (small) width rather than stretched. */
-    private static JComponent compact(JComponent c) {
-        Dimension d = c.getPreferredSize();
-        c.setPreferredSize(new Dimension(Math.max(d.width, 90), d.height));
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        p.setOpaque(false);
-        p.add(c);
-        return p;
-    }
 
     /** A left-aligned row of check boxes. */
     private static JComponent row(JCheckBox... boxes) {
