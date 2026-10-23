@@ -55,7 +55,18 @@ public final class ZapScanner {
         // budget, instead of stopping after 20 links per page.
         String sid = api.spiderScan(seedUrl, 0);
         int lastLoc = -1;
+        boolean zapPaused = false;
         while (true) {
+            // Stop the moment the task is deleted, so nothing keeps crawling.
+            if (crawlTask.cancelled()) { stopQuietly(() -> api.spiderStop(sid)); break; }
+            // Honour a paused task by pausing the engine's spider too, so a paused
+            // scan really stops working rather than only changing its label.
+            if (crawlTask.state() == ScanTask.State.PAUSED) {
+                if (!zapPaused) { stopQuietly(() -> api.spiderPause(sid)); zapPaused = true; }
+                Thread.sleep(500);
+                continue;
+            }
+            if (zapPaused) { stopQuietly(() -> api.spiderResume(sid)); zapPaused = false; }
             int st = api.spiderStatus(sid);
             // Stream the crawl's traffic into the logger and the site map first,
             // so the site tree is current before we count unique locations.
@@ -79,14 +90,17 @@ public final class ZapScanner {
         // keeping the traditional-spider results. Bounded by the tier's AJAX
         // budget; cutting discovery short is fine because the audit still fully
         // tests whatever was found.
-        if (cfg.ajaxSpider()) runAjaxCrawl(seedUrl, cfg, crawlTask);
+        if (cfg.ajaxSpider() && !crawlTask.cancelled()) runAjaxCrawl(seedUrl, cfg, crawlTask);
 
         drain("crawl", true, crawlTask);
-        crawlTask.log("Crawl finished: " + crawlTask.requests() + " request(s)");
+        crawlTask.log(crawlTask.cancelled()
+                ? "Crawl stopped"
+                : "Crawl finished: " + crawlTask.requests() + " request(s)");
         crawlTask.setState(ScanTask.State.FINISHED);
         ctx.taskChanged(crawlTask);
 
-        if (!thenAudit) return;
+        // A deleted crawl does not go on to start an audit.
+        if (crawlTask.cancelled() || !thenAudit) return;
 
         // ---- audit (only now does its task appear) -----------------------
         ScanTask auditTask = new ScanTask(ScanTask.Type.AUDIT,
@@ -121,7 +135,16 @@ public final class ZapScanner {
             ctx.taskChanged(auditTask);
             String aid = api.ascanScan(seedUrl);
             Set<String> seen = new HashSet<>();
+            boolean auditPaused = false;
             while (true) {
+                // Stop attacking the moment the task is deleted.
+                if (auditTask.cancelled()) { stopQuietly(() -> api.ascanStop(aid)); break; }
+                if (auditTask.state() == ScanTask.State.PAUSED) {
+                    if (!auditPaused) { stopQuietly(() -> api.ascanPause(aid)); auditPaused = true; }
+                    Thread.sleep(500);
+                    continue;
+                }
+                if (auditPaused) { stopQuietly(() -> api.ascanResume(aid)); auditPaused = false; }
                 int st = api.ascanStatus(aid);
                 auditTask.setItemsTotal(100);
                 auditTask.setItemsDone(Math.max(0, st));
@@ -133,7 +156,9 @@ public final class ZapScanner {
             }
             pullAlerts(baseurl, seed.host(), auditTask, seen);
             drain("audit", false, auditTask);
-            auditTask.log("Audit finished: " + seen.size() + " finding(s)");
+            auditTask.log(auditTask.cancelled()
+                    ? "Audit stopped"
+                    : "Audit finished: " + seen.size() + " finding(s)");
         } finally {
             auditTask.setState(ScanTask.State.FINISHED);
             ctx.taskChanged(auditTask);
@@ -171,6 +196,8 @@ public final class ZapScanner {
             int lastLoc = -1;
             String baseurl = HttpService.parse(seedUrl).url();
             while ("running".equalsIgnoreCase(api.ajaxSpiderStatus())) {
+                // A deleted task stops the AJAX spider (the finally block below).
+                if (crawlTask.cancelled()) break;
                 drain("crawl", true, crawlTask);
                 int loc = locations(baseurl);
                 if (loc >= 0 && loc != lastLoc) {
@@ -199,6 +226,13 @@ public final class ZapScanner {
             try { api.ajaxSpiderStop(); } catch (Exception ignore) { }
         }
         ctx.taskChanged(crawlTask);
+    }
+
+    /** A ZAP control call (stop/pause/resume) whose failure must never abort the
+     *  scan loop: the engine may have already finished the scan being stopped. */
+    private interface ZapCall { void run() throws Exception; }
+    private static void stopQuietly(ZapCall c) {
+        try { c.run(); } catch (Exception ignore) { }
     }
 
     /** Unique discovered locations under baseurl, or the last value on error. */

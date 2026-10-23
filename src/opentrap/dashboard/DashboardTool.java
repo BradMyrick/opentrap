@@ -987,8 +987,10 @@ public class DashboardTool implements ToolModule {
                 + "Any findings it has already reported are kept.",
                 "Delete task", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
         if (ok != JOptionPane.OK_OPTION) return;
-        // Stop driving a running task so nothing keeps updating a card that is gone.
-        if (t.state() == ScanTask.State.RUNNING) t.setState(ScanTask.State.PAUSED);
+        // Really stop the task: cancel() signals its scan loop to stop the engine
+        // (spider/active scan/AJAX spider) and exit, so nothing keeps running or
+        // accumulating memory in the background after the card is gone.
+        t.cancel();
         if (t == liveAudit && passiveScanner != null) passiveScanner.setEnabled(false);
         rerun.remove(t);
         if (selected == t) selected = null;
@@ -1773,6 +1775,11 @@ public class DashboardTool implements ToolModule {
 
     /** Live model for the crawl window's Logger: the engine's HTTP traffic. */
     private static final class ScanLogModel extends AbstractTableModel {
+        /** Upper bound on live-log rows held in memory. A long scan can stream a
+         *  huge amount of traffic; keeping only the most recent rows bounds the
+         *  table's memory while still showing the live tail. */
+        private static final int MAX_ROWS = 50_000;
+
         private final String[] cols = {"#", "Time", "Tool", "Method", "Host",
                 "Path", "Query", "Status", "Length"};
         private final List<LogEntry> rows = new ArrayList<>();
@@ -1782,12 +1789,21 @@ public class DashboardTool implements ToolModule {
         void add(LogEntry e) {
             rows.add(e);
             fireTableRowsInserted(rows.size() - 1, rows.size() - 1);
+            trim();
         }
         void addAll(List<LogEntry> es) {
             if (es.isEmpty()) return;
             int from = rows.size();
             rows.addAll(es);
             fireTableRowsInserted(from, rows.size() - 1);
+            trim();
+        }
+        /** Drop the oldest rows once the cap is exceeded, so the log cannot grow
+         *  without bound during a very long scan. */
+        private void trim() {
+            if (rows.size() <= MAX_ROWS) return;
+            rows.subList(0, rows.size() - MAX_ROWS).clear();
+            fireTableDataChanged();
         }
         /** Repaint existing rows in one event, for a batch of in-place updates. */
         void refreshRows() {

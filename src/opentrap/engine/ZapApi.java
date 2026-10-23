@@ -108,6 +108,19 @@ public final class ZapApi {
         return intOf(call("spider", "view", "status", p("scanId", id)), "status");
     }
 
+    /** Stop the spider scan so the engine releases it and stops crawling. */
+    public void spiderStop(String id) throws Exception {
+        call("spider", "action", "stop", p("scanId", id));
+    }
+
+    public void spiderPause(String id) throws Exception {
+        call("spider", "action", "pause", p("scanId", id));
+    }
+
+    public void spiderResume(String id) throws Exception {
+        call("spider", "action", "resume", p("scanId", id));
+    }
+
     public List<JsonValue> spiderResults(String id) throws Exception {
         return arr(call("spider", "view", "results", p("scanId", id)), "results");
     }
@@ -120,6 +133,19 @@ public final class ZapApi {
 
     public int ascanStatus(String id) throws Exception {
         return intOf(call("ascan", "view", "status", p("scanId", id)), "status");
+    }
+
+    /** Stop the active scan so the engine stops attacking and releases it. */
+    public void ascanStop(String id) throws Exception {
+        call("ascan", "action", "stop", p("scanId", id));
+    }
+
+    public void ascanPause(String id) throws Exception {
+        call("ascan", "action", "pause", p("scanId", id));
+    }
+
+    public void ascanResume(String id) throws Exception {
+        call("ascan", "action", "resume", p("scanId", id));
     }
 
     // ------------------------------------------------- AJAX spider (JavaScript)

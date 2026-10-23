@@ -51,6 +51,13 @@ public class ScanTask {
     public State state()          { return state; }
     public void setState(State s) { this.state = s; }
 
+    // A cancelled task is one the user deleted or stopped: the scan loop driving
+    // it checks this, stops the engine's scan, and exits so nothing keeps running
+    // (and consuming memory) in the background after the task is gone.
+    private volatile boolean cancelled;
+    public boolean cancelled()    { return cancelled; }
+    public void cancel()          { this.cancelled = true; }
+
     public int high()   { return high.get(); }
     public int medium() { return medium.get(); }
     public int low()    { return low.get(); }
