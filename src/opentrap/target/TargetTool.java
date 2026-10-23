@@ -299,7 +299,7 @@ public class TargetTool implements ToolModule {
         issueResp.setMessage(i.service(),
                 i.response() == null ? new HttpMessage(new byte[0]) : i.response().copy(), i.request());
         // Auto-highlight the evidence (the matched text) in the request and
-        // response, the way Burp does, so the relevant part is obvious.
+        // response, so the relevant part is obvious.
         String ev = i.evidence();
         issueReq.highlight(ev);
         issueResp.highlight(ev);
