@@ -269,6 +269,80 @@ public final class ZapApi {
         call("ascan", "action", "setScannerAlertThreshold", p("id", id, "alertThreshold", threshold));
     }
 
+    /**
+     * Set the attack strength (LOW, MEDIUM, HIGH, INSANE) on every active rule, so
+     * the whole default scan policy probes at the one intensity. Applied rule by
+     * rule because ZAP has no single global strength control; a rule ZAP refuses
+     * is skipped rather than failing the whole call.
+     */
+    public void setAllAttackStrength(String strength) throws Exception {
+        for (JsonValue s : activeScanners()) {
+            String id = str(s, "id");
+            if (id != null) try { setActiveStrength(id, strength); } catch (Exception ignore) { }
+        }
+    }
+
+    /** Set the alert threshold (OFF, LOW, MEDIUM, HIGH) on every active rule. */
+    public void setAllAlertThreshold(String threshold) throws Exception {
+        for (JsonValue s : activeScanners()) {
+            String id = str(s, "id");
+            if (id != null) try { setActiveThreshold(id, threshold); } catch (Exception ignore) { }
+        }
+    }
+
+    // ----------------------------------------------- active scan engine options
+
+    /**
+     * Which request locations the active scan injects payloads into, as a bitmask
+     * of query string, POST body, URL path, headers and cookies (see
+     * {@link ScanConfig}). More locations means broader coverage and more requests.
+     */
+    public void setInjectableParams(int mask) throws Exception {
+        call("ascan", "action", "setOptionTargetParamsInjectable", p("Integer", String.valueOf(mask)));
+    }
+
+    /**
+     * Which request-body content types the active scan tests (JSON, XML, multipart
+     * and so on), as a bitmask (see {@link ScanConfig}). A type only applies when a
+     * request actually carries it.
+     */
+    public void setInjectableRpc(int mask) throws Exception {
+        call("ascan", "action", "setOptionTargetParamsEnabledRPC", p("Integer", String.valueOf(mask)));
+    }
+
+    /** Throttle between active-scan requests in milliseconds (0 = fastest). */
+    public void setActiveDelayMs(int ms) throws Exception {
+        call("ascan", "action", "setOptionDelayInMs", p("Integer", String.valueOf(Math.max(0, ms))));
+    }
+
+    /** Active-scan time backstop in minutes (0 = no limit). */
+    public void setActiveMaxScanDuration(int minutes) throws Exception {
+        call("ascan", "action", "setOptionMaxScanDurationInMins", p("Integer", String.valueOf(Math.max(0, minutes))));
+    }
+
+    /** Whether the crawler fills and submits forms to reach more of the site. */
+    public void setSpiderProcessForms(boolean on) throws Exception {
+        call("spider", "action", "setOptionPostForm", p("Boolean", String.valueOf(on)));
+        call("spider", "action", "setOptionProcessForm", p("Boolean", String.valueOf(on)));
+    }
+
+    // ------------------------------------------------- AJAX spider budget options
+
+    /** AJAX crawl time budget in minutes (0 = no limit). */
+    public void setAjaxMaxDuration(int minutes) throws Exception {
+        call("ajaxSpider", "action", "setOptionMaxDuration", p("Integer", String.valueOf(Math.max(0, minutes))));
+    }
+
+    /** AJAX crawl click-depth from the seed (0 = unlimited). */
+    public void setAjaxMaxCrawlDepth(int depth) throws Exception {
+        call("ajaxSpider", "action", "setOptionMaxCrawlDepth", p("Integer", String.valueOf(Math.max(0, depth))));
+    }
+
+    /** How many distinct UI states the AJAX crawl explores (0 = unlimited). */
+    public void setAjaxMaxCrawlStates(int states) throws Exception {
+        call("ajaxSpider", "action", "setOptionMaxCrawlStates", p("Integer", String.valueOf(Math.max(0, states))));
+    }
+
     // ----------------------------------------------------------- json helpers
 
     public static String str(JsonValue o, String k) {

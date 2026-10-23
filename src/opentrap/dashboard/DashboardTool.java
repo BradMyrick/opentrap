@@ -1414,7 +1414,7 @@ public class DashboardTool implements ToolModule {
         NewScanWizard w = new NewScanWizard(ctx, ctx == null ? null : ctx.frame());
         w.setVisible(true);
         if (!w.started()) return;
-        startSpiderFor(w.targetUrl(), w.crawlAndAudit(), w.crawlDepth(), w.crawlDuration(), w.threads());
+        startSpiderFor(w.targetUrl(), w.crawlAndAudit(), w.config(), w.threads());
     }
 
     private void startSpider() {
@@ -1432,25 +1432,22 @@ public class DashboardTool implements ToolModule {
     }
 
     /** Crawl the given URL. The spider button calls this directly (crawl only). */
-    private static final int DEFAULT_CRAWL_DEPTH = 5;
-
-    private void startSpiderFor(String url) { startSpiderFor(url, false, DEFAULT_CRAWL_DEPTH, 0, 10); }
-
-    private void startSpiderFor(String url, boolean thenAudit) {
-        startSpiderFor(url, thenAudit, DEFAULT_CRAWL_DEPTH, 0, 10);
+    private void startSpiderFor(String url) {
+        startSpiderFor(url, false, opentrap.engine.ScanConfig.crawlDefault(), 10);
     }
 
-    private void startSpiderFor(String url, boolean thenAudit, int maxDepth, int maxDurationMin) {
-        startSpiderFor(url, thenAudit, maxDepth, maxDurationMin, 10);
+    private void startSpiderFor(String url, boolean thenAudit) {
+        startSpiderFor(url, thenAudit, opentrap.engine.ScanConfig.crawlDefault(), 10);
     }
 
     /**
      * Crawl the URL with the ZAP engine, and when {@code thenAudit} is set, audit
-     * the endpoints the crawl discovered. The engine is required: detection is
-     * ZAP's job, so there is no home-grown fall-back scanner. If the engine is not
-     * installed, scanning is unavailable until it is fetched.
+     * the endpoints the crawl discovered using the given {@link opentrap.engine.ScanConfig}.
+     * The engine is required: detection is ZAP's job, so there is no home-grown
+     * fall-back scanner. If the engine is not installed, scanning is unavailable
+     * until it is fetched.
      */
-    private void startSpiderFor(String url, boolean thenAudit, int maxDepth, int maxDurationMin, int threads) {
+    private void startSpiderFor(String url, boolean thenAudit, opentrap.engine.ScanConfig cfg, int threads) {
         HttpService svc = HttpService.parse(url.trim());
         if (svc == null) {
             JOptionPane.showMessageDialog(ctx.frame(),
@@ -1497,7 +1494,7 @@ public class DashboardTool implements ToolModule {
                 // The audit, if requested, runs only after the crawl finishes, and
                 // its own task card is created at that point by the scanner.
                 new opentrap.engine.ZapScanner(ctx, ze.api())
-                        .crawlAndAudit(seed, seedUrl, thenAudit, maxDepth, maxDurationMin, task);
+                        .crawlAndAudit(seed, seedUrl, thenAudit, cfg, task);
             } catch (Exception ex) {
                 task.log("Scan engine error: " + ex.getMessage());
                 task.setState(opentrap.core.ScanTask.State.FINISHED);

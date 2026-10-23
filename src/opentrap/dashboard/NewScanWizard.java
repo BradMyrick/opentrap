@@ -43,14 +43,20 @@ public class NewScanWizard extends JDialog {
     private JButton prevButton, nextButton, scanButton;
     private boolean started;
 
-    // Scan configuration presets, in the reference's order.
+    // Scan configuration tiers. Every tier tests the same things (all input
+    // vectors, all rules, the same reporting threshold); they differ only in how
+    // much the crawl discovers and how hard each rule attacks it, so the
+    // descriptions talk about depth and strength, not fixed time promises.
     private static final String[][] CONFIGS = {
-        {"Lightweight", "Gain fast feedback on a site's security. Will complete within 15 minutes."},
-        {"Fast",        "Greater coverage while keeping scan times low. Generally completes within one hour."},
-        {"Balanced",    "Provides a balance between coverage and speed. Generally completes within a few hours."},
-        {"Deep",        "Achieve comprehensive coverage. Scanning time depends on the target site's size and complexity."},
-        {"Custom",      "Configure the default scan settings to meet your needs."},
+        {"Lightweight", "Full coverage at low attack strength over a shallow crawl. The quickest way to surface obvious issues."},
+        {"Fast",        "Full coverage at medium strength over a wider crawl. A good first pass on most targets."},
+        {"Balanced",    "Full coverage at high strength with JavaScript crawling. Thorough without running unbounded."},
+        {"Deep",        "Full coverage at maximum strength over an unlimited crawl. The most comprehensive scan; time depends on the target's size."},
+        {"Custom",      "Configure every engine setting yourself. Coming soon."},
     };
+
+    // Tiers the user cannot select yet because their configuration UI is not built.
+    private static boolean configEnabled(String name) { return !"Custom".equals(name); }
 
     public NewScanWizard(SuiteContext ctx, Frame owner) {
         super(owner, "New scan", true);
@@ -86,25 +92,9 @@ public class NewScanWizard extends JDialog {
         return "";
     }
 
-    /** Crawl depth implied by the chosen configuration (0 = unlimited). */
-    public int crawlDepth() {
-        return switch (configPreset) {
-            case "Lightweight" -> 3;
-            case "Fast" -> 5;
-            case "Balanced" -> 10;
-            case "Deep" -> 0;
-            default -> 5;   // Custom
-        };
-    }
-
-    /** Crawl/scan time budget in minutes implied by the configuration (0 = none). */
-    public int crawlDuration() {
-        return switch (configPreset) {
-            case "Lightweight" -> 15;
-            case "Fast" -> 60;
-            case "Balanced" -> 180;
-            default -> 0;   // Deep, Custom
-        };
+    /** The real engine settings implied by the chosen configuration tier. */
+    public opentrap.engine.ScanConfig config() {
+        return opentrap.engine.ScanConfig.preset(configPreset);
     }
 
     // ---- left rail ----
@@ -309,7 +299,7 @@ public class NewScanWizard extends JDialog {
         list.setAlignmentX(Component.LEFT_ALIGNMENT);
         list.setBorder(BorderFactory.createLineBorder(Ui.GRID));
         for (String[] c : CONFIGS) {
-            JPanel card = configCard(c[0], c[1]);
+            JPanel card = configCard(c[0], c[1], configEnabled(c[0]));
             configCards.put(c[0], card);
             list.add(card);
         }
@@ -340,7 +330,7 @@ public class NewScanWizard extends JDialog {
         return panel;
     }
 
-    private JPanel configCard(String name, String desc) {
+    private JPanel configCard(String name, String desc, boolean enabled) {
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(true);
         row.setBackground(Theme.BG);
@@ -349,10 +339,18 @@ public class NewScanWizard extends JDialog {
         row.add(new JLabel(configIcon(name)), BorderLayout.WEST);
         JPanel text = new JPanel(new BorderLayout());
         text.setOpaque(false);
-        text.add(Ui.bold(name), BorderLayout.NORTH);
+        JLabel title = Ui.bold(name);
+        if (!enabled) title.setForeground(Theme.MUTED);
+        text.add(title, BorderLayout.NORTH);
         text.add(Ui.note(desc), BorderLayout.CENTER);
         row.add(text, BorderLayout.CENTER);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+        // A tier whose configuration UI is not built yet is shown but not
+        // selectable, rather than offering a control that does nothing.
+        if (!enabled) {
+            row.setToolTipText(name + " configuration is coming soon.");
+            return row;
+        }
         row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         java.awt.event.MouseAdapter pick = new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) { selectConfig(name); }
