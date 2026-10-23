@@ -1572,7 +1572,10 @@ public class DashboardTool implements ToolModule {
         NewScanWizard w = new NewScanWizard(ctx, ctx == null ? null : ctx.frame());
         w.setVisible(true);
         if (!w.started()) return;
-        startSpiderFor(w.targetUrl(), w.crawlAndAudit(), w.config(), w.threads());
+        // Start a scan for every URL listed, not just the first one.
+        for (String url : w.targetUrls()) {
+            startSpiderFor(url, w.crawlAndAudit(), w.config(), w.threads());
+        }
     }
 
     private void startSpider() {

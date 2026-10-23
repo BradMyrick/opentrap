@@ -134,6 +134,17 @@ public final class ZapScanner {
                     + ": strength " + cfg.attackStrength() + ", threshold " + cfg.alertThreshold() + ")...");
             ctx.taskChanged(auditTask);
             String aid = api.ascanScan(seedUrl);
+            // With nothing crawled (an unreachable or empty target), the engine
+            // has no tree to attack and returns no scan id. Finish cleanly with a
+            // clear message instead of driving the audit loop with a null id,
+            // which the API would reject.
+            if (aid == null || aid.isBlank()) {
+                auditTask.log(crawlTask.discoveredLocations() <= 0
+                        ? "No crawlable content was found, so there is nothing to audit. "
+                          + "Check the target is reachable from this machine."
+                        : "The engine did not start an audit for this target.");
+                return;
+            }
             Set<String> seen = new HashSet<>();
             boolean auditPaused = false;
             while (true) {

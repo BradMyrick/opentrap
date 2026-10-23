@@ -59,7 +59,9 @@ public final class ZapApi {
     }
 
     private static String enc(String s) {
-        return URLEncoder.encode(s, StandardCharsets.UTF_8);
+        // A null parameter value must never crash a scan: URLEncoder.encode(null)
+        // throws a NullPointerException, so treat null as the empty string.
+        return s == null ? "" : URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 
     private static Map<String, String> p(String... kv) {

@@ -124,6 +124,16 @@ public class NewScanWizard extends JDialog {
         return "";
     }
 
+    /** Every non-empty URL in the list, each of which is scanned in turn. */
+    public java.util.List<String> targetUrls() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (String line : urls.getText().split("\n")) {
+            String t = line.trim();
+            if (!t.isEmpty()) out.add(t);
+        }
+        return out;
+    }
+
     /** The real engine settings implied by the chosen configuration tier. */
     public opentrap.engine.ScanConfig config() {
         if (!"Custom".equals(configPreset)) return opentrap.engine.ScanConfig.preset(configPreset);
