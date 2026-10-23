@@ -1,8 +1,9 @@
 <div align="center">
 
-<h1>
-<img src="icon/opentrap.svg" height="46" align="middle" alt="OpenTRAP logo">&nbsp;&nbsp;OpenTRAP
-</h1>
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="icon/wordmark-dark.svg">
+<img src="icon/wordmark.svg" alt="OpenTRAP" height="56">
+</picture>
 
 <p><strong>Open Traffic Replay and Analysis Proxy</strong><br>
 A free and open-source alternative to Burp Suite, built on the trusted OWASP ZAP engine.</p>
