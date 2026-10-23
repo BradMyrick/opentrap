@@ -350,13 +350,24 @@ public class MessageEditor extends JPanel {
     private void renderHtml() {
         try {
             String body = message.bodyText();
+            if (body == null) body = "";
             body = body.replaceAll("(?is)<script.*?</script>", "")
                        .replaceAll("(?i)<link[^>]*>", "")
                        .replaceAll("(?i)src\\s*=\\s*\"https?://[^\"]*\"", "");
-            renderPane.setText(body);
+            // Reset the document before each render. Reusing the previous
+            // HTMLDocument makes JEditorPane keep showing the earlier page (or
+            // nothing at all) on the next setText, which is why most responses
+            // came up blank. A fresh document forces a clean re-parse every time.
+            renderPane.setContentType("text/html");
+            renderPane.setDocument(renderPane.getEditorKit().createDefaultDocument());
+            if (body.isBlank()) {
+                renderPane.setText("<html><body><i>No HTML body to render.</i></body></html>");
+            } else {
+                renderPane.setText(body);
+            }
             renderPane.setCaretPosition(0);
         } catch (Exception e) {
-            renderPane.setText("<html><body><i>could not render this response</i></body></html>");
+            renderPane.setText("<html><body><i>Could not render this response.</i></body></html>");
         }
     }
 
