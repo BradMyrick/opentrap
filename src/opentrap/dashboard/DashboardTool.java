@@ -59,6 +59,8 @@ public class DashboardTool implements ToolModule {
     private final JPanel taskList = new JPanel();
     private JTextField searchField;
     private final Map<ScanTask, TaskCard> cards = new IdentityHashMap<>();
+    /** Re-run action per task, so "Scan again" relaunches the original scan. */
+    private final Map<ScanTask, Runnable> rerun = new IdentityHashMap<>();
     private ScanTask selected;
     /** Drives the sliding progress-bar animation while a crawl is running. */
     private javax.swing.Timer cardAnimTimer;
@@ -926,6 +928,85 @@ public class DashboardTool implements ToolModule {
         refreshRight();
     }
 
+    private Window ownerFrame() { return ctx == null ? null : ctx.frame(); }
+
+    /** Rename a task to any label the user types. */
+    private void renameTask(ScanTask t) {
+        Object input = JOptionPane.showInputDialog(ownerFrame(), "Rename task:",
+                "Rename task", JOptionPane.PLAIN_MESSAGE, null, null, t.title());
+        if (input == null) return;
+        String name = input.toString().trim();
+        if (name.isEmpty()) return;
+        t.setTitle(name);
+        if (ctx != null) ctx.taskChanged(t);
+    }
+
+    /** Remove a task from the dashboard after confirmation. */
+    private void deleteTask(ScanTask t) {
+        int ok = JOptionPane.showConfirmDialog(ownerFrame(),
+                "Remove task \"" + t.number + ". " + t.title() + "\" from the dashboard?\n"
+                + "Any findings it has already reported are kept.",
+                "Delete task", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (ok != JOptionPane.OK_OPTION) return;
+        // Stop driving a running task so nothing keeps updating a card that is gone.
+        if (t.state() == ScanTask.State.RUNNING) t.setState(ScanTask.State.PAUSED);
+        if (t == liveAudit && passiveScanner != null) passiveScanner.setEnabled(false);
+        rerun.remove(t);
+        if (selected == t) selected = null;
+        if (ctx != null) ctx.removeTask(t);
+    }
+
+    /** Open a task's live details in a separate, read-only window. */
+    private void openTaskWindow(ScanTask t) {
+        JFrame f = new JFrame(t.number + ". " + t.title());
+        f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        JPanel body = new JPanel(new BorderLayout(0, 8));
+        body.setBorder(Ui.pad(12, 12, 12, 12));
+
+        JPanel meta = new JPanel(new GridLayout(0, 1, 0, 3));
+        meta.add(Ui.bold(t.number + ". " + t.title()));
+        JLabel type   = Ui.label("");
+        JLabel config = Ui.label("Configuration: " + t.configuration());
+        JLabel scope  = Ui.label("Scope: " + (t.scope().isEmpty() ? "-" : t.scope()));
+        JLabel status = Ui.label("");
+        type.setText("Type: " + typeLabel(t.type()));
+        meta.add(type);
+        meta.add(config);
+        meta.add(scope);
+        meta.add(status);
+
+        JTextArea log = new JTextArea();
+        log.setEditable(false);
+        log.setFont(Ui.MONO);
+        JScrollPane sp = Ui.scroll(log);
+        sp.setPreferredSize(new Dimension(560, 300));
+
+        body.add(meta, BorderLayout.NORTH);
+        body.add(sp, BorderLayout.CENTER);
+        f.setContentPane(body);
+        f.setSize(600, 440);
+        f.setLocationRelativeTo(ownerFrame());
+
+        Runnable refresh = () -> {
+            status.setText("Status: " + t.stateLabel()
+                    + "   ·   Issues: " + (t.high() + t.medium() + t.low() + t.info()));
+            String text = String.join("\n", t.logLines());
+            if (!text.equals(log.getText())) {
+                log.setText(text);
+                log.setCaretPosition(log.getDocument().getLength());
+            }
+        };
+        refresh.run();
+        // Keep the window live while it is open, then stop the timer on close.
+        javax.swing.Timer timer = new javax.swing.Timer(1000, e -> refresh.run());
+        f.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosed(java.awt.event.WindowEvent e) { timer.stop(); }
+        });
+        timer.start();
+        f.setVisible(true);
+    }
+
     /** A single task card in the left-hand list. */
     private final class TaskCard extends JPanel {
         private final ScanTask task;
@@ -1087,8 +1168,12 @@ public class DashboardTool implements ToolModule {
             g2.dispose();
         }
 
-        /** The task's three-dot overflow menu: pause/resume and open details. */
+        /** The task's three-dot overflow menu. */
         private final class MenuButton extends JComponent {
+            /** When the menu last closed, so a click that dismissed it toggles shut
+             *  instead of immediately reopening a fresh menu. */
+            private long menuHiddenAt;
+
             MenuButton() {
                 Dimension d = new Dimension(16, 22);
                 setPreferredSize(d); setMinimumSize(d); setMaximumSize(d);
@@ -1096,20 +1181,52 @@ public class DashboardTool implements ToolModule {
                 setToolTipText("Task actions");
                 addMouseListener(new java.awt.event.MouseAdapter() {
                     @Override public void mousePressed(java.awt.event.MouseEvent e) {
-                        JPopupMenu m = new JPopupMenu();
-                        boolean finished = task.state() == ScanTask.State.FINISHED;
-                        boolean running  = task.state() == ScanTask.State.RUNNING;
-                        if (!finished) {
-                            JMenuItem t = new JMenuItem(running ? "Pause task" : "Resume task");
-                            t.addActionListener(a -> toggleState());
-                            m.add(t);
-                        }
-                        JMenuItem d = new JMenuItem("View task details");
-                        d.addActionListener(a -> selectTask(task));
-                        m.add(d);
-                        m.show(MenuButton.this, 0, getHeight());
+                        // The click that closes an open popup arrives here right
+                        // after the popup hides; ignore it so a second click acts
+                        // as "close" rather than reopening the menu.
+                        if (System.currentTimeMillis() - menuHiddenAt < 250) return;
+                        showMenu();
                     }
                 });
+            }
+
+            private void showMenu() {
+                JPopupMenu m = new JPopupMenu();
+                boolean finished = task.state() == ScanTask.State.FINISHED;
+                boolean running  = task.state() == ScanTask.State.RUNNING;
+                if (!finished) m.add(mi(running ? "Pause task" : "Resume task", this::toggle));
+                m.add(mi("View task details", () -> selectTask(task)));
+                m.add(mi("Open in new window", () -> openTaskWindow(task)));
+                m.addSeparator();
+                m.add(mi("Rename task", () -> renameTask(task)));
+                if (rerun.containsKey(task)) m.add(mi("Scan again", () -> {
+                    Runnable r = rerun.get(task);
+                    if (r != null) r.run();
+                }));
+                JMenuItem settings = new JMenuItem("Settings");
+                settings.setEnabled(false);   // no per-task settings screen yet
+                settings.setToolTipText("Per-task settings are coming soon.");
+                m.add(settings);
+                m.addSeparator();
+                m.add(mi("Delete", () -> deleteTask(task)));
+                m.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
+                    @Override public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) {}
+                    @Override public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) {
+                        menuHiddenAt = System.currentTimeMillis();
+                    }
+                    @Override public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) {
+                        menuHiddenAt = System.currentTimeMillis();
+                    }
+                });
+                m.show(MenuButton.this, 0, getHeight());
+            }
+
+            private void toggle() { toggleState(); }
+
+            private JMenuItem mi(String text, Runnable action) {
+                JMenuItem it = new JMenuItem(text);
+                it.addActionListener(a -> action.run());
+                return it;
             }
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -1482,6 +1599,12 @@ public class DashboardTool implements ToolModule {
                 thenAudit ? "Crawl then audit, within scope" : "Crawl within scope");
         task.setScope(seed.url());
         ctx.addTask(task);
+        // Remember how to run this exact scan again, for the task's "Scan again".
+        final boolean againAudit = thenAudit;
+        final opentrap.engine.ScanConfig againCfg = cfg;
+        final int againThreads = threads;
+        final String againUrl = url.trim();
+        rerun.put(task, () -> startSpiderFor(againUrl, againAudit, againCfg, againThreads));
         task.log("Starting scan engine (first run can take ~30s)...");
         ctx.taskChanged(task);
         Thread zth = new Thread(() -> {

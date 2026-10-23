@@ -173,6 +173,11 @@ public class SuiteContext {
         taskChanged(t);
     }
 
+    public void removeTask(ScanTask t) {
+        synchronized (tasks) { tasks.remove(t); }
+        taskChanged(t);
+    }
+
     public List<ScanTask> tasks() {
         synchronized (tasks) { return new ArrayList<>(tasks); }
     }
