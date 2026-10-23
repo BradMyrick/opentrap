@@ -155,6 +155,15 @@ public class SuiteContext {
         synchronized (issues) { return new ArrayList<>(issues); }
     }
 
+    /** Replace all issues (used when restoring a saved project). */
+    public void restoreIssues(List<Issue> saved) {
+        synchronized (issues) {
+            issues.clear();
+            issueKeys.clear();
+        }
+        if (saved != null) for (Issue i : saved) addIssue(i);
+    }
+
     public void addIssueListener(IssueListener l) { issueListeners.add(l); }
 
     // ---- scan tasks ----

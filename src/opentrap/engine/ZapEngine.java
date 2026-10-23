@@ -31,11 +31,48 @@ public final class ZapEngine {
     private static final String BUNDLE = "/opentrap/engine/engine.zip";
     private static final String BUNDLE_VERSION = "/opentrap/engine/VERSION";
 
+    /**
+     * The lifeline watchdog. Run as {@code /bin/sh -c WATCHDOG name <zap cmd...>}
+     * with its stdin wired to a pipe held by OpenTRAP. It starts ZAP in its own
+     * session, then blocks reading stdin; when OpenTRAP dies (for any reason) the
+     * pipe closes, the read returns EOF, and it kills ZAP and all its descendants
+     * (the headless browsers) plus ZAP's process group as a backstop.
+     */
+    private static final String WATCHDOG = """
+            port=; key=; prev=
+            for a in "$@"; do
+              [ "$prev" = "-port" ] && port=$a
+              case $a in api.key=*) key=${a#api.key=};; esac
+              prev=$a
+            done
+            setsid "$@" &
+            zap=$!
+            cat >/dev/null 2>&1
+            # OpenTRAP is gone. Shut ZAP down the same clean way the app itself does
+            # - stop the AJAX spider then shut the core down - which quits the
+            # Selenium-driven browsers properly. (SIGTERM alone does not: ZAP exits
+            # and its browsers orphan to init, out of reach of a process-tree walk.)
+            if [ -n "$port" ] && command -v curl >/dev/null 2>&1; then
+              curl -gs "http://127.0.0.1:$port/JSON/ajaxSpider/action/stop/?apikey=$key" >/dev/null 2>&1
+              curl -gs "http://127.0.0.1:$port/JSON/core/action/shutdown/?apikey=$key" >/dev/null 2>&1
+            fi
+            # Backstop: record ZAP's descendant browsers by PID while it is still
+            # alive, then hard-kill any that survive, plus ZAP's process group.
+            descendants() { for c in $(pgrep -P "$1" 2>/dev/null); do echo "$c"; descendants "$c"; done; }
+            all=$(descendants "$zap")
+            i=0
+            while kill -0 "$zap" 2>/dev/null && [ "$i" -lt 8 ]; do all="$all $(descendants "$zap")"; i=$((i+1)); sleep 1; done
+            kill -KILL "$zap" 2>/dev/null
+            for p in $all; do kill -KILL "$p" 2>/dev/null; done
+            kill -KILL -"$zap" 2>/dev/null
+            """;
+
     private String jar;             // path to the engine jar; null until a bundled engine is extracted
     private final boolean bundled;  // engine.zip is embedded in this application jar
     private String base;            // http://127.0.0.1:<port>
     private String apiKey;
     private Process proc;
+    private java.io.OutputStream lifeline;   // write end of the watchdog's stdin pipe
     private ZapApi api;
 
     private ZapEngine(String jar, boolean bundled) { this.jar = jar; this.bundled = bundled; }
@@ -76,12 +113,9 @@ public final class ZapEngine {
             String j = findJar(dir);
             if (j == null) continue;
             String v = j.replaceAll(".*/zap-([0-9.]+)\\.jar$", "$1");
-            String where = dir.equals(extractDir().toString()) ? (bundled != null ? "bundled" : "unpacked under ~/.opentrap")
-                    : dir.endsWith("/engine") ? "fetched into the source tree"
-                    : "system install at " + dir;
-            return "OWASP ZAP " + v + " (" + where + ")";
+            return "OWASP ZAP " + v;
         }
-        if (bundled != null) return "OWASP ZAP " + bundled + " (bundled, unpacked on first scan)";
+        if (bundled != null) return "OWASP ZAP " + bundled;
         return "OWASP ZAP (none found: run fetch-zap.sh or use a release build)";
     }
 
@@ -139,10 +173,44 @@ public final class ZapEngine {
                 "-silent",
                 "-dir", home.toString()));
 
-        ProcessBuilder pb = new ProcessBuilder(cmd);
+        // Point ZAP's Selenium/AJAX-spider at the Chromium and chromedriver we
+        // bundle (or the ones on the system), and drive it headless. When either
+        // is missing the AJAX crawl simply does not run; the traditional spider
+        // still does. The key-name variants cover different add-on versions.
+        String chrome = opentrap.proxy.EmbeddedBrowser.findBinary();
+        String driver = opentrap.proxy.EmbeddedBrowser.findDriver();
+        if (driver != null) {
+            cmd.add("-config"); cmd.add("selenium.chromeDriverPath=" + driver);
+            cmd.add("-config"); cmd.add("selenium.chromeDriver=" + driver);
+        }
+        if (chrome != null) {
+            cmd.add("-config"); cmd.add("selenium.chromeBinaryPath=" + chrome);
+            cmd.add("-config"); cmd.add("selenium.chromeBinary=" + chrome);
+        }
+        cmd.add("-config"); cmd.add("ajaxSpider.browserId=chrome-headless");
+        // Cap the AJAX spider's browser pool. ZAP defaults to one browser per CPU
+        // core, which on a many-core machine means a dozen-plus headless Chromium
+        // instances per crawl - a huge, needless memory load. Two is plenty.
+        cmd.add("-config"); cmd.add("ajaxSpider.numberOfBrowsers=2");
+
+        // Launch ZAP through a lifeline watchdog instead of directly. The watchdog
+        // holds a pipe (its stdin) connected to this OpenTRAP process; the moment
+        // OpenTRAP exits for ANY reason - clean close, crash, or kill -9 - the
+        // kernel closes that pipe, the watchdog wakes on EOF, and it kills ZAP and
+        // every browser ZAP spawned. Each OpenTRAP instance watches only its own
+        // engine, so running several instances at once is safe.
+        List<String> launch = new ArrayList<>(List.of(
+                "/bin/sh", "-c", WATCHDOG, "opentrap-engine-watchdog"));
+        launch.addAll(cmd);
+
+        ProcessBuilder pb = new ProcessBuilder(launch);
+        pb.redirectInput(ProcessBuilder.Redirect.PIPE);    // the lifeline
         pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
         pb.redirectError(ProcessBuilder.Redirect.DISCARD);
         proc = pb.start();
+        // Hold the write end open for the engine's lifetime; never write to it.
+        // When this JVM ends, the OS closes it and the watchdog fires.
+        lifeline = proc.getOutputStream();
         base = "http://127.0.0.1:" + port;
         api = new ZapApi(base, apiKey);
 
@@ -219,10 +287,38 @@ public final class ZapEngine {
     }
 
     public synchronized void shutdown() {
-        try { if (api != null) api.shutdown(); } catch (Exception ignore) { }
+        // Ask ZAP to stop the AJAX spider first, then shut down cleanly, so it
+        // releases the headless browsers it drives.
+        try {
+            if (api != null) {
+                try { api.ajaxSpiderStop(); } catch (Exception ignore) { }
+                api.shutdown();
+            }
+        } catch (Exception ignore) { }
+        // Snap the lifeline: this alone makes the watchdog kill the engine tree,
+        // and it is the safety net if the in-process kill below is ever skipped.
+        if (lifeline != null) {
+            try { lifeline.close(); } catch (Exception ignore) { }
+            lifeline = null;
+        }
         if (proc != null) {
+            // Kill the WHOLE process tree. ZAP's AJAX spider spawns headless
+            // browser processes (chromedriver/chromium, geckodriver/firefox) that
+            // are descendants of the ZAP process, not of ours. destroy() signals
+            // only ZAP itself, so those browsers would orphan and leak - which is
+            // exactly how hundreds of them once piled up. Collect every descendant
+            // before killing ZAP, then destroy them too.
+            java.util.List<ProcessHandle> tree;
+            try { tree = proc.descendants().collect(java.util.stream.Collectors.toList()); }
+            catch (Exception e) { tree = java.util.List.of(); }
             proc.destroy();
-            try { proc.waitFor(); } catch (InterruptedException ignore) { }
+            for (ProcessHandle h : tree) { try { h.destroy(); } catch (Exception ignore) { } }
+            try {
+                if (!proc.waitFor(8, java.util.concurrent.TimeUnit.SECONDS)) proc.destroyForcibly();
+            } catch (InterruptedException ignore) { proc.destroyForcibly(); }
+            for (ProcessHandle h : tree) {
+                try { if (h.isAlive()) h.destroyForcibly(); } catch (Exception ignore) { }
+            }
         }
     }
 

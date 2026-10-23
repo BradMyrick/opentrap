@@ -81,7 +81,16 @@ public final class AboutDialog {
 
     private static void open(String url) {
         try {
-            if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(java.net.URI.create(url));
+            if (Desktop.isDesktopSupported()
+                    && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(java.net.URI.create(url));
+                return;
+            }
         } catch (Exception ignored) {}
+        // Desktop.browse is frequently a no-op on Linux (especially Wayland), so
+        // fall back to the system URL opener.
+        for (String[] cmd : new String[][]{{"xdg-open", url}, {"gio", "open", url}, {"x-www-browser", url}}) {
+            try { new ProcessBuilder(cmd).start(); return; } catch (Exception ignored) {}
+        }
     }
 }

@@ -62,6 +62,18 @@ public class IntruderTool implements ToolModule {
         return new Tab[]{ new Tab("intruder", split) };
     }
 
+    @Override public java.io.Serializable saveState() {
+        String marked = positions.markedText();
+        return (marked == null || marked.isEmpty()) ? null : marked;
+    }
+
+    @Override public void restoreState(java.io.Serializable state) {
+        if (state instanceof String s) {
+            positions.setMarkedText(s);
+            payloads.setAttack(positions.attackType(), positions.positionCount());
+        }
+    }
+
     @Override public JMenu[] menus() {
         JMenu menu = new JMenu("intruder");
         JMenuItem start = new JMenuItem("start attack");

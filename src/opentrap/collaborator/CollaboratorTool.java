@@ -284,7 +284,7 @@ public class CollaboratorTool implements ToolModule {
     // ------------------------------------------------------------ table model
 
     private final class InteractionTableModel extends AbstractTableModel {
-        private final String[] cols = {"#", "type", "source", "host"};
+        private final String[] cols = {"#", "Type", "Source", "Host"};
         private final List<Interaction> rows = new ArrayList<>();
         private final SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
 

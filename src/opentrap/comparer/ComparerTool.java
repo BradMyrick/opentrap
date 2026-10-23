@@ -81,6 +81,18 @@ public class ComparerTool implements ToolModule {
 
     @Override public Tab[] tabs() { return new Tab[]{ new Tab("comparer", root) }; }
 
+    @Override public java.io.Serializable saveState() {
+        java.util.ArrayList<byte[]> data = new java.util.ArrayList<>();
+        for (Item it : items) data.add(it.data());
+        return data.isEmpty() ? null : data;
+    }
+
+    @Override public void restoreState(java.io.Serializable state) {
+        if (state instanceof java.util.List<?> list) {
+            for (Object o : list) if (o instanceof byte[] b) add(b);
+        }
+    }
+
     @Override public void init(SuiteContext ctx) {
         this.ctx = ctx;
         ctx.registerSink("comparer", new SuiteContext.MessageSink() {

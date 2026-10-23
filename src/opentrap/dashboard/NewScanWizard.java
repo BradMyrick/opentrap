@@ -6,33 +6,51 @@ import opentrap.ui.Ui;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 
 /**
- * The New scan wizard: a left step rail (Scan type, Scan
- * details, Scan configuration, Application login, Resource pool) and a content
- * area, with Cancel / Previous / Next / Scan along the bottom. The dialog only
- * gathers configuration; the caller reads the getters and starts the scan.
+ * The New scan wizard: a left step rail (Scan type, Scan details, Scan
+ * configuration, Application login, Resource pool) and a content area, with
+ * Cancel / Previous / Next / Scan along the bottom.
+ *
+ * <p>Behaviour mirrors the reference wizard: only "Scan type" is shown until a
+ * scan type is chosen, at which point the remaining steps appear and the Scan
+ * button becomes enabled (orange). The dialog only gathers configuration; the
+ * caller reads the getters and starts the scan.
  */
 public class NewScanWizard extends JDialog {
 
     private static final String[] STEPS = {
             "Scan type", "Scan details", "Scan configuration", "Application login", "Resource pool"
     };
+    private static final String[] STEP_ICONS = { "type", "details", "config", "login", "pool" };
 
     private final CardLayout cards = new CardLayout();
     private final JPanel content = new JPanel(cards);
     private final JToggleButton[] rail = new JToggleButton[STEPS.length];
     private int step;
+    private boolean typeChosen;
 
     // Collected configuration.
-    private final JRadioButton typeCrawlAudit = new JRadioButton("", true);
-    private final JRadioButton typeCrawl = new JRadioButton("");
+    private final JRadioButton typeCrawlAudit = new JRadioButton();
+    private final JRadioButton typeCrawl = new JRadioButton();
+    private final JRadioButton typeApiOnly = new JRadioButton();
     private final JTextArea urls = new JTextArea();
-    private final ButtonGroup configGroup = new ButtonGroup();
-    private String configPreset = "Balanced";
+    private String configPreset = "Lightweight";
+    private final java.util.Map<String, JPanel> configCards = new java.util.LinkedHashMap<>();
     private final JSpinner threads = new JSpinner(new SpinnerNumberModel(10, 1, 50, 1));
 
+    private JButton prevButton, nextButton, scanButton;
     private boolean started;
+
+    // Scan configuration presets, in the reference's order.
+    private static final String[][] CONFIGS = {
+        {"Lightweight", "Gain fast feedback on a site's security. Will complete within 15 minutes."},
+        {"Fast",        "Greater coverage while keeping scan times low. Generally completes within one hour."},
+        {"Balanced",    "Provides a balance between coverage and speed. Generally completes within a few hours."},
+        {"Deep",        "Achieve comprehensive coverage. Scanning time depends on the target site's size and complexity."},
+        {"Custom",      "Configure the default scan settings to meet your needs."},
+    };
 
     public NewScanWizard(SuiteContext ctx, Frame owner) {
         super(owner, "New scan", true);
@@ -48,8 +66,9 @@ public class NewScanWizard extends JDialog {
         add(content, BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
         selectStep(0);
+        revealSteps(false);   // only "Scan type" until a type is chosen
 
-        setSize(900, 560);
+        setSize(940, 620);
         setLocationRelativeTo(owner);
     }
 
@@ -67,11 +86,25 @@ public class NewScanWizard extends JDialog {
         return "";
     }
 
+    /** Crawl depth implied by the chosen configuration (0 = unlimited). */
     public int crawlDepth() {
-        return switch (configPreset) { case "Lightweight" -> 3; case "Deep" -> 0; default -> 5; };
+        return switch (configPreset) {
+            case "Lightweight" -> 3;
+            case "Fast" -> 5;
+            case "Balanced" -> 10;
+            case "Deep" -> 0;
+            default -> 5;   // Custom
+        };
     }
+
+    /** Crawl/scan time budget in minutes implied by the configuration (0 = none). */
     public int crawlDuration() {
-        return switch (configPreset) { case "Lightweight" -> 15; case "Deep" -> 0; default -> 60; };
+        return switch (configPreset) {
+            case "Lightweight" -> 15;
+            case "Fast" -> 60;
+            case "Balanced" -> 180;
+            default -> 0;   // Deep, Custom
+        };
     }
 
     // ---- left rail ----
@@ -84,15 +117,18 @@ public class NewScanWizard extends JDialog {
         ButtonGroup g = new ButtonGroup();
         for (int i = 0; i < STEPS.length; i++) {
             final int idx = i;
-            JToggleButton b = new JToggleButton("<html><div style='text-align:center'>" + STEPS[i] + "</div></html>");
+            JToggleButton b = new JToggleButton(
+                    "<html><div style='text-align:center'>" + STEPS[i].replace(" ", "<br>") + "</div></html>");
             b.setFont(Ui.PLAIN);
             b.setFocusable(false);
             b.setContentAreaFilled(false);
             b.setOpaque(true);
             b.setBackground(Theme.SURFACE);
-            b.setBorder(Ui.pad(14, 18, 14, 18));
+            b.setHorizontalTextPosition(SwingConstants.CENTER);
+            b.setVerticalTextPosition(SwingConstants.BOTTOM);
+            b.setBorder(Ui.pad(12, 14, 12, 14));
             b.setAlignmentX(Component.CENTER_ALIGNMENT);
-            b.setMaximumSize(new Dimension(150, 70));
+            b.setMaximumSize(new Dimension(150, 80));
             b.addActionListener(e -> selectStep(idx));
             g.add(b);
             rail[i] = b;
@@ -101,18 +137,30 @@ public class NewScanWizard extends JDialog {
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.add(p, BorderLayout.NORTH);
         wrap.setBackground(Theme.SURFACE);
+        wrap.setPreferredSize(new Dimension(152, 10));
         return wrap;
     }
 
+    /** Show or hide every step after "Scan type". */
+    private void revealSteps(boolean show) {
+        for (int k = 1; k < rail.length; k++) rail[k].setVisible(show);
+        rail[0].getParent().revalidate();
+        rail[0].getParent().repaint();
+    }
+
     private void selectStep(int i) {
+        // Steps beyond the first are only reachable once a scan type is chosen.
+        if (!typeChosen) i = 0;
         step = Math.max(0, Math.min(STEPS.length - 1, i));
         for (int k = 0; k < rail.length; k++) {
             boolean on = k == step;
             rail[k].setSelected(on);
             rail[k].setBackground(on ? Ui.ACCENT : Theme.SURFACE);
             rail[k].setForeground(on ? Color.WHITE : Theme.TEXT);
+            rail[k].setIcon(railIcon(STEP_ICONS[k], on ? Color.WHITE : Theme.MUTED));
         }
         cards.show(content, STEPS[step]);
+        updateButtons();
     }
 
     // ---- step panels ----
@@ -121,44 +169,64 @@ public class NewScanWizard extends JDialog {
         ButtonGroup g = new ButtonGroup();
         g.add(typeCrawlAudit);
         g.add(typeCrawl);
-        JPanel cardsRow = new JPanel(new GridLayout(1, 2, 16, 0));
+        g.add(typeApiOnly);
+        JPanel cardsRow = new JPanel(new GridLayout(1, 3, 16, 0));
         cardsRow.setOpaque(false);
         cardsRow.add(typeCard(typeCrawlAudit, "Crawl and audit",
-                "Maps the attack surface and identifies vulnerabilities. Scans the web application."));
+                "Maps the attack surface and identifies vulnerabilities. Scans the web application and any detected APIs.", true));
         cardsRow.add(typeCard(typeCrawl, "Crawl",
-                "Maps the attack surface of the web application without auditing for vulnerabilities."));
-        return stepPanel("Scan type", "Select the type of scan you'd like to run.", cardsRow);
+                "Maps the attack surface of the web application and any detected APIs.", true));
+        // API-only scanning is not implemented yet, so the card is shown but not
+        // selectable, rather than pretending to offer it.
+        cardsRow.add(typeCard(typeApiOnly, "API-only scan",
+                "Scans only detected APIs. Not yet available.", false));
+
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.setOpaque(false);
+        wrap.add(cardsRow, BorderLayout.NORTH);
+        return stepPanel("Scan type", "Select the type of scan you'd like to run.", wrap);
     }
 
-    private JComponent typeCard(JRadioButton radio, String title, String desc) {
+    private JComponent typeCard(JRadioButton radio, String title, String desc, boolean enabled) {
         JPanel card = new JPanel(new BorderLayout(0, 6));
-        card.setBackground(Theme.BG);
+        card.setBackground(enabled ? Theme.BG : Theme.SURFACE);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Ui.GRID), Ui.pad(14, 14, 14, 14)));
         JPanel head = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         head.setOpaque(false);
         radio.setOpaque(false);
+        radio.setEnabled(enabled);
         head.add(radio);
         JLabel titleLabel = Ui.bold(title);
+        if (!enabled) titleLabel.setForeground(Theme.MUTED);
         head.add(titleLabel);
         JTextArea d = Ui.note(desc);
         card.add(head, BorderLayout.NORTH);
         card.add(d, BorderLayout.CENTER);
-        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        java.awt.event.MouseAdapter pick = new java.awt.event.MouseAdapter() {
-            @Override public void mouseClicked(java.awt.event.MouseEvent e) { radio.setSelected(true); }
-        };
-        // Clicking anywhere on the card, including its title and description text,
-        // selects it, not just the radio button.
-        for (Component c : new Component[]{card, head, titleLabel, d}) {
-            c.addMouseListener(pick);
+        if (enabled) {
+            card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            java.awt.event.MouseAdapter pick = new java.awt.event.MouseAdapter() {
+                @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                    radio.setSelected(true);
+                    onTypeChosen();
+                }
+            };
+            for (Component c : new Component[]{card, head, titleLabel, d}) c.addMouseListener(pick);
+            radio.addActionListener(e -> onTypeChosen());
         }
         return card;
     }
 
+    /** First scan-type selection: reveal the rest of the steps and enable Scan. */
+    private void onTypeChosen() {
+        if (typeChosen) { updateButtons(); return; }
+        typeChosen = true;
+        revealSteps(true);
+        updateButtons();
+    }
+
     private JComponent buildScanDetails(SuiteContext ctx) {
         urls.setFont(Ui.MONO);
-        // Prefill from scope if it is set; otherwise leave empty.
         StringBuilder sb = new StringBuilder();
         try {
             for (var r : ctx.scope().include()) {
@@ -168,57 +236,139 @@ public class NewScanWizard extends JDialog {
         } catch (Exception ignored) {}
         urls.setText(sb.toString());
 
-        JPanel body = new JPanel(new BorderLayout(0, 8));
-        body.setOpaque(false);
         JScrollPane sp = Ui.scroll(urls);
-        sp.setPreferredSize(new Dimension(500, 260));
-        body.add(sp, BorderLayout.CENTER);
-        body.add(Ui.note("OpenTRAP will begin crawling from these URLs, and by default includes "
-                + "everything beneath the specified URLs' folders. One URL per line."), BorderLayout.SOUTH);
-        return stepPanel("URLs to scan", "Define the URLs to scan.", body);
+        sp.setPreferredSize(new Dimension(500, 220));
+
+        JTextArea urlsNote = Ui.note("OpenTRAP will begin crawling from these URLs, and by default "
+                + "includes everything beneath the specified URLs' folders. One URL per line.");
+
+        // Protocol settings.
+        JRadioButton pHttpHttps = Ui.radio("Scan using HTTP & HTTPS", true);
+        JRadioButton pSpecified = Ui.radio("Scan using my specified protocols", false);
+        ButtonGroup pg = new ButtonGroup();
+        pg.add(pHttpHttps); pg.add(pSpecified);
+        JPanel protoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        protoRow.setOpaque(false);
+        protoRow.add(pHttpHttps); protoRow.add(Box.createHorizontalStrut(18)); protoRow.add(pSpecified);
+
+        // Detailed scope configuration: an expander that reveals the in-scope hosts.
+        JTextArea scopeInfo = Ui.note(sb.length() == 0
+                ? "Scope is taken from the URLs above (and everything beneath their folders)."
+                : "In scope:\n" + sb.toString().trim());
+        scopeInfo.setVisible(false);
+        JButton scopeToggle = new JButton("› Detailed scope configuration");
+        scopeToggle.setFont(Ui.PLAIN);
+        scopeToggle.setBorder(Ui.pad(2, 0, 2, 0));
+        scopeToggle.setContentAreaFilled(false);
+        scopeToggle.setFocusPainted(false);
+        scopeToggle.setHorizontalAlignment(SwingConstants.LEFT);
+        scopeToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        scopeToggle.addActionListener(e -> {
+            boolean now = !scopeInfo.isVisible();
+            scopeInfo.setVisible(now);
+            scopeToggle.setText((now ? "⌄ " : "› ") + "Detailed scope configuration");
+        });
+
+        // Advanced scan parameters: the isolated-scan toggle (not yet honoured, so
+        // shown disabled rather than as a control that does nothing).
+        JCheckBox isolated = Ui.check("Run isolated scan", false);
+        isolated.setEnabled(false);
+        isolated.setToolTipText("Isolated scans are not yet available.");
+
+        // Lay the body out in a single full-width column with GridBag, which keeps
+        // every row flush-left and lets the URLs box fill the width.
+        JPanel body = new JPanel(new GridBagLayout());
+        body.setOpaque(false);
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0; c.anchor = GridBagConstraints.WEST; c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1; c.insets = new Insets(0, 0, 0, 0);
+        int row = 0;
+        c.gridy = row++; c.fill = GridBagConstraints.BOTH; c.weighty = 0; c.ipady = 200; body.add(sp, c);
+        c.fill = GridBagConstraints.HORIZONTAL; c.ipady = 0;
+        c.gridy = row++; c.insets = new Insets(6, 0, 16, 0); body.add(urlsNote, c);
+        c.gridy = row++; c.insets = new Insets(0, 0, 6, 0); body.add(sectionLabel("Protocol settings"), c);
+        c.gridy = row++; c.insets = new Insets(0, 0, 6, 0); body.add(protoRow, c);
+        c.gridy = row++; c.insets = new Insets(0, 0, 0, 0); body.add(scopeToggle, c);
+        c.gridy = row++; c.insets = new Insets(2, 0, 16, 0); body.add(scopeInfo, c);
+        c.gridy = row++; c.insets = new Insets(0, 0, 6, 0); body.add(sectionLabel("Advanced scan parameters"), c);
+        c.gridy = row++; c.insets = new Insets(0, 0, 4, 0);
+        body.add(Ui.note("Isolate the scan so its results do not appear in the main site map or issue log."), c);
+        c.gridy = row++; c.insets = new Insets(0, 0, 0, 0); body.add(isolated, c);
+        // Filler row pushes everything to the top.
+        c.gridy = row; c.weighty = 1; c.fill = GridBagConstraints.BOTH; body.add(Box.createGlue(), c);
+
+        return stepPanel("URLs to scan",
+                "Define the URLs to scan. OpenTRAP will begin crawling from these URLs.", body);
     }
 
     private JComponent buildScanConfiguration() {
+        // The configurations are shown directly as a selectable list (no dropdown).
         JPanel list = new JPanel();
         list.setLayout(new BoxLayout(list, BoxLayout.Y_AXIS));
         list.setOpaque(false);
-        list.add(configRow("Lightweight", "Gain fast feedback on a site's security. Shallow crawl, quick audit.", false));
-        list.add(configRow("Balanced", "A balance between coverage and speed. The default.", true));
-        list.add(configRow("Deep", "Comprehensive coverage. Unlimited crawl depth; takes longer.", false));
-        return stepPanel("Scan configuration",
-                "Select the scan configuration to run. Lightweight is fastest; Deep is most thorough.", list);
+        list.setAlignmentX(Component.LEFT_ALIGNMENT);
+        list.setBorder(BorderFactory.createLineBorder(Ui.GRID));
+        for (String[] c : CONFIGS) {
+            JPanel card = configCard(c[0], c[1]);
+            configCards.put(c[0], card);
+            list.add(card);
+        }
+
+        JPanel body = new JPanel(new BorderLayout(0, 10));
+        body.setOpaque(false);
+        JPanel listWrap = new JPanel(new BorderLayout());
+        listWrap.setOpaque(false);
+        listWrap.add(list, BorderLayout.NORTH);
+        body.add(listWrap, BorderLayout.NORTH);
+
+        // Save / Load named configurations is not implemented, so disabled.
+        JButton save = Ui.button("Save");
+        JButton load = Ui.button("Load");
+        save.setEnabled(false); load.setEnabled(false);
+        save.setToolTipText("Saving named configurations is coming soon.");
+        load.setToolTipText("Loading named configurations is coming soon.");
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        actions.setOpaque(false);
+        actions.add(save); actions.add(load);
+
+        JComponent panel = stepPanel("Scan configuration",
+                "Select the type of scan configuration you want to run. You can adjust it as needed.", body);
+        if (panel instanceof JPanel jp && jp.getComponent(0) instanceof JPanel head) {
+            head.add(actions, BorderLayout.EAST);
+        }
+        selectConfig(configPreset);
+        return panel;
     }
 
-    private JComponent configRow(String name, String desc, boolean selected) {
-        JRadioButton r = new JRadioButton("", selected);
-        r.setOpaque(false);
-        configGroup.add(r);
-        r.addActionListener(e -> { if (r.isSelected()) configPreset = name; });
-        JPanel row = new JPanel(new BorderLayout(8, 0));
-        row.setOpaque(false);
+    private JPanel configCard(String name, String desc) {
+        JPanel row = new JPanel(new BorderLayout(10, 0));
+        row.setOpaque(true);
+        row.setBackground(Theme.BG);
         row.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, Ui.GRID), Ui.pad(8, 4, 8, 4)));
-        row.add(r, BorderLayout.WEST);
+                BorderFactory.createMatteBorder(0, 0, 1, 0, Ui.GRID), Ui.pad(10, 12, 10, 12)));
+        row.add(new JLabel(configIcon(name)), BorderLayout.WEST);
         JPanel text = new JPanel(new BorderLayout());
         text.setOpaque(false);
-        JLabel nameLabel = Ui.bold(name);
-        JTextArea descArea = Ui.note(desc);
-        text.add(nameLabel, BorderLayout.NORTH);
-        text.add(descArea, BorderLayout.CENTER);
+        text.add(Ui.bold(name), BorderLayout.NORTH);
+        text.add(Ui.note(desc), BorderLayout.CENTER);
         row.add(text, BorderLayout.CENTER);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
-        // Click anywhere on the row (not just the radio) to select it.
         row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         java.awt.event.MouseAdapter pick = new java.awt.event.MouseAdapter() {
-            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
-                r.setSelected(true);
-                configPreset = name;
-            }
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) { selectConfig(name); }
         };
-        for (Component c : new Component[]{row, text, nameLabel, descArea}) {
-            c.addMouseListener(pick);
-        }
+        for (Component c : row.getComponents()) c.addMouseListener(pick);
+        row.addMouseListener(pick);
         return row;
+    }
+
+    private void selectConfig(String name) {
+        if (name == null) return;
+        configPreset = name;
+        for (var e : configCards.entrySet()) {
+            boolean on = e.getKey().equals(name);
+            e.getValue().setBackground(on ? Ui.SELECTION : Theme.BG);
+        }
     }
 
     private JComponent buildApplicationLogin() {
@@ -237,8 +387,6 @@ public class NewScanWizard extends JDialog {
         threads.setFont(Ui.PLAIN);
         threads.setPreferredSize(new Dimension(70, threads.getPreferredSize().height));
         threads.setMaximumSize(threads.getPreferredSize());
-        // Keep the spinner at its natural width rather than stretching across the
-        // form, which looks wrong for a small number field.
         JPanel spinnerWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         spinnerWrap.setOpaque(false);
         spinnerWrap.add(threads);
@@ -247,8 +395,7 @@ public class NewScanWizard extends JDialog {
         body.add(Ui.form("Concurrent requests:", spinnerWrap), BorderLayout.NORTH);
         body.add(Ui.note("The number of requests the scan engine sends at once. Lower this to "
                 + "be gentler on the target; raise it to scan faster."), BorderLayout.CENTER);
-        return stepPanel("Resource pool",
-                "Specify the resources the scan may use.", body);
+        return stepPanel("Resource pool", "Specify the resources the scan may use.", body);
     }
 
     private JComponent stepPanel(String title, String subtitle, JComponent body) {
@@ -257,32 +404,52 @@ public class NewScanWizard extends JDialog {
         p.setBorder(Ui.pad(16, 20, 16, 20));
         JPanel head = new JPanel(new BorderLayout());
         head.setOpaque(false);
-        head.add(Ui.heading(title), BorderLayout.NORTH);
-        head.add(Ui.note(subtitle), BorderLayout.CENTER);
+        JPanel titles = new JPanel(new BorderLayout());
+        titles.setOpaque(false);
+        titles.add(Ui.heading(title), BorderLayout.NORTH);
+        titles.add(Ui.note(subtitle), BorderLayout.CENTER);
+        head.add(titles, BorderLayout.CENTER);
         p.add(head, BorderLayout.NORTH);
         p.add(body, BorderLayout.CENTER);
         return p;
+    }
+
+    private static JLabel sectionLabel(String text) {
+        JLabel l = Ui.bold(text);
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return l;
     }
 
     // ---- bottom buttons ----
 
     private JComponent buildButtons() {
         JButton cancel = Ui.button("Cancel");
-        JButton prev = Ui.button("Previous");
-        JButton next = Ui.button("Next");
-        JButton scan = Ui.primaryButton("Scan", "start the scan with this configuration");
+        prevButton = Ui.button("Previous");
+        nextButton = Ui.button("Next");
+        scanButton = Ui.button("Scan");
+        scanButton.setEnabled(false);   // greyed until a scan type is chosen
         cancel.addActionListener(e -> { started = false; dispose(); });
-        prev.addActionListener(e -> selectStep(step - 1));
-        next.addActionListener(e -> selectStep(step + 1));
-        scan.addActionListener(e -> doScan());
+        prevButton.addActionListener(e -> selectStep(step - 1));
+        nextButton.addActionListener(e -> selectStep(step + 1));
+        scanButton.addActionListener(e -> doScan());
 
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
         bar.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Ui.GRID));
         bar.add(cancel);
-        bar.add(prev);
-        bar.add(next);
-        bar.add(scan);
+        bar.add(prevButton);
+        bar.add(nextButton);
+        bar.add(scanButton);
         return bar;
+    }
+
+    private void updateButtons() {
+        prevButton.setEnabled(step > 0);
+        nextButton.setEnabled(typeChosen && step < STEPS.length - 1);
+        boolean scannable = typeChosen;
+        scanButton.setEnabled(scannable);
+        // Turn the Scan button orange once it is usable, grey before that.
+        scanButton.putClientProperty(Theme.PRIMARY, scannable ? Boolean.TRUE : Boolean.FALSE);
+        scanButton.repaint();
     }
 
     private void doScan() {
@@ -300,5 +467,69 @@ public class NewScanWizard extends JDialog {
         }
         started = true;
         dispose();
+    }
+
+    // ---- icons ----
+
+    private static Icon railIcon(String kind, Color col) {
+        int s = 20;
+        BufferedImage img = new BufferedImage(s, s, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(col);
+        g.setStroke(new BasicStroke(1.5f));
+        switch (kind) {
+            case "type" -> {
+                // Target / crosshair.
+                g.drawOval(4, 4, 12, 12);
+                g.drawOval(8, 8, 4, 4);
+                g.drawLine(10, 1, 10, 4);
+                g.drawLine(10, 16, 10, 19);
+                g.drawLine(1, 10, 4, 10);
+                g.drawLine(16, 10, 19, 10);
+            }
+            case "details" -> { g.drawLine(5, 3, 5, 17); g.drawPolygon(new int[]{5, 15, 5}, new int[]{4, 8, 12}, 3); }
+            case "config" -> {
+                g.drawOval(7, 7, 6, 6);
+                for (int a = 0; a < 360; a += 45) {
+                    double r = Math.toRadians(a);
+                    g.drawLine((int) (10 + 4 * Math.cos(r)), (int) (10 + 4 * Math.sin(r)),
+                               (int) (10 + 6.5 * Math.cos(r)), (int) (10 + 6.5 * Math.sin(r)));
+                }
+            }
+            case "login" -> {
+                g.drawRect(10, 4, 6, 12);
+                g.drawLine(3, 10, 11, 10);
+                g.drawLine(8, 7, 11, 10);
+                g.drawLine(8, 13, 11, 10);
+            }
+            case "pool" -> { g.drawOval(4, 4, 12, 12); g.drawLine(10, 10, 10, 4); g.drawLine(10, 10, 16, 11); }
+        }
+        g.dispose();
+        return new ImageIcon(img);
+    }
+
+    private static Icon configIcon(String name) {
+        int s = 18;
+        BufferedImage img = new BufferedImage(s, s, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(Theme.MUTED);
+        g.setStroke(new BasicStroke(1.4f));
+        switch (name) {
+            case "Lightweight" -> { g.drawOval(2, 2, 13, 13); g.drawLine(8, 8, 8, 4); g.drawLine(8, 8, 12, 9); }
+            case "Fast" -> {
+                g.fillPolygon(new int[]{2, 2, 8}, new int[]{3, 15, 9}, 3);
+                g.fillPolygon(new int[]{8, 8, 14}, new int[]{3, 15, 9}, 3);
+            }
+            case "Balanced" -> { g.drawLine(9, 2, 9, 15); g.drawLine(3, 5, 15, 5); g.drawOval(2, 5, 3, 3); g.drawOval(13, 5, 3, 3); }
+            case "Deep" -> { g.drawArc(2, 1, 14, 8, 0, -180); g.drawArc(4, 5, 10, 7, 0, -180); g.drawArc(6, 9, 6, 6, 0, -180); }
+            case "Custom" -> {
+                for (int y : new int[]{4, 9, 14}) { g.drawLine(2, y, 16, y); }
+                g.fillRect(5, 2, 3, 4); g.fillRect(11, 7, 3, 4); g.fillRect(7, 12, 3, 4);
+            }
+        }
+        g.dispose();
+        return new ImageIcon(img);
     }
 }

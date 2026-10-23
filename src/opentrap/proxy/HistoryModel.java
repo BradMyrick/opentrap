@@ -11,8 +11,8 @@ import java.util.List;
 public class HistoryModel extends AbstractTableModel {
 
     private static final String[] COLS = {
-        "#", "host", "method", "URL", "params", "edited", "status",
-        "length", "MIME type", "extension", "title", "SSL", "IP", "time"
+        "#", "Host", "Method", "URL", "Params", "Edited", "Status",
+        "Length", "MIME type", "Extension", "Title", "SSL", "IP", "Time"
     };
 
     private final List<LogEntry> all = new ArrayList<>();

@@ -15,7 +15,9 @@ import java.util.List;
  * <p>Instances are immutable. Build one with {@link #builder(String)}; the long
  * constructor is retained for the original checks that predate the builder.
  */
-public final class Issue {
+public final class Issue implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     /** Severity bands, most serious first. */
     public enum Severity {

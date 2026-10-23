@@ -122,8 +122,80 @@ public final class ZapApi {
         return intOf(call("ascan", "view", "status", p("scanId", id)), "status");
     }
 
+    // ------------------------------------------------- AJAX spider (JavaScript)
+
+    /** Pick the browser the AJAX spider drives, e.g. "chrome-headless". */
+    public void setAjaxBrowser(String browserId) throws Exception {
+        call("ajaxSpider", "action", "setOptionBrowserId", p("String", browserId));
+    }
+
+    /** Bound the AJAX spider's concurrent headless-browser pool. */
+    public void setAjaxBrowsers(int n) throws Exception {
+        call("ajaxSpider", "action", "setOptionNumberOfBrowsers", p("Integer", String.valueOf(n)));
+    }
+
+    /** Start the AJAX spider over the URL; it executes JavaScript as it crawls. */
+    public void ajaxSpiderScan(String url, boolean inScope) throws Exception {
+        call("ajaxSpider", "action", "scan", p("url", url, "inScope", String.valueOf(inScope)));
+    }
+
+    /** "running" while the AJAX spider is working, "stopped" once it is done. */
+    public String ajaxSpiderStatus() throws Exception {
+        return str(call("ajaxSpider", "view", "status", null), "status");
+    }
+
+    /** How many results (URLs) the AJAX spider has found so far. */
+    public int ajaxSpiderResults() throws Exception {
+        return intOf(call("ajaxSpider", "view", "numberOfResults", null), "numberOfResults");
+    }
+
+    /** Stop the AJAX spider early (e.g. when a time budget is reached). */
+    public void ajaxSpiderStop() throws Exception {
+        call("ajaxSpider", "action", "stop", null);
+    }
+
     public int numberOfAlerts(String baseurl) throws Exception {
         return intOf(call("core", "view", "numberOfAlerts", p("baseurl", baseurl)), "numberOfAlerts");
+    }
+
+    /**
+     * The number of unique locations (endpoints) under {@code baseurl} that ZAP
+     * has discovered, counted at node granularity: a path plus its set of
+     * parameter names, with parameter *values* collapsed. So {@code /p?id=2} and
+     * {@code /p?id=3} count once, while {@code /p?d=1} counts separately. This
+     * reads ZAP's site tree, so it combines the traditional and AJAX spiders
+     * with no double counting.
+     */
+    public int uniqueLocations(String baseurl) throws Exception {
+        java.util.Set<String> nodes = new java.util.HashSet<>();
+        for (JsonValue u : arr(call("core", "view", "urls", p("baseurl", baseurl)), "urls")) {
+            String url = u.asString();
+            if (url != null) nodes.add(nodeKey(url));
+        }
+        return nodes.size();
+    }
+
+    /** host + path + the sorted set of query-parameter names (values dropped). */
+    static String nodeKey(String url) {
+        try {
+            java.net.URI u = java.net.URI.create(url);
+            StringBuilder b = new StringBuilder();
+            if (u.getHost() != null) b.append(u.getHost());
+            b.append(u.getRawPath() == null ? "/" : u.getRawPath());
+            String q = u.getRawQuery();
+            if (q != null && !q.isEmpty()) {
+                java.util.TreeSet<String> names = new java.util.TreeSet<>();
+                for (String pair : q.split("&")) {
+                    if (pair.isEmpty()) continue;
+                    int eq = pair.indexOf('=');
+                    names.add(eq >= 0 ? pair.substring(0, eq) : pair);
+                }
+                b.append('?').append(String.join("&", names));
+            }
+            return b.toString();
+        } catch (Exception e) {
+            return url;   // unparseable: treat the raw URL as its own node
+        }
     }
 
     public List<JsonValue> alerts(String baseurl, int start, int count) throws Exception {

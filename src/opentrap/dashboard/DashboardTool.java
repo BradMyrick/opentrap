@@ -5,6 +5,7 @@ import opentrap.core.HttpMessage;
 import opentrap.core.HttpService;
 import opentrap.core.Issue;
 import opentrap.core.LogEntry;
+import opentrap.core.MessageStore;
 import opentrap.core.ScanTask;
 import opentrap.core.SuiteContext;
 import opentrap.core.ToolModule;
@@ -44,6 +45,7 @@ public class DashboardTool implements ToolModule {
     private static final Color CARD_SEL_BG  = Ui.SELECTION;
     private static final Color CARD_BORDER  = Ui.GRID;
     private static final Color GREY_TEXT    = new Color(0x77, 0x77, 0x77);
+    private static final Color FINISHED_GREEN = new Color(0x3A, 0x9A, 0x4B);
 
     private SuiteContext ctx;
     /** The shared ZAP scan engine (same instance the passive-rules tab uses). */
@@ -58,6 +60,8 @@ public class DashboardTool implements ToolModule {
     private JTextField searchField;
     private final Map<ScanTask, TaskCard> cards = new IdentityHashMap<>();
     private ScanTask selected;
+    /** Drives the sliding progress-bar animation while a crawl is running. */
+    private javax.swing.Timer cardAnimTimer;
 
     // ---- right ----
     private final JLabel rightHeader = Ui.heading("");
@@ -65,23 +69,34 @@ public class DashboardTool implements ToolModule {
     private final JPanel rightBody = new JPanel(rightCards);
     private JTextArea crawlLog;
     private JLabel crawlStats;
-    private JLabel crawlImage;
-    private volatile byte[] latestShot;
+    // The crawl window's live Logger: a table of the scan's HTTP traffic with a
+    // request/response viewer, fed from the shared store as the engine runs.
+    private final ScanLogModel scanLogModel = new ScanLogModel();
+    private JTable scanLogTable;
+    private MessageEditor scanReq, scanResp;
     private final IssueTableModel summaryModel =
-            new IssueTableModel(new String[]{"Issue type", "Host", "Severity", "Confidence"});
+            new IssueTableModel(new String[]{"Issue type", "Host", "Time"});
     private final IssueTableModel issuesModel =
             new IssueTableModel(new String[]{"Time", "Source", "Issue type", "Host", "Path",
                     "Insertion point", "Severity", "Confidence", "Comment"});
     private JTable summaryTable;
     private JTable issuesTable;
+    private final AuditLogModel auditLogModel = new AuditLogModel();
+    private JTable auditLogTable;
 
     private final JLabel cfgType   = Ui.label("");
     private final JLabel cfgScope  = Ui.label("");
     private final JLabel cfgConfig = Ui.label("");
 
-    private final JLabel progRequests = Ui.label("");
-    private final JLabel progItems    = Ui.label("");
-    private final JLabel progIssues   = Ui.label("");
+    // Task progress: the six metrics we can source from the ZAP engine, shown
+    // in two columns matching the reference layout.
+    private final JLabel progTotalItems   = Ui.label("");
+    private final JLabel progItemsActive  = Ui.label("");
+    private final JLabel progItemsDone    = Ui.label("");
+    private final JLabel progDiscovered   = Ui.label("");
+    private final JLabel progRequests     = Ui.label("");
+    private final JLabel progPerSecond    = Ui.label("");
+    private final JTextArea summaryTaskLog = new JTextArea();
 
     private JEditorPane issueDetail;
     private MessageEditor issueRequest;
@@ -109,6 +124,17 @@ public class DashboardTool implements ToolModule {
         ctx.addIssueListener(i -> SwingUtilities.invokeLater(this::onIssuesChanged));
         ctx.addTaskListener(t -> SwingUtilities.invokeLater(this::rebuildTasks));
 
+        // Feed the crawl window's live Logger from the shared store: every crawl
+        // or audit request/response the engine records shows up there as it runs.
+        ctx.store().addListener(new MessageStore.Listener() {
+            @Override public void entryAdded(LogEntry e) {
+                if (isScanEntry(e)) SwingUtilities.invokeLater(() -> scanLogModel.add(e));
+            }
+            @Override public void entryUpdated(LogEntry e) {
+                if (isScanEntry(e)) SwingUtilities.invokeLater(() -> scanLogModel.updated(e));
+            }
+        });
+
         issueRequest  = new MessageEditor(ctx, MessageEditor.REQUEST, false);
         issueResponse = new MessageEditor(ctx, MessageEditor.RESPONSE, false);
         issueSplit.setTopComponent(issueRequest);
@@ -132,6 +158,7 @@ public class DashboardTool implements ToolModule {
 
     @Override public void shutdown() {
         // The ZAP scan engine is shared and shuts itself down via its own hook.
+        ensureCardAnimation(false);
     }
 
     // ----------------------------------------------------------------- layout
@@ -207,13 +234,35 @@ public class DashboardTool implements ToolModule {
         JPanel right = new JPanel(new BorderLayout(0, 6));
         right.setBorder(Ui.pad(8, 8, 8, 8));
 
+        // Task header bar: a pennant glyph and the task title on the left, three
+        // round control buttons (play/pause, settings, help) on the right.
         rightHeader.setText("Dashboard");
-        right.add(rightHeader, BorderLayout.NORTH);
+        rightHeader.setIcon(pennantIcon());
+        rightHeader.setIconTextGap(10);
+
+        JPanel headerControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        headerControls.setOpaque(false);
+        headerControls.add(new HeaderIconButton("play", "Pause or resume the selected task", () -> {
+            if (selected != null && selected.state() != ScanTask.State.FINISHED) {
+                selected.setState(selected.state() == ScanTask.State.RUNNING
+                        ? ScanTask.State.PAUSED : ScanTask.State.RUNNING);
+                if (ctx != null) ctx.taskChanged(selected);
+            }
+        }));
+        headerControls.add(new HeaderIconButton("gear", "Task settings", () -> {}));
+        headerControls.add(new HeaderIconButton("help", "Help", () -> {}));
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(rightHeader, BorderLayout.WEST);
+        header.add(headerControls, BorderLayout.EAST);
+        right.add(header, BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Summary", buildSummaryTab());
         tabs.addTab("Issues", buildIssuesTab());
         tabs.addTab("Event log", buildEventLogTab());
+        tabs.addTab("Audit log", buildAuditLogTab());
 
         rightBody.add(tabs, "scan");
         rightBody.add(buildCrawlCard(), "crawl");
@@ -221,88 +270,368 @@ public class DashboardTool implements ToolModule {
         return right;
     }
 
-    /** Crawl view: progress and the live list of URLs being visited. */
+    /**
+     * Crawl view: a live Logger of the scan's HTTP traffic (table + request and
+     * response viewer), plus an Event log tab, like the reference crawl window.
+     */
     private JComponent buildCrawlCard() {
         JPanel p = new JPanel(new BorderLayout(0, 6));
+
         crawlStats = Ui.bold("Crawling");
         crawlStats.setBorder(Ui.pad(2, 2, 4, 2));
         p.add(crawlStats, BorderLayout.NORTH);
+
+        // ---- Logger: live request table over a request/response viewer ----
+        scanLogTable = new JTable(scanLogModel);
+        Ui.styleTable(scanLogTable);
+        Ui.distributeWidths(scanLogTable, 48, 95, 60, 70, 170, 200, 150, 60, 70);
+        lightHeader(scanLogTable);
+        scanLogTable.setRowSorter(new javax.swing.table.TableRowSorter<>(scanLogModel));
+        scanReq  = new MessageEditor(ctx, MessageEditor.REQUEST, false);
+        scanResp = new MessageEditor(ctx, MessageEditor.RESPONSE, false);
+        scanLogTable.getSelectionModel().addListSelectionListener(e -> showScanSelected());
+        JScrollPane logScroll = new JScrollPane(scanLogTable);
+        logScroll.setBorder(BorderFactory.createLineBorder(Ui.GRID));
+        JSplitPane detail = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scanReq, scanResp);
+        detail.setDividerSize(5);
+        Ui.balance(detail, 0.5);
+        JSplitPane logger = new JSplitPane(JSplitPane.VERTICAL_SPLIT, logScroll, detail);
+        logger.setDividerSize(5);
+        Ui.balance(logger, 0.5);
+
+        // ---- Event log: the crawl's own progress lines ----
         crawlLog = new JTextArea();
         crawlLog.setEditable(false);
         crawlLog.setFont(Ui.MONO);
-        // Wrap long URLs instead of scrolling the view horizontally off-screen.
         crawlLog.setLineWrap(true);
         crawlLog.setWrapStyleWord(false);
-        JPanel listWrap = new JPanel(new BorderLayout());
-        listWrap.add(Ui.bold(" Requests discovered (live)"), BorderLayout.NORTH);
-        listWrap.add(Ui.scroll(crawlLog), BorderLayout.CENTER);
 
-        crawlImage = new JLabel("", SwingConstants.CENTER);
-        crawlImage.setVerticalAlignment(SwingConstants.TOP);
-        JPanel imgWrap = new JPanel(new BorderLayout());
-        imgWrap.add(Ui.bold(" Rendered page (live)"), BorderLayout.NORTH);
-        imgWrap.add(Ui.scroll(crawlImage), BorderLayout.CENTER);
-
-        JSplitPane sp = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listWrap, imgWrap);
-        sp.setDividerSize(5);
-        Ui.balance(sp, 0.40);
-        p.add(sp, BorderLayout.CENTER);
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Logger", logger);
+        tabs.addTab("Event log", Ui.scroll(crawlLog));
+        p.add(tabs, BorderLayout.CENTER);
         return p;
     }
 
-    /** Update the live rendered-page image (called from the crawler on the EDT). */
-    private void setCrawlScreenshot(byte[] png) {
-        this.latestShot = png;
-        if (crawlImage == null || png == null) return;
-        try {
-            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(png));
-            if (img == null) return;
-            int w = Math.max(200, crawlImage.getWidth() > 0 ? crawlImage.getWidth() - 8 : 500);
-            int sh = (int) (img.getHeight() * (w / (double) img.getWidth()));
-            Image scaled = img.getScaledInstance(w, sh, Image.SCALE_SMOOTH);
-            crawlImage.setIcon(new ImageIcon(scaled));
-            crawlImage.setText("");
-        } catch (Exception ignored) {}
+    private void showScanSelected() {
+        int row = scanLogTable.getSelectedRow();
+        if (row < 0) return;
+        LogEntry e = scanLogModel.at(scanLogTable.convertRowIndexToModel(row));
+        if (e == null) return;
+        scanReq.setMessage(e.service(), e.request() == null ? new HttpMessage(new byte[0]) : e.request().copy());
+        scanResp.setMessage(e.service(), e.response() == null ? new HttpMessage(new byte[0]) : e.response().copy(), e.request());
+    }
+
+    /** True for traffic the engine's crawl or audit produced. */
+    private static boolean isScanEntry(LogEntry e) {
+        String t = e.tool();
+        return "crawl".equals(t) || "audit".equals(t);
     }
 
     private JComponent buildSummaryTab() {
-        // Section 1: most serious vulnerabilities (all issues, by rank).
+        // ---- left card: most serious vulnerabilities (all issues, by rank) ----
         summaryTable = new JTable(summaryModel);
         Ui.styleTable(summaryTable);
-        Ui.distributeWidths(summaryTable, 220, 160, 90, 90);
-        Ui.centerCells(summaryTable);
-        Ui.severityColumn(summaryTable, 2);   // Severity column
-        JScrollPane sumScroll = Ui.scroll(summaryTable);
-        JPanel vulns = section("Most serious vulnerabilities found (live)", sumScroll);
+        summaryTable.setAutoCreateRowSorter(true);
+        Ui.distributeWidths(summaryTable, 260, 230, 170);
+        summaryIssueIconColumn(summaryTable, 0);   // glyph icon before the issue type
+        lightHeader(summaryTable);
+        JScrollPane sumScroll = new JScrollPane(summaryTable);
+        sumScroll.setBorder(BorderFactory.createLineBorder(Ui.GRID));
+        sumScroll.getVerticalScrollBar().setUnitIncrement(16);
+        summaryTable.setFillsViewportHeight(true);
+        sumScroll.getViewport().setBackground(Color.WHITE);
 
-        // Task configuration and progress: small, so they sit at the bottom and
-        // leave the vulnerabilities table all the room it can take.
-        JPanel cfg = section("Task configuration", Ui.vbox(
-                labelled("Task type: ", cfgType),
-                labelled("Scope: ", cfgScope),
-                labelled("Configuration: ", cfgConfig)));
-        JPanel prog = section("Task progress", Ui.vbox(
-                progRequests, progItems, progIssues));
+        JPanel vulnsCard = card();
+        vulnsCard.setLayout(new BorderLayout(0, 10));
+        vulnsCard.add(sectionHeader("Most serious vulnerabilities found (live)",
+                sectionIcon("warning"), "View all", this::selectIssuesTab), BorderLayout.NORTH);
+        vulnsCard.add(sumScroll, BorderLayout.CENTER);
 
-        JPanel bottom = new JPanel(new GridLayout(1, 2, 12, 0));
-        bottom.setOpaque(false);
-        bottom.add(cfg);
-        bottom.add(prog);
+        // ---- right card: configuration / progress / log, one card with rules ----
+        summaryTaskLog.setEditable(false);
+        summaryTaskLog.setFont(Ui.MONO);
+        summaryTaskLog.setLineWrap(false);
+        summaryTaskLog.setOpaque(false);
+        summaryTaskLog.setBorder(null);
+        JScrollPane logScroll = new JScrollPane(summaryTaskLog);
+        logScroll.setBorder(null);
+        logScroll.setOpaque(false);
+        logScroll.getViewport().setOpaque(false);
 
-        // The table expands with the window; the task info is a fixed strip below.
-        JPanel holder = new JPanel(new BorderLayout(0, 10));
+        JPanel top = new JPanel();
+        top.setOpaque(false);
+        top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
+        addLeft(top, sectionHeader("Task configuration", sectionIcon("pencil"),
+                "View configuration", () -> {}));
+        top.add(Box.createVerticalStrut(10));
+        addLeft(top, configGrid());
+        top.add(Box.createVerticalStrut(16));
+        addLeft(top, divider());
+        top.add(Box.createVerticalStrut(16));
+        addLeft(top, sectionHeader("Task progress", sectionIcon("pie"), null, null));
+        top.add(Box.createVerticalStrut(10));
+        addLeft(top, progressGrid());
+        top.add(Box.createVerticalStrut(16));
+        addLeft(top, divider());
+        top.add(Box.createVerticalStrut(16));
+        addLeft(top, sectionHeader("Task log", sectionIcon("clock"), null, null));
+        top.add(Box.createVerticalStrut(8));
+
+        JPanel rightCard = card();
+        rightCard.setLayout(new BorderLayout());
+        rightCard.add(top, BorderLayout.NORTH);
+        rightCard.add(logScroll, BorderLayout.CENTER);
+
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, vulnsCard, rightCard);
+        split.setDividerSize(12);
+        split.setBorder(null);
+        split.setOpaque(false);
+        Ui.balance(split, 0.52);
+
+        JPanel holder = new JPanel(new BorderLayout());
         holder.setOpaque(false);
-        holder.setBorder(Ui.pad(2, 2, 2, 2));
-        holder.add(vulns, BorderLayout.CENTER);
-        holder.add(bottom, BorderLayout.SOUTH);
+        holder.setBorder(Ui.pad(6, 6, 6, 6));
+        holder.add(split, BorderLayout.CENTER);
         return holder;
+    }
+
+    /** A human-readable label for a scan task type, as the reference shows. */
+    private static String typeLabel(ScanTask.Type type) {
+        return switch (type) {
+            case LIVE_PASSIVE -> "Live passive audit";
+            case LIVE_ACTIVE  -> "Crawl";
+            case AUDIT        -> "Audit";
+        };
+    }
+
+    private void selectIssuesTab() {
+        // "View all" jumps to the full Issues tab.
+        if (summaryTable == null) return;
+        java.awt.Container c = summaryTable;
+        while (c != null && !(c instanceof JTabbedPane)) c = c.getParent();
+        if (c instanceof JTabbedPane tp) {
+            int idx = tp.indexOfTab("Issues");
+            if (idx >= 0) tp.setSelectedIndex(idx);
+        }
+    }
+
+    /** Add a component to a vertical box, left-aligned and capped to its height. */
+    private static void addLeft(JPanel box, JComponent c) {
+        c.setAlignmentX(Component.LEFT_ALIGNMENT);
+        c.setMaximumSize(new Dimension(Integer.MAX_VALUE, c.getPreferredSize().height));
+        box.add(c);
+    }
+
+    /** A thin horizontal rule between card sections. */
+    private static JComponent divider() {
+        JSeparator s = new JSeparator(SwingConstants.HORIZONTAL);
+        s.setForeground(Ui.GRID);
+        s.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        return s;
+    }
+
+    /** A rounded, white card with a subtle border, like the reference panels. */
+    private static JPanel card() {
+        JPanel p = new JPanel() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+                g2.setColor(Ui.GRID);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+                g2.dispose();
+            }
+        };
+        p.setBackground(Color.WHITE);
+        p.setOpaque(false);
+        p.setBorder(Ui.pad(12, 14, 14, 14));
+        return p;
+    }
+
+    /** A section heading row: icon + bold title, with an optional accent link. */
+    private JPanel sectionHeader(String title, javax.swing.Icon icon, String linkText, Runnable onLink) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setOpaque(false);
+        JLabel h = Ui.bold(title);
+        if (icon != null) { h.setIcon(icon); h.setIconTextGap(8); }
+        p.add(h, BorderLayout.WEST);
+        if (linkText != null) p.add(accentLink(linkText, onLink), BorderLayout.EAST);
+        return p;
+    }
+
+    /** A plain accent-coloured clickable link, as the reference uses for actions. */
+    private static JLabel accentLink(String text, Runnable onClick) {
+        JLabel l = new JLabel(text);
+        l.setFont(Ui.PLAIN);
+        l.setForeground(Ui.ACCENT);
+        l.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        l.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                if (onClick != null) onClick.run();
+            }
+        });
+        return l;
+    }
+
+    /** Task configuration: label/value rows aligned in two columns. */
+    private JPanel configGrid() {
+        JPanel g = new JPanel(new GridBagLayout());
+        g.setOpaque(false);
+        addKv(g, 0, "Task type:", cfgType);
+        addKv(g, 1, "Scope:", cfgScope);
+        addKv(g, 2, "Configuration:", cfgConfig);
+        return g;
+    }
+
+    /** Task progress: the eight metrics in two aligned label/value columns. */
+    private JPanel progressGrid() {
+        JPanel g = new JPanel(new GridBagLayout());
+        g.setOpaque(false);
+        addKv2(g, 0, "Total audit items:", progTotalItems, "Discovered locations:", progDiscovered);
+        addKv2(g, 1, "Audit items in progress:", progItemsActive, "Requests:", progRequests);
+        addKv2(g, 2, "Audit items completed:", progItemsDone, "Requests per second:", progPerSecond);
+        return g;
+    }
+
+    private static void addKv(JPanel g, int row, String caption, JLabel value) {
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridy = row; c.anchor = GridBagConstraints.WEST; c.insets = new Insets(2, 0, 2, 0);
+        c.gridx = 0; c.insets = new Insets(2, 0, 2, 14); g.add(Ui.bold(caption), c);
+        c.gridx = 1; c.insets = new Insets(2, 0, 2, 0); c.weightx = 1; g.add(value, c);
+    }
+
+    private static void addKv2(JPanel g, int row, String cap1, JLabel v1, String cap2, JLabel v2) {
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridy = row; c.anchor = GridBagConstraints.WEST;
+        c.gridx = 0; c.insets = new Insets(2, 0, 2, 10); g.add(Ui.bold(cap1), c);
+        c.gridx = 1; c.insets = new Insets(2, 0, 2, 26); g.add(v1, c);
+        c.gridx = 2; c.insets = new Insets(2, 0, 2, 10); g.add(Ui.bold(cap2), c);
+        c.gridx = 3; c.insets = new Insets(2, 0, 2, 0); c.weightx = 1; g.add(v2, c);
+    }
+
+    /** Give the summary table a light header with a bottom rule, like the reference. */
+    private static void lightHeader(JTable t) {
+        javax.swing.table.JTableHeader h = t.getTableHeader();
+        h.setBackground(new Color(0xF2, 0xF2, 0xF2));
+        h.setForeground(new Color(0x33, 0x33, 0x33));
+        h.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Ui.GRID));
+        h.setReorderingAllowed(false);
+    }
+
+    /**
+     * Put a Burp-style severity glyph (a coloured disc with "!" for serious
+     * findings, "i" for informational ones) in front of the issue-type text.
+     */
+    private void summaryIssueIconColumn(JTable table, int textCol) {
+        table.getColumnModel().getColumn(textCol).setCellRenderer(
+            new javax.swing.table.DefaultTableCellRenderer() {
+                @Override public Component getTableCellRendererComponent(JTable t, Object v,
+                        boolean sel, boolean focus, int row, int column) {
+                    super.getTableCellRendererComponent(t, v, sel, focus, row, column);
+                    int mr = t.convertRowIndexToModel(row);
+                    setIcon(issueGlyphIcon(summaryModel.severityAt(mr), summaryModel.confidenceAt(mr)));
+                    setIconTextGap(7);
+                    return this;
+                }
+            });
+    }
+
+    /**
+     * A filled severity disc with a white glyph, matching the reference: "?" for
+     * a tentative (unconfirmed) finding, "i" for informational, "!" otherwise.
+     * The disc is coloured by severity.
+     */
+    private static javax.swing.Icon issueGlyphIcon(Issue.Severity sev, Issue.Confidence conf) {
+        final Color col = Ui.severityColor(sev);
+        final String glyph = conf == Issue.Confidence.TENTATIVE ? "?"
+                : (sev == Issue.Severity.INFORMATION ? "i" : "!");
+        return new javax.swing.Icon() {
+            @Override public int getIconWidth()  { return 15; }
+            @Override public int getIconHeight() { return 15; }
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(col);
+                g2.fillOval(x + 1, y + 1, 13, 13);
+                g2.setColor(Color.WHITE);
+                g2.setFont(new Font("Dialog", Font.BOLD, 11));
+                FontMetrics fm = g2.getFontMetrics();
+                int tx = x + 1 + (13 - fm.stringWidth(glyph)) / 2;
+                int ty = y + 1 + (13 + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(glyph, tx, ty);
+                g2.dispose();
+            }
+        };
+    }
+
+    /** A small pennant/flag glyph shown to the left of the task title. */
+    private static javax.swing.Icon pennantIcon() {
+        int s = 18;
+        java.awt.image.BufferedImage img =
+                new java.awt.image.BufferedImage(s, s, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(Theme.MUTED);
+        g.setStroke(new BasicStroke(1.4f));
+        g.drawLine(5, 2, 5, 16);
+        g.drawPolygon(new int[]{5, 15, 5}, new int[]{3, 7, 11}, 3);
+        g.dispose();
+        return new javax.swing.ImageIcon(img);
+    }
+
+    /** A round header control button (play/pause, settings or help glyph). */
+    private static final class HeaderIconButton extends JComponent {
+        private final String kind;
+        HeaderIconButton(String kind, String tip, Runnable onClick) {
+            this.kind = kind;
+            Dimension d = new Dimension(26, 26);
+            setPreferredSize(d); setMinimumSize(d); setMaximumSize(d);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            setToolTipText(tip);
+            addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                    if (onClick != null) onClick.run();
+                }
+            });
+        }
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth(), h = getHeight(), cx = w / 2, cy = h / 2;
+            g2.setColor(new Color(0x55, 0x55, 0x55));
+            g2.setStroke(new BasicStroke(1.4f));
+            g2.drawOval(2, 2, w - 5, h - 5);
+            switch (kind) {
+                case "play" -> g2.fillPolygon(new int[]{cx - 3, cx - 3, cx + 5},
+                        new int[]{cy - 5, cy + 5, cy}, 3);
+                case "gear" -> {
+                    g2.drawOval(cx - 3, cy - 3, 6, 6);
+                    for (int a = 0; a < 360; a += 45) {
+                        double r = Math.toRadians(a);
+                        g2.drawLine((int) (cx + 4 * Math.cos(r)), (int) (cy + 4 * Math.sin(r)),
+                                    (int) (cx + 6 * Math.cos(r)), (int) (cy + 6 * Math.sin(r)));
+                    }
+                }
+                case "help" -> {
+                    g2.setFont(new Font("Dialog", Font.BOLD, 13));
+                    FontMetrics fm = g2.getFontMetrics();
+                    String q = "?";
+                    g2.drawString(q, cx - fm.stringWidth(q) / 2,
+                            cy + (fm.getAscent() - fm.getDescent()) / 2);
+                }
+            }
+            g2.dispose();
+        }
     }
 
     private JComponent buildIssuesTab() {
         issuesTable = new JTable(issuesModel);
         Ui.styleTable(issuesTable);
         Ui.distributeWidths(issuesTable, 95, 70, 190, 140, 130, 110, 80, 80, 110);
-        Ui.severityColumn(issuesTable, 6);   // Severity column
+        Ui.severityColumn(issuesTable, 6);           // Severity column
+        Ui.severityIconColumn(issuesTable, 2, 6);    // severity dot before the issue type
         issuesTable.getSelectionModel().addListSelectionListener(this::onIssueRowSelected);
 
         issueDetail = new JEditorPane();
@@ -354,6 +683,128 @@ public class DashboardTool implements ToolModule {
         return Ui.scroll(eventLog);
     }
 
+    /** A chronological log of findings as they were detected. */
+    private JComponent buildAuditLogTab() {
+        auditLogTable = new JTable(auditLogModel);
+        Ui.styleTable(auditLogTable);
+        Ui.distributeWidths(auditLogTable, 48, 150, 80, 90, 200, 150, 130, 130, 85, 85);
+        lightHeader(auditLogTable);
+        auditLogGlyphColumn(auditLogTable, 4);   // severity/confidence glyph before the issue type
+        // Severity column stays plain dark text: the glyph carries the colour.
+
+        javax.swing.table.TableRowSorter<AuditLogModel> sorter =
+                new javax.swing.table.TableRowSorter<>(auditLogModel);
+        auditLogTable.setRowSorter(sorter);
+
+        // Filter state shared by the Filter popup and the Search box.
+        final java.util.Set<Issue.Severity> enabled = java.util.EnumSet.allOf(Issue.Severity.class);
+        final String[] query = { "" };
+        final Runnable apply = () -> sorter.setRowFilter(new RowFilter<AuditLogModel, Integer>() {
+            @Override public boolean include(Entry<? extends AuditLogModel, ? extends Integer> e) {
+                Issue is = auditLogModel.issueAt(e.getIdentifier());
+                if (is != null && !enabled.contains(is.severity())) return false;
+                String q = query[0].toLowerCase();
+                if (q.isEmpty()) return true;
+                for (int c = 0; c < e.getValueCount(); c++) {
+                    Object v = e.getValue(c);
+                    if (v != null && v.toString().toLowerCase().contains(q)) return true;
+                }
+                return false;
+            }
+        });
+
+        // ---- Filter button (left): a real per-severity filter ----
+        JButton filter = new JButton("Filter", funnelIcon());
+        filter.setFont(Ui.PLAIN);
+        filter.setFocusPainted(false);
+        filter.addActionListener(e -> {
+            JPopupMenu m = new JPopupMenu();
+            for (Issue.Severity s : Issue.Severity.values()) {
+                JCheckBoxMenuItem it = new JCheckBoxMenuItem(s.label(), enabled.contains(s));
+                it.addActionListener(a -> {
+                    if (it.isSelected()) enabled.add(s); else enabled.remove(s);
+                    apply.run();
+                });
+                m.add(it);
+            }
+            m.show(filter, 0, filter.getHeight());
+        });
+
+        // ---- Search box (right): a real text filter over all columns ----
+        JTextField search = new JTextField(16);
+        search.setBorder(null);
+        search.setOpaque(false);
+        search.getDocument().addDocumentListener(new DocumentListener() {
+            private void upd() { query[0] = search.getText().trim(); apply.run(); }
+            @Override public void insertUpdate(DocumentEvent e) { upd(); }
+            @Override public void removeUpdate(DocumentEvent e) { upd(); }
+            @Override public void changedUpdate(DocumentEvent e) { upd(); }
+        });
+        JPanel searchWrap = new JPanel(new BorderLayout(6, 0));
+        searchWrap.setBackground(Color.WHITE);
+        searchWrap.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Ui.GRID), Ui.pad(3, 8, 3, 8)));
+        searchWrap.add(search, BorderLayout.CENTER);
+        searchWrap.add(new JLabel(magnifierIcon()), BorderLayout.EAST);
+
+        JPanel bar = new JPanel(new BorderLayout());
+        bar.setOpaque(false);
+        bar.setBorder(Ui.pad(0, 0, 6, 0));
+        bar.add(filter, BorderLayout.WEST);
+        bar.add(searchWrap, BorderLayout.EAST);
+
+        JPanel p = new JPanel(new BorderLayout(0, 4));
+        p.setOpaque(false);
+        p.setBorder(Ui.pad(4, 4, 4, 4));
+        p.add(bar, BorderLayout.NORTH);
+        p.add(Ui.scroll(auditLogTable), BorderLayout.CENTER);
+        return p;
+    }
+
+    /** The severity/confidence glyph disc in front of an audit-log issue type. */
+    private void auditLogGlyphColumn(JTable table, int textCol) {
+        table.getColumnModel().getColumn(textCol).setCellRenderer(
+            new javax.swing.table.DefaultTableCellRenderer() {
+                @Override public Component getTableCellRendererComponent(JTable t, Object v,
+                        boolean sel, boolean focus, int row, int column) {
+                    super.getTableCellRendererComponent(t, v, sel, focus, row, column);
+                    Issue is = auditLogModel.issueAt(t.convertRowIndexToModel(row));
+                    if (is != null) setIcon(issueGlyphIcon(is.severity(), is.confidence()));
+                    setIconTextGap(7);
+                    return this;
+                }
+            });
+    }
+
+    /** A small funnel glyph for the Filter button. */
+    private static javax.swing.Icon funnelIcon() {
+        int s = 14;
+        java.awt.image.BufferedImage img =
+                new java.awt.image.BufferedImage(s, s, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(Theme.MUTED);
+        g.setStroke(new BasicStroke(1.3f));
+        g.drawPolygon(new int[]{1, 13, 8, 6}, new int[]{2, 2, 8, 13}, 4);
+        g.dispose();
+        return new javax.swing.ImageIcon(img);
+    }
+
+    /** A small magnifier glyph for the Search box. */
+    private static javax.swing.Icon magnifierIcon() {
+        int s = 14;
+        java.awt.image.BufferedImage img =
+                new java.awt.image.BufferedImage(s, s, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(Theme.MUTED);
+        g.setStroke(new BasicStroke(1.4f));
+        g.drawOval(2, 2, 7, 7);
+        g.drawLine(9, 9, 13, 13);
+        g.dispose();
+        return new javax.swing.ImageIcon(img);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static void accentise(JButton b) {
@@ -361,25 +812,52 @@ public class DashboardTool implements ToolModule {
         b.setFocusPainted(false);
     }
 
-    /** A bordered section with a bold heading above its content. */
-    private static JPanel section(String title, JComponent content) {
-        JPanel p = new JPanel(new BorderLayout(0, 4));
-        p.setOpaque(false);
-        p.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Ui.GRID),
-                Ui.pad(8, 8, 8, 8)));
-        p.add(Ui.bold(title), BorderLayout.NORTH);
-        content.setOpaque(false);
-        p.add(content, BorderLayout.CENTER);
-        return p;
-    }
-
-    private static JPanel labelled(String caption, JLabel value) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 1));
-        p.setOpaque(false);
-        p.add(Ui.bold(caption));
-        p.add(value);
-        return p;
+    /** Small grey line icons for the summary section headings. */
+    private static javax.swing.Icon sectionIcon(String kind) {
+        int s = 16;
+        java.awt.image.BufferedImage img =
+                new java.awt.image.BufferedImage(s, s, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(Theme.MUTED);
+        g.setStroke(new BasicStroke(1.3f));
+        switch (kind) {
+            case "folder" -> {
+                g.drawLine(2, 5, 6, 5); g.drawLine(6, 5, 7, 4);
+                g.drawRoundRect(2, 5, 12, 8, 2, 2);
+            }
+            case "gear" -> {
+                g.drawOval(5, 5, 6, 6);
+                for (int a = 0; a < 360; a += 45) {
+                    double r = Math.toRadians(a);
+                    g.drawLine((int) (8 + 4 * Math.cos(r)), (int) (8 + 4 * Math.sin(r)),
+                               (int) (8 + 6.5 * Math.cos(r)), (int) (8 + 6.5 * Math.sin(r)));
+                }
+            }
+            case "clock" -> {
+                g.drawOval(2, 2, 12, 12);
+                g.drawLine(8, 8, 8, 4); g.drawLine(8, 8, 11, 9);
+            }
+            case "warning" -> {
+                // A rounded triangle with an exclamation mark.
+                g.drawPolygon(new int[]{8, 2, 14}, new int[]{2, 13, 13}, 3);
+                g.drawLine(8, 6, 8, 9);
+                g.fillOval(7, 10, 2, 2);
+            }
+            case "pencil" -> {
+                g.drawLine(3, 13, 11, 5);
+                g.drawLine(11, 5, 13, 7);
+                g.drawLine(13, 7, 5, 15);
+                g.drawLine(3, 13, 5, 15);
+            }
+            case "pie" -> {
+                g.drawOval(2, 2, 12, 12);
+                g.drawLine(8, 8, 8, 2);
+                g.drawLine(8, 8, 13, 10);
+            }
+        }
+        g.dispose();
+        return new javax.swing.ImageIcon(img);
     }
 
     // ----------------------------------------------------------- task cards
@@ -417,7 +895,27 @@ public class DashboardTool implements ToolModule {
 
         taskList.revalidate();
         taskList.repaint();
+
+        // Run the shared animation timer only while a crawl is actively running,
+        // so an idle dashboard does no repaint work.
+        boolean animating = tasks.stream().anyMatch(t ->
+                t.type() == ScanTask.Type.LIVE_ACTIVE && t.state() == ScanTask.State.RUNNING);
+        ensureCardAnimation(animating);
+
         refreshRight();
+    }
+
+    /** Start or stop the single timer that animates running crawl progress bars. */
+    private void ensureCardAnimation(boolean animating) {
+        if (animating) {
+            if (cardAnimTimer == null) {
+                cardAnimTimer = new javax.swing.Timer(30, e -> taskList.repaint());
+                cardAnimTimer.start();
+            }
+        } else if (cardAnimTimer != null) {
+            cardAnimTimer.stop();
+            cardAnimTimer = null;
+        }
     }
 
     private void selectTask(ScanTask t) {
@@ -432,13 +930,33 @@ public class DashboardTool implements ToolModule {
     private final class TaskCard extends JPanel {
         private final ScanTask task;
 
+        private boolean selectedLook;
+
         TaskCard(ScanTask task) {
             super(new BorderLayout(0, 4));
             this.task = task;
-            setBorder(Theme.cardBorder());
+            setOpaque(false);
+            setBorder(Ui.pad(12, 16, 12, 14));
             setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredHeight()));
 
+            boolean passive  = task.type() == ScanTask.Type.LIVE_PASSIVE;
+            boolean finished = task.state() == ScanTask.State.FINISHED;
+            boolean running  = task.state() == ScanTask.State.RUNNING;
+
+            // ---- header: title (truncates), a play/pause circle, an overflow menu.
             JLabel title = Ui.bold(task.number + ". " + task.title());
+            title.setToolTipText(task.number + ". " + task.title());
+
+            JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+            controls.setOpaque(false);
+            if (!finished) controls.add(new CircleButton(running, this::toggleState));
+            controls.add(new MenuButton());
+
+            JPanel titleRow = new JPanel(new BorderLayout(6, 0));
+            titleRow.setOpaque(false);
+            titleRow.add(title, BorderLayout.CENTER);
+            titleRow.add(controls, BorderLayout.EAST);
+
             JLabel config = Ui.label(task.configuration());
             config.setForeground(GREY_TEXT);
             config.setFont(Ui.PLAIN.deriveFont(11f));
@@ -446,87 +964,59 @@ public class DashboardTool implements ToolModule {
             JPanel head = new JPanel();
             head.setOpaque(false);
             head.setLayout(new BoxLayout(head, BoxLayout.Y_AXIS));
-            title.setAlignmentX(LEFT_ALIGNMENT);
+            titleRow.setAlignmentX(LEFT_ALIGNMENT);
             config.setAlignmentX(LEFT_ALIGNMENT);
-            head.add(title);
+            head.add(titleRow);
             head.add(config);
-
-            boolean passive = task.type() == ScanTask.Type.LIVE_PASSIVE;
-            boolean finished = task.state() == ScanTask.State.FINISHED;
-            boolean running = task.state() == ScanTask.State.RUNNING;
 
             // The passive audit is a simple on/off capture stage, so it shows a
             // "Capturing" toggle and no bar. Active work (a crawl, or an audit)
-            // keeps a progress bar that moves while it is doing something.
-            JComponent progress = passive ? null : buildProgress();
+            // keeps a progress bar while it runs, but a finished task shows no bar.
+            boolean crawl = task.type() == ScanTask.Type.LIVE_ACTIVE;
+            JComponent progress = (passive || finished) ? null : new ProgressStrip(task);
 
             JPanel stateRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
             stateRow.setOpaque(false);
-            if (passive) {
+            if (passive && !finished) {
                 // On/off toggle for the continuous passive capture stage.
-                if (finished) {
-                    stateRow.add(Ui.label(task.stateLabel()));
-                } else {
-                    stateRow.add(Ui.label("Capturing"));
-                    ToggleSwitch sw = new ToggleSwitch(running);
-                    sw.setOnToggle(() -> {
-                        task.setState(task.state() == ScanTask.State.RUNNING
-                                ? ScanTask.State.PAUSED : ScanTask.State.RUNNING);
-                        // The live audit toggle drives live passive scanning.
-                        if (task == liveAudit && passiveScanner != null)
-                            passiveScanner.setEnabled(task.state() == ScanTask.State.RUNNING);
-                        ctx.taskChanged(task);
-                    });
-                    stateRow.add(sw);
-                }
+                stateRow.add(Ui.label("Capturing"));
+                ToggleSwitch sw = new ToggleSwitch(running);
+                sw.setOnToggle(this::toggleState);
+                stateRow.add(sw);
             } else {
-                // Active task: state label + pause/resume.
-                stateRow.add(Ui.label(task.stateLabel()));
-                if (!finished) {
-                    JButton toggle = Ui.button(running ? "pause" : "resume");
-                    toggle.setFont(Ui.PLAIN.deriveFont(11f));
-                    toggle.addActionListener(e -> {
-                        task.setState(task.state() == ScanTask.State.RUNNING
-                                ? ScanTask.State.PAUSED : ScanTask.State.RUNNING);
-                        ctx.taskChanged(task);
-                    });
-                    stateRow.add(toggle);
-                }
+                // Active task, or a finished one: show the status word next to a
+                // small state icon. A finished task reads in green, as Burp does.
+                JLabel st = Ui.label(statusText(finished, crawl));
+                st.setIcon(statusIcon(task.state()));
+                st.setIconTextGap(5);
+                if (finished) st.setForeground(FINISHED_GREEN);
+                stateRow.add(st);
             }
 
-            // Crawl tasks map pages rather than find issues: show crawl stats,
-            // not issue badges.
-            JPanel badges = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-            badges.setOpaque(false);
-            if (task.type() == ScanTask.Type.LIVE_ACTIVE) {
-                JLabel stats = Ui.label(task.itemsDone() + " pages crawled, "
-                        + Math.max(0, task.itemsTotal() - task.itemsDone()) + " queued");
-                stats.setFont(Ui.PLAIN.deriveFont(11f));
-                stats.setForeground(GREY_TEXT);
-                badges.add(stats);
-            } else {
-                badges.add(badge(task.high(),   HIGH_COL));
-                badges.add(badge(task.medium(), MEDIUM_COL));
-                badges.add(badge(task.low(),    LOW_COL));
-                badges.add(badge(task.info(),   INFO_COL));
-            }
+            // Cards show the "Issues:" pill row (zeros for a crawl until its audit
+            // runs), matching the reference. A finished crawl shows nothing more;
+            // its figures live in the crawl window and the Summary task progress.
+            JComponent tail = (crawl && finished) ? null : issuesRow();
 
             JPanel body = new JPanel();
             body.setOpaque(false);
             body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
             head.setAlignmentX(LEFT_ALIGNMENT);
             stateRow.setAlignmentX(LEFT_ALIGNMENT);
-            badges.setAlignmentX(LEFT_ALIGNMENT);
             body.add(head);
             if (progress != null) {
                 progress.setAlignmentX(LEFT_ALIGNMENT);
-                body.add(Box.createVerticalStrut(4));
+                body.add(Box.createVerticalStrut(6));
                 body.add(progress);
             }
-            body.add(Box.createVerticalStrut(4));
+            body.add(Box.createVerticalStrut(6));
             body.add(stateRow);
-            body.add(Box.createVerticalStrut(2));
-            body.add(badges);
+            if (tail != null) {
+                tail.setAlignmentX(LEFT_ALIGNMENT);
+                tail.setMaximumSize(new Dimension(Integer.MAX_VALUE, tail.getPreferredSize().height));
+                body.add(Box.createVerticalStrut(8));
+                body.add(tail);
+            }
 
             add(body, BorderLayout.CENTER);
 
@@ -537,42 +1027,220 @@ public class DashboardTool implements ToolModule {
             setSelectedLook(task == selected);
         }
 
-        private int getPreferredHeight() {
-            return task.type() == ScanTask.Type.LIVE_PASSIVE ? 120 : 150;
+        /** The status word shown beside the state icon. */
+        private String statusText(boolean finished, boolean crawl) {
+            if (!finished) return task.stateLabel();
+            return crawl ? "Crawl finished"
+                    : (task.type() == ScanTask.Type.AUDIT ? "Audit finished" : "Finished");
         }
 
-        private JComponent buildProgress() {
-            JProgressBar bar = new JProgressBar(0, 100);
-            bar.setFont(Ui.PLAIN.deriveFont(11f));
-            double p = task.progress();
-            ScanTask.State st = task.state();
-            if (p < 0) {
-                // Continuous task (live passive audit, or a crawl). Its bar shows
-                // a word, not a percentage, and "Finished" once it is done rather
-                // than falling back to "Paused".
-                boolean running = st == ScanTask.State.RUNNING;
-                bar.setIndeterminate(running);
-                bar.setStringPainted(true);
-                String word = switch (st) {
-                    case FINISHED -> "Finished";
-                    case PAUSED   -> "Paused";
-                    case RUNNING  -> task.type() == ScanTask.Type.LIVE_PASSIVE ? "Capturing" : "Crawling";
-                };
-                bar.setString(word);
-            } else {
-                bar.setIndeterminate(false);
-                bar.setValue((int) Math.round(p * 100));
-                bar.setStringPainted(true);
-                bar.setString(st == ScanTask.State.FINISHED ? "Finished"
-                        : (int) Math.round(p * 100) + "%");
+        /** Flip the task between running and paused, driving live scanning too. */
+        private void toggleState() {
+            task.setState(task.state() == ScanTask.State.RUNNING
+                    ? ScanTask.State.PAUSED : ScanTask.State.RUNNING);
+            if (task == liveAudit && passiveScanner != null)
+                passiveScanner.setEnabled(task.state() == ScanTask.State.RUNNING);
+            ctx.taskChanged(task);
+        }
+
+        /** The right-aligned "Issues:" label followed by one pill per severity. */
+        private JComponent issuesRow() {
+            JPanel row = new JPanel();
+            row.setOpaque(false);
+            row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+            row.add(Box.createHorizontalGlue());
+            JLabel lbl = Ui.label("Issues:");
+            lbl.setForeground(GREY_TEXT);
+            row.add(lbl);
+            row.add(Box.createHorizontalStrut(6));
+            row.add(pill(task.high(),   HIGH_COL));   row.add(Box.createHorizontalStrut(5));
+            row.add(pill(task.medium(), MEDIUM_COL)); row.add(Box.createHorizontalStrut(5));
+            row.add(pill(task.low(),    LOW_COL));    row.add(Box.createHorizontalStrut(5));
+            row.add(pill(task.info(),   INFO_COL));
+            return row;
+        }
+
+        private int getPreferredHeight() {
+            boolean finished = task.state() == ScanTask.State.FINISHED;
+            boolean crawl    = task.type() == ScanTask.Type.LIVE_ACTIVE;
+            if (crawl && finished) return 96;    // title, subtitle, status only
+            if (task.type() == ScanTask.Type.LIVE_PASSIVE) return 118;
+            if (finished) return 120;            // issues row, no progress bar
+            return 148;
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth(), h = getHeight();
+            // A clean white rounded card, the same whether or not it is selected.
+            g2.setColor(Color.WHITE);
+            g2.fillRoundRect(0, 0, w - 1, h - 1, 12, 12);
+            g2.setColor(Ui.GRID);
+            g2.drawRoundRect(0, 0, w - 1, h - 1, 12, 12);
+            // The card stays a clean white tile whether or not it is selected;
+            // selection shows only as a slim accent bar on the left edge.
+            if (selectedLook) {
+                g2.setColor(Ui.ACCENT);
+                g2.fillRoundRect(2, 8, 4, h - 17, 4, 4);
             }
-            return bar;
+            g2.dispose();
+        }
+
+        /** The task's three-dot overflow menu: pause/resume and open details. */
+        private final class MenuButton extends JComponent {
+            MenuButton() {
+                Dimension d = new Dimension(16, 22);
+                setPreferredSize(d); setMinimumSize(d); setMaximumSize(d);
+                setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                setToolTipText("Task actions");
+                addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                        JPopupMenu m = new JPopupMenu();
+                        boolean finished = task.state() == ScanTask.State.FINISHED;
+                        boolean running  = task.state() == ScanTask.State.RUNNING;
+                        if (!finished) {
+                            JMenuItem t = new JMenuItem(running ? "Pause task" : "Resume task");
+                            t.addActionListener(a -> toggleState());
+                            m.add(t);
+                        }
+                        JMenuItem d = new JMenuItem("View task details");
+                        d.addActionListener(a -> selectTask(task));
+                        m.add(d);
+                        m.show(MenuButton.this, 0, getHeight());
+                    }
+                });
+            }
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(0x55, 0x55, 0x55));
+                int cx = getWidth() / 2, cy = getHeight() / 2, r = 2;
+                for (int i = -1; i <= 1; i++) g2.fillOval(cx - r, cy - r + i * 6, r * 2, r * 2);
+                g2.dispose();
+            }
         }
 
         void setSelectedLook(boolean on) {
-            setBackground(on ? CARD_SEL_BG : CARD_BG);
-            setOpaque(true);
+            this.selectedLook = on;
+            repaint();
         }
+    }
+
+    /** A round play/pause button, like the control on each scan-task tile. */
+    private static final class CircleButton extends JComponent {
+        private final boolean running;
+        CircleButton(boolean running, Runnable onClick) {
+            this.running = running;
+            Dimension d = new Dimension(22, 22);
+            setPreferredSize(d); setMinimumSize(d); setMaximumSize(d);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            setToolTipText(running ? "Pause" : "Resume");
+            addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                    if (onClick != null) onClick.run();
+                }
+            });
+        }
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth(), h = getHeight();
+            g2.setColor(new Color(0x55, 0x55, 0x55));
+            g2.setStroke(new BasicStroke(1.4f));
+            g2.drawOval(1, 1, w - 3, h - 3);
+            int cx = w / 2, cy = h / 2;
+            if (running) {
+                // Two pause bars.
+                g2.fillRect(cx - 4, cy - 4, 2, 8);
+                g2.fillRect(cx + 2, cy - 4, 2, 8);
+            } else {
+                // A play triangle, nudged right so it reads as centred.
+                int[] xs = {cx - 3, cx - 3, cx + 5};
+                int[] ys = {cy - 5, cy + 5, cy};
+                g2.fillPolygon(xs, ys, 3);
+            }
+            g2.dispose();
+        }
+    }
+
+    /** A slim, rounded progress bar for active tasks (no inline text). */
+    private static final class ProgressStrip extends JComponent {
+        // A shared clock so the slide stays continuous even when the card list is
+        // rebuilt (which recreates the strip) during a scan - otherwise the
+        // segment would snap back to the start on every rebuild.
+        private static final long ANIM_EPOCH = System.nanoTime();
+        private static final double ANIM_SPEED = 2.2;   // radians per second
+
+        private final ScanTask task;
+        // A continuous task (a running crawl) has no percentage, so its bar shows
+        // a segment sliding back and forth instead of a proportional fill. The
+        // repaint ticks come from a single dashboard-level timer (see
+        // ensureCardAnimation), not a per-strip one, so the slide never stalls
+        // when the card list is rebuilt during a scan.
+        private final boolean indeterminate;
+
+        ProgressStrip(ScanTask task) {
+            this.task = task;
+            this.indeterminate = task.progress() < 0 && task.state() == ScanTask.State.RUNNING;
+            setPreferredSize(new Dimension(220, 9));
+            setMinimumSize(new Dimension(40, 9));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 9));
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth(), h = getHeight();
+            g2.setColor(new Color(0xD8, 0xD8, 0xD8));
+            g2.fillRoundRect(0, 0, w - 1, h - 1, h, h);
+            g2.setColor(Ui.ACCENT);
+            if (indeterminate) {
+                // A short segment eased smoothly to and fro across the track. The
+                // phase comes from the wall clock, so it never resets on rebuild.
+                double phase = (System.nanoTime() - ANIM_EPOCH) / 1_000_000_000.0 * ANIM_SPEED;
+                int segW = Math.max(h * 3, (int) (w * 0.28));
+                double frac = (1 - Math.cos(phase)) / 2;   // 0..1..0, slowing at each end
+                int x = (int) Math.round((w - 1 - segW) * frac);
+                g2.fillRoundRect(x, 0, segW, h - 1, h, h);
+            } else {
+                double p = task.progress();
+                int fill = p >= 0 ? (int) Math.round(p * (w - 1))
+                        : (task.state() == ScanTask.State.RUNNING ? w - 1 : 0);
+                if (fill > 0) g2.fillRoundRect(0, 0, Math.max(h, fill), h - 1, h, h);
+            }
+            g2.dispose();
+        }
+    }
+
+    /** A small icon marking a task's run state, shown beside the status word. */
+    private static Icon statusIcon(ScanTask.State state) {
+        return new Icon() {
+            @Override public int getIconWidth()  { return 12; }
+            @Override public int getIconHeight() { return 12; }
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.translate(x, y);
+                switch (state) {
+                    case RUNNING -> {
+                        g2.setColor(Ui.ACCENT);
+                        g2.fillPolygon(new int[]{2, 2, 11}, new int[]{1, 11, 6}, 3);
+                    }
+                    case PAUSED -> {
+                        g2.setColor(new Color(0x55, 0x55, 0x55));
+                        g2.fillRect(2, 1, 3, 10);
+                        g2.fillRect(7, 1, 3, 10);
+                    }
+                    case FINISHED -> {
+                        g2.setColor(new Color(0x3A, 0x9A, 0x4B));
+                        g2.setStroke(new BasicStroke(2f));
+                        g2.drawPolyline(new int[]{1, 5, 11}, new int[]{6, 11, 1}, 3);
+                    }
+                }
+                g2.dispose();
+            }
+        };
     }
 
     /** A small on/off pill toggle (blue when on, grey when off). */
@@ -612,29 +1280,31 @@ public class DashboardTool implements ToolModule {
         }
     }
 
-    /** A rounded, coloured issue-count badge with white text. */
-    private static JComponent badge(int count, Color bg) {
+    /** A capsule-shaped, coloured issue-count pill with white text. */
+    private static JComponent pill(int count, Color bg) {
         final String text = Integer.toString(count);
         JComponent c = new JComponent() {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int w = getWidth(), h = getHeight();
                 g2.setColor(bg);
-                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                g2.fillRoundRect(0, 0, w - 1, h - 1, h, h);   // radius = height: a capsule
                 g2.setColor(Color.WHITE);
                 g2.setFont(Ui.BOLD.deriveFont(11f));
                 FontMetrics fm = g2.getFontMetrics();
                 int tw = fm.stringWidth(text);
-                int tx = (getWidth() - tw) / 2;
-                int ty = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                int tx = (w - tw) / 2;
+                int ty = (h + fm.getAscent() - fm.getDescent()) / 2;
                 g2.drawString(text, tx, ty);
                 g2.dispose();
             }
             @Override public Dimension getPreferredSize() {
                 FontMetrics fm = getFontMetrics(Ui.BOLD.deriveFont(11f));
-                int w = Math.max(22, fm.stringWidth(text) + 12);
-                return new Dimension(w, 18);
+                int w = Math.max(26, fm.stringWidth(text) + 16);
+                return new Dimension(w, 20);
             }
+            @Override public Dimension getMinimumSize() { return getPreferredSize(); }
             @Override public Dimension getMaximumSize() { return getPreferredSize(); }
         };
         return c;
@@ -650,10 +1320,12 @@ public class DashboardTool implements ToolModule {
             cfgType.setText("-");
             cfgScope.setText("-");
             cfgConfig.setText("-");
-            progRequests.setText("Requests: 0");
-            progItems.setText("Items: 0 of 0");
-            progIssues.setText("Issues: 0");
+            for (JLabel l : new JLabel[]{progTotalItems, progItemsActive, progItemsDone,
+                    progDiscovered, progRequests, progPerSecond}) {
+                l.setText("0");
+            }
             eventLog.setText("");
+            summaryTaskLog.setText("");
             return;
         }
 
@@ -662,31 +1334,35 @@ public class DashboardTool implements ToolModule {
         if (t.type() == ScanTask.Type.LIVE_ACTIVE) {
             // Crawl task: show the crawl view, not the scan/issues view.
             rightCards.show(rightBody, "crawl");
-            int queued = Math.max(0, t.itemsTotal() - t.itemsDone());
-            crawlStats.setText(t.itemsDone() + " pages crawled, " + queued
-                    + " queued, " + t.requests() + " requests");
+            crawlStats.setText("Discovered locations: " + t.discoveredLocations()
+                    + "   ·   Requests: " + t.requests());
             crawlLog.setText(String.join("\n", t.logLines()));
             crawlLog.setCaretPosition(crawlLog.getDocument().getLength());
-            // Restore the latest rendered-page image for this task (so selecting
-            // a crawl shows its last frame, not a blank panel).
-            if (t.lastShot() != null) {
-                setCrawlScreenshot(t.lastShot());
-            } else {
-                crawlImage.setIcon(null);
-                crawlImage.setText("(waiting for first page…)");
-            }
             return;
         }
         rightCards.show(rightBody, "scan");
 
-        cfgType.setText(t.type().toString());
+        cfgType.setText(typeLabel(t.type()));
         cfgScope.setText(t.scope().isEmpty() ? "-" : t.scope());
         cfgConfig.setText(t.configuration());
 
-        progRequests.setText("Requests: " + t.requests());
-        progItems.setText("Items: " + t.itemsDone() + " of " + t.itemsTotal());
-        progIssues.setText("Issues: high " + t.high() + ", medium " + t.medium()
-                + ", low " + t.low() + ", info " + t.info());
+        // Audit items: the active-scan rule count (real), split into completed
+        // and in-progress by ZAP's live scan percentage.
+        boolean running = t.state() == ScanTask.State.RUNNING;
+        int ruleTotal = t.auditItemsTotal();
+        double frac = t.progress() < 0 ? 0 : t.progress();   // -1 for continuous tasks
+        int completed = (int) Math.round(ruleTotal * frac);
+        int active = running ? Math.max(0, ruleTotal - completed) : 0;
+        progTotalItems.setText(Integer.toString(ruleTotal));
+        progItemsActive.setText(Integer.toString(active));
+        progItemsDone.setText(Integer.toString(completed));
+        progDiscovered.setText(Integer.toString(t.discoveredLocations()));
+        progRequests.setText(Integer.toString(t.requests()));
+        long secs = Math.max(1, (System.currentTimeMillis() - t.startedAt()) / 1000);
+        progPerSecond.setText(running ? Integer.toString((int) (t.requests() / secs)) : "0");
+
+        summaryTaskLog.setText(String.join("\n", t.logLines()));
+        summaryTaskLog.setCaretPosition(summaryTaskLog.getDocument().getLength());
 
         eventLog.setText(String.join("\n", t.logLines()));
         eventLog.setCaretPosition(eventLog.getDocument().getLength());
@@ -697,6 +1373,7 @@ public class DashboardTool implements ToolModule {
         all.sort(java.util.Comparator.comparingInt(Issue::rank));
         summaryModel.setIssues(all);
         issuesModel.setIssues(all);
+        auditLogModel.setIssues(all);
         // The live audit task reflects the shared issue set.
         if (liveAudit != null) {
             int h = 0, m = 0, l = 0, i = 0;
@@ -839,6 +1516,7 @@ public class DashboardTool implements ToolModule {
         private final boolean full;   // the Issues tab: the full column set
         private List<Issue> rows = new ArrayList<>();
         private final java.text.DateFormat fmt = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM);
+        private final java.text.DateFormat dateFmt = new java.text.SimpleDateFormat("HH:mm:ss dd MMM yyyy");
 
         IssueTableModel(String[] columns) {
             this.columns = columns;
@@ -882,9 +1560,92 @@ public class DashboardTool implements ToolModule {
             return switch (c) {
                 case 0 -> i.title();
                 case 1 -> i.host();
-                case 2 -> i.severity().label();
-                case 3 -> i.confidence().label();
+                case 2 -> dateFmt.format(new java.util.Date(i.time()));
                 default -> "";
+            };
+        }
+
+        Issue.Severity severityAt(int row) {
+            return row >= 0 && row < rows.size() ? rows.get(row).severity() : null;
+        }
+
+        Issue.Confidence confidenceAt(int row) {
+            return row >= 0 && row < rows.size() ? rows.get(row).confidence() : null;
+        }
+    }
+
+    /** The Audit log: every finding in the order it was detected. */
+    private static final class AuditLogModel extends AbstractTableModel {
+        private final String[] cols = {"#", "Time", "Source", "Action", "Issue type",
+                "Host", "Path", "Insertion point", "Severity", "Confidence"};
+        private List<Issue> rows = new ArrayList<>();
+        private final java.text.DateFormat fmt = new java.text.SimpleDateFormat("HH:mm:ss dd MMM yyyy");
+
+        void setIssues(List<Issue> issues) {
+            List<Issue> copy = new ArrayList<>(issues);
+            copy.sort(java.util.Comparator.comparingLong(Issue::time));
+            rows = copy;
+            fireTableDataChanged();
+        }
+
+        Issue issueAt(int row) {
+            return row >= 0 && row < rows.size() ? rows.get(row) : null;
+        }
+
+        @Override public int getRowCount() { return rows.size(); }
+        @Override public int getColumnCount() { return cols.length; }
+        @Override public String getColumnName(int c) { return cols[c]; }
+        @Override public Object getValueAt(int r, int c) {
+            Issue i = rows.get(r);
+            return switch (c) {
+                case 0 -> r + 1;
+                case 1 -> fmt.format(new java.util.Date(i.time()));
+                case 2 -> i.source();
+                case 3 -> "Issue present";
+                case 4 -> i.title();
+                case 5 -> i.host();
+                case 6 -> i.path();
+                case 7 -> i.param() == null ? "" : i.param();
+                case 8 -> i.severity().label();
+                default -> i.confidence().label();
+            };
+        }
+    }
+
+    /** Live model for the crawl window's Logger: the engine's HTTP traffic. */
+    private static final class ScanLogModel extends AbstractTableModel {
+        private final String[] cols = {"#", "Time", "Tool", "Method", "Host",
+                "Path", "Query", "Status", "Length"};
+        private final List<LogEntry> rows = new ArrayList<>();
+        private final java.text.DateFormat fmt =
+                java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM);
+
+        void add(LogEntry e) {
+            rows.add(e);
+            fireTableRowsInserted(rows.size() - 1, rows.size() - 1);
+        }
+        void updated(LogEntry e) {
+            int i = rows.indexOf(e);
+            if (i >= 0) fireTableRowsUpdated(i, i);
+        }
+        LogEntry at(int r) { return (r >= 0 && r < rows.size()) ? rows.get(r) : null; }
+
+        @Override public int getRowCount() { return rows.size(); }
+        @Override public int getColumnCount() { return cols.length; }
+        @Override public String getColumnName(int c) { return cols[c]; }
+        @Override public Class<?> getColumnClass(int c) { return c == 0 ? Integer.class : String.class; }
+        @Override public Object getValueAt(int r, int c) {
+            LogEntry e = rows.get(r);
+            return switch (c) {
+                case 0 -> e.number();
+                case 1 -> fmt.format(e.time());
+                case 2 -> e.tool();
+                case 3 -> e.request() == null ? "" : e.request().method();
+                case 4 -> e.service() == null ? "" : e.service().host();
+                case 5 -> e.request() == null ? "" : e.request().path();
+                case 6 -> e.request() == null ? "" : e.request().query();
+                case 7 -> e.status() == 0 ? "" : String.valueOf(e.status());
+                default -> e.responseLen() == 0 ? "" : String.valueOf(e.responseLen());
             };
         }
     }

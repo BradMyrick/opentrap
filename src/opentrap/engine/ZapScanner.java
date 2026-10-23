@@ -50,24 +50,34 @@ public final class ZapScanner {
             api.setSpiderMaxDepth(maxDepth);
             api.setSpiderMaxDuration(maxDurationMin);
         } catch (Exception ignore) { /* use the engine defaults */ }
-        String sid = api.spiderScan(seedUrl, 20);
-        int lastFound = -1;
+        // 0 = no per-node child limit: crawl every in-scope link within the depth
+        // budget, instead of stopping after 20 links per page.
+        String sid = api.spiderScan(seedUrl, 0);
+        int lastLoc = -1;
         while (true) {
             int st = api.spiderStatus(sid);
-            int found = api.spiderResults(sid).size();
-            if (found != lastFound) {
-                crawlTask.setItemsDone(found);
-                crawlTask.setItemsTotal(found);
-                crawlTask.log("Crawled " + found + " url(s)");
-                ctx.taskChanged(crawlTask);
-                lastFound = found;
-            }
-            // Stream the crawl's traffic into the logger and the site map as it happens.
+            // Stream the crawl's traffic into the logger and the site map first,
+            // so the site tree is current before we count unique locations.
             drain("crawl", true, crawlTask);
+            int loc = locations(baseurl);
+            if (loc >= 0 && loc != lastLoc) {
+                crawlTask.setDiscoveredLocations(loc);
+                crawlTask.log("Discovered " + loc + " location(s)");
+                lastLoc = loc;
+            }
             ctx.taskChanged(crawlTask);
             if (st >= 100) break;
             Thread.sleep(1000);
         }
+        drain("crawl", true, crawlTask);
+
+        // ---- AJAX crawl: render JavaScript and discover client-side routes ----
+        // This is what lets single-page apps (Angular/React/Vue) be crawled at
+        // all. It runs a real headless Chromium through ZAP's AJAX spider. If the
+        // add-on or a browser is not available the call fails and we skip it,
+        // keeping the traditional-spider results.
+        runAjaxCrawl(seedUrl, maxDurationMin, crawlTask);
+
         drain("crawl", true, crawlTask);
         crawlTask.log("Crawl finished: " + crawlTask.requests() + " request(s)");
         crawlTask.setState(ScanTask.State.FINISHED);
@@ -79,6 +89,15 @@ public final class ZapScanner {
         ScanTask auditTask = new ScanTask(ScanTask.Type.AUDIT,
                 "Audit of " + seed.host(), "ZAP active rules, within scope");
         auditTask.setScope(seed.url());
+        // Carry over what the crawl discovered, and record how many active-scan
+        // rules are enabled, so the dashboard shows real task-progress figures.
+        auditTask.setDiscoveredLocations(crawlTask.discoveredLocations());
+        try {
+            int rules = 0;
+            for (JsonValue s : api.activeScanners())
+                if ("true".equals(ZapApi.str(s, "enabled"))) rules++;
+            auditTask.setAuditItemsTotal(rules);
+        } catch (Exception ignore) { /* leave at 0 if ZAP cannot report it */ }
         ctx.addTask(auditTask);
         try {
             auditTask.log("Auditing with the ZAP active rules...");
@@ -102,6 +121,62 @@ public final class ZapScanner {
             auditTask.setState(ScanTask.State.FINISHED);
             ctx.taskChanged(auditTask);
         }
+    }
+
+    /**
+     * Run ZAP's AJAX spider (a real headless Chromium) over the seed, so that
+     * JavaScript-rendered links and routes are discovered and fed to the audit.
+     * Bounded by a time budget; absence of the add-on or a browser is not fatal.
+     */
+    private void runAjaxCrawl(String seedUrl, int maxDurationMin, ScanTask crawlTask) {
+        try {
+            api.setAjaxBrowser("chrome-headless");
+            api.setAjaxBrowsers(2);   // bound the headless-browser pool
+            crawlTask.log("Starting AJAX crawl (headless Chromium, executes JavaScript)...");
+            ctx.taskChanged(crawlTask);
+            // inScope=false: crawl from the seed directly (Crawljax stays on the
+            // seed's domain). inScope=true would require a ZAP context we do not
+            // define, and fails with "starting URI is not in scope".
+            api.ajaxSpiderScan(seedUrl, false);
+
+            long budgetMs = (maxDurationMin > 0 ? maxDurationMin : 3) * 60_000L;
+            long deadline = System.currentTimeMillis() + budgetMs;
+            int lastLoc = -1;
+            String baseurl = HttpService.parse(seedUrl).url();
+            while ("running".equalsIgnoreCase(api.ajaxSpiderStatus())) {
+                drain("crawl", true, crawlTask);
+                int loc = locations(baseurl);
+                if (loc >= 0 && loc != lastLoc) {
+                    crawlTask.setDiscoveredLocations(loc);
+                    crawlTask.log("Discovered " + loc + " location(s)");
+                    lastLoc = loc;
+                }
+                ctx.taskChanged(crawlTask);
+                if (System.currentTimeMillis() > deadline) {
+                    crawlTask.log("AJAX crawl time budget reached; stopping");
+                    try { api.ajaxSpiderStop(); } catch (Exception ignore) { }
+                    break;
+                }
+                Thread.sleep(1500);
+            }
+            drain("crawl", true, crawlTask);
+            crawlTask.log("AJAX crawl finished");
+        } catch (Exception e) {
+            // Add-on missing, no browser/driver, or the engine refused: carry on
+            // with whatever the traditional spider found.
+            crawlTask.log("AJAX crawl unavailable (" + e.getMessage()
+                    + "); using traditional crawl results only");
+        } finally {
+            // Always stop the AJAX spider so ZAP releases its headless browsers,
+            // even if the crawl was interrupted or threw.
+            try { api.ajaxSpiderStop(); } catch (Exception ignore) { }
+        }
+        ctx.taskChanged(crawlTask);
+    }
+
+    /** Unique discovered locations under baseurl, or the last value on error. */
+    private int locations(String baseurl) {
+        try { return api.uniqueLocations(baseurl); } catch (Exception e) { return -1; }
     }
 
     /** Fetch alerts and add any not yet seen to the issue tree; recount badges. */

@@ -27,6 +27,9 @@ public class ScanTask {
     private volatile int requests;
     private volatile int itemsTotal;
     private volatile int itemsDone;
+    private volatile int discoveredLocations;  // URLs the crawl found (real, from ZAP spider)
+    private volatile int auditItemsTotal;      // active-scan rules enabled (real, from ZAP)
+    private final long startedAt = System.currentTimeMillis();
     private volatile byte[] lastShot;   // latest rendered-page screenshot (crawl tasks)
     private final List<String> log = new CopyOnWriteArrayList<>();
 
@@ -73,6 +76,11 @@ public class ScanTask {
     public void setItemsTotal(int n){ itemsTotal = n; }
     public int itemsDone()         { return itemsDone; }
     public void setItemsDone(int n){ itemsDone = n; }
+    public int discoveredLocations()        { return discoveredLocations; }
+    public void setDiscoveredLocations(int n){ discoveredLocations = n; }
+    public int auditItemsTotal()            { return auditItemsTotal; }
+    public void setAuditItemsTotal(int n)   { auditItemsTotal = n; }
+    public long startedAt()        { return startedAt; }
     public byte[] lastShot()           { return lastShot; }
     public void setLastShot(byte[] b)  { lastShot = b; }
 

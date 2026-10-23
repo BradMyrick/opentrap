@@ -21,6 +21,7 @@ public class SuiteFrame extends JFrame {
     private final List<ToolModule> modules = new ArrayList<>();
     private final JLabel statusLabel = new JLabel(" ");
     private final JLabel memoryLabel = new JLabel();
+    private final MemoryMeter memoryMeter = new MemoryMeter();
     private final JButton eventLogLabel = new JButton("Event log (0)");
     private final JButton issuesLabel = new JButton("All issues (0)");
     private AlertsPanel alertsPanel;
@@ -64,7 +65,12 @@ public class SuiteFrame extends JFrame {
         west.add(issuesLabel);
         west.add(statusLabel);
         p.add(west, BorderLayout.WEST);
-        p.add(memoryLabel, BorderLayout.EAST);
+
+        JPanel east = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        east.setOpaque(false);
+        east.add(memoryLabel);
+        east.add(memoryMeter);
+        p.add(east, BorderLayout.EAST);
 
         // Live counters for the status bar.
         ctx.addAlertListener(a -> SwingUtilities.invokeLater(() ->
@@ -90,6 +96,35 @@ public class SuiteFrame extends JFrame {
         long used = (r.totalMemory() - r.freeMemory()) / (1024 * 1024);
         long max = r.maxMemory() / (1024 * 1024);
         memoryLabel.setText("Memory: " + used + "MB of " + max + "MB");
+        memoryMeter.setFraction(max <= 0 ? 0 : (double) used / max);
+    }
+
+    /** A small rounded usage meter shown beside the memory readout. */
+    private static final class MemoryMeter extends JComponent {
+        private double fraction;
+        MemoryMeter() {
+            Dimension d = new Dimension(64, 10);
+            setPreferredSize(d); setMinimumSize(d); setMaximumSize(d);
+        }
+        void setFraction(double f) {
+            this.fraction = Math.max(0, Math.min(1, f));
+            repaint();
+        }
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth(), h = getHeight();
+            g2.setColor(Theme.SURFACE_3);
+            g2.fillRoundRect(0, 0, w - 1, h - 1, h, h);
+            int fill = (int) Math.round(fraction * (w - 1));
+            if (fill > 0) {
+                g2.setColor(Theme.ACCENT);
+                g2.fillRoundRect(0, 0, Math.max(h, fill), h - 1, h, h);
+            }
+            g2.setColor(Ui.GRID);
+            g2.drawRoundRect(0, 0, w - 1, h - 1, h, h);
+            g2.dispose();
+        }
     }
 
     public void setStatus(String s) {

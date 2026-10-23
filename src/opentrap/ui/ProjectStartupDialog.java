@@ -32,8 +32,8 @@ public final class ProjectStartupDialog extends JDialog {
 
     private boolean proceeded;
 
-    public ProjectStartupDialog(String title) {
-        super((Frame) null, title, true);
+    public ProjectStartupDialog(Frame owner, String title) {
+        super(owner, title, true);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setIconImages(AppIcon.images());
 
@@ -42,6 +42,25 @@ public final class ProjectStartupDialog extends JDialog {
         for (JRadioButton r : new JRadioButton[]{temporary, newOnDisk, openExisting}) {
             r.setFont(Ui.BOLD); r.setOpaque(false); r.setFocusable(false);
         }
+
+        // When the Name changes, keep the chosen file's name in step with it.
+        newName.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e)  { syncFileToName(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e)  { syncFileToName(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { syncFileToName(); }
+        });
+
+        // Only fill in a default name once "New project on disk" is actually
+        // chosen (by click or by the folder picker), never while on a temporary
+        // or existing project.
+        newOnDisk.addItemListener(e -> {
+            if (!newOnDisk.isSelected()) return;
+            if (newName.getText().trim().isEmpty()) newName.setText(defaultProjectName());
+            // Default the file to the user's home directory, shown in full.
+            if (newFile.getText().trim().isEmpty()) {
+                newFile.setText(new File(System.getProperty("user.home"), projectFileName()).getAbsolutePath());
+            }
+        });
 
         // A two-column grid: radio labels in a left column, their inputs in an
         // aligned right column, with a thin separator between each section.
@@ -77,6 +96,9 @@ public final class ProjectStartupDialog extends JDialog {
             @Override public void windowOpened(java.awt.event.WindowEvent e) {
                 if (fixed) return;
                 fixed = true;
+                // Make sure the dialog is raised above other windows and focused.
+                toFront();
+                requestFocus();
                 SwingUtilities.invokeLater(() -> {
                     Dimension pref = getContentPane().getPreferredSize();
                     Insets in = getInsets();
@@ -225,13 +247,29 @@ public final class ProjectStartupDialog extends JDialog {
     }
 
     private JComponent fileRow(JTextField field) {
-        JButton choose = Ui.button("Choose file...");
+        boolean isNew = field == newFile;
+        JButton choose = Ui.button(isNew ? "Choose folder..." : "Choose file...");
         choose.addActionListener(e -> {
             JFileChooser fc = new JFileChooser();
-            if (fc.showDialog(this, "Select") == JFileChooser.APPROVE_OPTION) {
-                field.setText(fc.getSelectedFile().getAbsolutePath());
-                if (field == newFile) newOnDisk.setSelected(true);
-                if (field == openFile) openExisting.setSelected(true);
+            if (isNew) {
+                // Pick a folder; the file name comes from the project Name, so the
+                // user never has to type a filename and the name is always kept.
+                fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                fc.setDialogTitle("Choose a folder for the new project");
+                // Start in the current project directory, or the home directory.
+                String cur = newFile.getText().trim();
+                File start = cur.isEmpty() ? new File(System.getProperty("user.home"))
+                                           : new File(cur).getParentFile();
+                if (start != null && start.isDirectory()) fc.setCurrentDirectory(start);
+                if (fc.showDialog(this, "Select folder") == JFileChooser.APPROVE_OPTION) {
+                    newOnDisk.setSelected(true);   // fills a default name if none yet
+                    newFile.setText(new File(fc.getSelectedFile(), projectFileName()).getAbsolutePath());
+                }
+            } else {
+                if (fc.showDialog(this, "Select") == JFileChooser.APPROVE_OPTION) {
+                    field.setText(fc.getSelectedFile().getAbsolutePath());
+                    openExisting.setSelected(true);
+                }
             }
         });
         JPanel row = new JPanel(new BorderLayout(8, 0));
@@ -239,6 +277,31 @@ public final class ProjectStartupDialog extends JDialog {
         row.add(field, BorderLayout.CENTER);
         row.add(choose, BorderLayout.EAST);
         return row;
+    }
+
+    /** The default project name, shown with its .otrap extension so the user sees the full filename. */
+    private static String defaultProjectName() {
+        return StateIO.defaultProjectFileName();
+    }
+
+    /**
+     * The on-disk file name derived from the Name field. The Name already shows
+     * the .otrap extension, so this mirrors it exactly (just making the characters
+     * filesystem-safe) rather than re-appending an extension, which would double
+     * it up to ".otra.otrap" as the user edits.
+     */
+    private String projectFileName() {
+        String n = newName.getText().trim();
+        if (n.isEmpty()) n = defaultProjectName();
+        return n.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    /** Keep the chosen file in step with the Name: edit the name, the file follows. */
+    private void syncFileToName() {
+        String path = newFile.getText().trim();
+        if (path.isEmpty()) return;
+        File parent = new File(path).getParentFile();
+        if (parent != null) newFile.setText(new File(parent, projectFileName()).getAbsolutePath());
     }
 
     /** A small grey question-mark glyph, matching the welcome header. */
