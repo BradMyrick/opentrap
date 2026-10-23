@@ -14,13 +14,30 @@ import java.util.zip.ZipOutputStream;
 public final class StateIO {
     private StateIO() {}
 
+    /** Project file extension. */
+    public static final String EXT = ".otrap";
+
+    /** A timestamped default project name, matching the startup dialog. */
+    public static String defaultProjectFileName() {
+        return "project-" + java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + EXT;
+    }
+
+    private static File withExtension(File f) {
+        if (f.getName().toLowerCase().endsWith(EXT)) return f;
+        return new File(f.getParentFile(), f.getName() + EXT);
+    }
+
     public static void saveDialog(SuiteContext ctx, java.awt.Component parent) {
         JFileChooser fc = new JFileChooser();
         fc.setDialogTitle("save state");
-        // Default to the project file this session is bound to, if any.
+        // Reuse the project file this session is bound to; otherwise pre-fill a
+        // timestamped name (like the startup "new project" option does), so a
+        // temporary session never has to have a name typed from scratch.
         if (ctx.projectFile() != null) fc.setSelectedFile(ctx.projectFile());
+        else fc.setSelectedFile(new File(defaultProjectFileName()));
         if (fc.showSaveDialog(parent) != JFileChooser.APPROVE_OPTION) return;
-        File f = fc.getSelectedFile();
+        File f = withExtension(fc.getSelectedFile());
         if (f.exists()) {
             int r = JOptionPane.showConfirmDialog(parent,
                     "This file already exists. Are you sure?", "confirm", JOptionPane.YES_NO_OPTION);
@@ -28,6 +45,7 @@ public final class StateIO {
         }
         try {
             save(ctx, f);
+            ctx.setProjectFile(f);   // bind the session, so later saves reuse it
             ctx.alert("suite", "state saved to " + f.getName());
         } catch (Exception e) {
             JOptionPane.showMessageDialog(parent, "An error occurred: " + e.getMessage(),
@@ -55,12 +73,20 @@ public final class StateIO {
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
             zos.putNextEntry(new ZipEntry("opentrap"));
             ObjectOutputStream oos = new ObjectOutputStream(zos);
-            oos.writeInt(3);                            // format version
+            oos.writeInt(4);                            // format version
             oos.writeObject(ctx.store().all());         // history
             oos.writeObject(ctx.scope());               // scope
             oos.writeObject(ctx.settings().snapshot()); // settings
             oos.writeObject(ctx.sessions().snapshot()); // session jar, macros, rules (v2)
             oos.writeObject(ctx.organizer().snapshot()); // organizer items (v3)
+            // v4: scanner issues, and each tool's own working state.
+            oos.writeObject(new ArrayList<>(ctx.issues()));
+            java.util.LinkedHashMap<String, java.io.Serializable> toolStates = new java.util.LinkedHashMap<>();
+            for (opentrap.core.ToolModule t : ctx.tools()) {
+                java.io.Serializable s = t.saveState();
+                if (s != null) toolStates.put(t.name(), s);
+            }
+            oos.writeObject(toolStates);
             oos.flush();
             zos.closeEntry();
         }
@@ -87,6 +113,12 @@ public final class StateIO {
             if (version >= 3) {
                 organizer = (java.util.List<opentrap.organizer.OrganizerItem>) ois.readObject();
             }
+            java.util.List<opentrap.core.Issue> savedIssues = null;
+            java.util.Map<String, java.io.Serializable> toolStates = null;
+            if (version >= 4) {
+                savedIssues = (java.util.List<opentrap.core.Issue>) ois.readObject();
+                toolStates = (java.util.Map<String, java.io.Serializable>) ois.readObject();
+            }
 
             ctx.store().replaceAll(entries == null ? new ArrayList<>() : entries);
             if (scope != null) {
@@ -98,6 +130,15 @@ public final class StateIO {
             ctx.settings().restore(settings);
             if (session != null) ctx.sessions().restore(session);
             if (organizer != null) ctx.organizer().restore(organizer);
+            if (savedIssues != null) ctx.restoreIssues(savedIssues);
+            if (toolStates != null) {
+                for (opentrap.core.ToolModule t : ctx.tools()) {
+                    java.io.Serializable s = toolStates.get(t.name());
+                    if (s != null) {
+                        try { t.restoreState(s); } catch (Exception ignore) {}
+                    }
+                }
+            }
             int max = 0;
             for (LogEntry le : ctx.store().all()) max = Math.max(max, le.number());
             LogEntry.setCounter(max);

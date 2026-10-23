@@ -60,9 +60,9 @@ public class SuiteOptionsPanel extends JPanel {
         themeNote.setPreferredSize(new java.awt.Dimension(600, 40));
 
         page.section("display",
-                Ui.row(Ui.label("interface scale"), scaleCombo),
+                OptionsPage.labelRow("interface scale", scaleCombo),
                 scaleNote,
-                Ui.row(Ui.label("theme"), themeCombo),
+                OptionsPage.labelRow("theme", themeCombo),
                 themeNote);
 
         JTextArea about = Ui.note(

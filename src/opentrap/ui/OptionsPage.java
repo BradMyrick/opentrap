@@ -94,13 +94,32 @@ public class OptionsPage extends JPanel {
         stack.add(c);
     }
 
-    /** A labelled numeric or text field row. */
+    /** Shared fixed-width label column, so every settings input lines up. */
+    private static final int LABEL_W = 130;
+
+    private static JLabel formLabel(String text) {
+        JLabel l = Ui.label(text);
+        l.setHorizontalAlignment(SwingConstants.RIGHT);
+        l.setPreferredSize(new Dimension(LABEL_W, l.getPreferredSize().height));
+        return l;
+    }
+
+    /** A labelled numeric or text field row; the label sits in the shared column. */
     public static JPanel fieldRow(String label, JTextField field, String suffix) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         p.setOpaque(false);
-        p.add(Ui.label(label));
+        p.add(formLabel(label));
         p.add(field);
         if (suffix != null && !suffix.isEmpty()) p.add(Ui.label(suffix));
+        return p;
+    }
+
+    /** A labelled control (combo box, etc.) row sharing the same label column. */
+    public static JPanel labelRow(String label, Component control) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        p.setOpaque(false);
+        p.add(formLabel(label));
+        p.add(control);
         return p;
     }
 

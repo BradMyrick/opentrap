@@ -27,6 +27,9 @@ public class ScanTask {
     private volatile int requests;
     private volatile int itemsTotal;
     private volatile int itemsDone;
+    private volatile int discoveredLocations;  // URLs the crawl found (real, from ZAP spider)
+    private volatile int auditItemsTotal;      // active-scan rules enabled (real, from ZAP)
+    private final long startedAt = System.currentTimeMillis();
     private volatile byte[] lastShot;   // latest rendered-page screenshot (crawl tasks)
     private final List<String> log = new CopyOnWriteArrayList<>();
 
@@ -47,6 +50,13 @@ public class ScanTask {
     public void setScope(String s){ this.scope = s == null ? "" : s; }
     public State state()          { return state; }
     public void setState(State s) { this.state = s; }
+
+    // A cancelled task is one the user deleted or stopped: the scan loop driving
+    // it checks this, stops the engine's scan, and exits so nothing keeps running
+    // (and consuming memory) in the background after the task is gone.
+    private volatile boolean cancelled;
+    public boolean cancelled()    { return cancelled; }
+    public void cancel()          { this.cancelled = true; }
 
     public int high()   { return high.get(); }
     public int medium() { return medium.get(); }
@@ -73,6 +83,11 @@ public class ScanTask {
     public void setItemsTotal(int n){ itemsTotal = n; }
     public int itemsDone()         { return itemsDone; }
     public void setItemsDone(int n){ itemsDone = n; }
+    public int discoveredLocations()        { return discoveredLocations; }
+    public void setDiscoveredLocations(int n){ discoveredLocations = n; }
+    public int auditItemsTotal()            { return auditItemsTotal; }
+    public void setAuditItemsTotal(int n)   { auditItemsTotal = n; }
+    public long startedAt()        { return startedAt; }
     public byte[] lastShot()           { return lastShot; }
     public void setLastShot(byte[] b)  { lastShot = b; }
 

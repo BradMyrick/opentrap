@@ -111,6 +111,9 @@ public class PositionsPanel extends JPanel {
     /** The current text, markers included. */
     public String markedText() { return area.getText(); }
 
+    /** Replace the marked request text directly, keeping the user's § markers. */
+    public void setMarkedText(String s) { area.setText(s == null ? "" : s); }
+
     /** Number of payload positions, each a matched pair of markers. */
     public int positionCount() {
         int marks = 0;

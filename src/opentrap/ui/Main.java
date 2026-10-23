@@ -1,10 +1,12 @@
 package opentrap.ui;
 
 import opentrap.core.SuiteContext;
+import opentrap.core.Debug;
 
 import javax.swing.*;
 import java.awt.*;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 public class Main {
     /**
@@ -49,14 +51,27 @@ public class Main {
 
         launchArgs = args;
 
+        for (String a : args) {
+            if ("--debug".equals(a)) { Debug.enable(); break; }
+        }
+        Debug.log("main() starting, args=" + Arrays.toString(args));
+
         // If a non-default interface scale is saved and this JVM has not had it
         // applied yet, relaunch with Java's real HiDPI scaling so the whole UI
         // scales uniformly (fonts, columns, borders), then exit.
         if (!UiScale.applied()) {
             double want = UiScale.desired();
+            Debug.log("scale not yet applied; desired=" + want);
             if (Math.abs(want - 1.0) > 0.001) {
-                if (UiScale.relaunchWith(want, args)) return;
+                Debug.log("relaunching JVM with uiScale=" + want);
+                if (UiScale.relaunchWith(want, args)) {
+                    Debug.log("relaunched child process; parent exiting");
+                    return;
+                }
+                Debug.log("relaunch did not happen; continuing in this process");
             }
+        } else {
+            Debug.log("scale already applied; no relaunch needed");
         }
 
         System.setProperty("awt.useSystemAAFontSettings", "on");
@@ -69,26 +84,20 @@ public class Main {
 
         Path home = Path.of(System.getProperty("user.home"), ".opentrap");
 
+        Debug.log("entering EDT to build the UI");
         SwingUtilities.invokeLater(() -> {
-            // Ask the user to choose a project before the main window is built,
-            // as a startup step. Cancelling here exits the app.
-            ProjectStartupDialog startup = new ProjectStartupDialog(TITLE);
-            startup.setVisible(true);
-            if (!startup.proceeded()) {
-                System.exit(0);
-                return;
-            }
-
+          try {
+            // Build the whole UI and show the main window FIRST, then ask which
+            // project to open. A modal dialog shown as the very first window with
+            // no owner fails to map on some Linux/Wayland desktops (it blocks
+            // invisibly and the process hangs); giving it a visible parent frame
+            // makes it appear reliably.
+            Debug.log("creating SuiteContext and SuiteFrame");
             SuiteContext ctx = new SuiteContext();
             SuiteFrame frame = new SuiteFrame(ctx, TITLE);
-            try {
-                Bootstrap.registerTools(ctx, frame, home);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null,
-                        "Failed to start: " + e, "error", JOptionPane.ERROR_MESSAGE);
-                e.printStackTrace();
-                System.exit(1);
-            }
+            Debug.log("registering tools");
+            Bootstrap.registerTools(ctx, frame, home);
+            Debug.log("building UI (frame.buildUi)");
             frame.buildUi();
 
             // Size to the scaled ideal, but never larger than the screen's work
@@ -103,7 +112,22 @@ public class Main {
             if (w >= screen.width - 8 && h >= screen.height - 8) {
                 frame.setExtendedState(Frame.MAXIMIZED_BOTH);
             }
+            Debug.log("showing main window (" + w + "x" + h + ")");
             frame.setVisible(true);
+            frame.toFront();
+            frame.requestFocus();
+            Debug.log("main window is visible");
+
+            // Now choose the project, in a dialog owned by the visible window.
+            Debug.log("showing startup project dialog");
+            ProjectStartupDialog startup = new ProjectStartupDialog(frame, TITLE);
+            startup.setVisible(true);
+            Debug.log("startup dialog closed: proceeded=" + startup.proceeded()
+                    + " mode=" + startup.mode());
+            if (!startup.proceeded()) {
+                System.exit(0);
+                return;
+            }
             ctx.alert("suite", "OpenTRAP " + VERSION + " started");
 
             // Resolve the chosen project now that the window and its tools
@@ -136,6 +160,12 @@ public class Main {
                 }
                 default -> { /* temporary in-memory project: nothing to load */ }
             }
+          } catch (Throwable t) {
+            Debug.error("startup failed while building the UI", t);
+            JOptionPane.showMessageDialog(null,
+                    "Failed to start: " + t, "error", JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+          }
         });
     }
 }

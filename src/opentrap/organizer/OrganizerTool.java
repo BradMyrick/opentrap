@@ -22,6 +22,8 @@ public class OrganizerTool implements ToolModule {
     private JTable table;
     private MessageEditor reqView, respView;
     private JTextArea notes;
+    private final CardLayout tableCards = new CardLayout();
+    private JPanel tableArea;
 
     @Override public String name() { return "organizer"; }
 
@@ -32,7 +34,7 @@ public class OrganizerTool implements ToolModule {
             store.add(new OrganizerItem(svc, req == null ? null : req.copy(),
                     resp == null ? null : resp.copy(), cap, "sent"));
         }));
-        store.addListener(() -> SwingUtilities.invokeLater(model::refresh));
+        store.addListener(() -> SwingUtilities.invokeLater(() -> { model.refresh(); updateEmpty(); }));
     }
 
     @Override public Tab[] tabs() {
@@ -59,18 +61,22 @@ public class OrganizerTool implements ToolModule {
         JButton delete = Ui.button("delete");
         JButton clear = Ui.button("clear all");
         delete.addActionListener(e -> {
-            int r = table.getSelectedRow();
-            OrganizerItem it = model.at(r);
+            OrganizerItem it = model.at(table.getSelectedRow());
             if (it != null) store.remove(it);
         });
         clear.addActionListener(e -> store.clear());
 
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
-        bar.add(delete); bar.add(clear);
-        bar.add(Ui.note("Right-click a request anywhere and choose “send to organizer” to add it here."));
+        bar.add(delete);
+        bar.add(clear);
+
+        // The table, or a centred empty-state hint when nothing is saved yet.
+        tableArea = new JPanel(tableCards);
+        tableArea.add(Ui.scroll(table), "table");
+        tableArea.add(emptyState(), "empty");
 
         JPanel notesPanel = new JPanel(new BorderLayout());
-        notesPanel.add(Ui.bold(" notes"), BorderLayout.NORTH);
+        notesPanel.add(Ui.bold(" Notes"), BorderLayout.NORTH);
         notesPanel.add(Ui.scroll(notes), BorderLayout.CENTER);
 
         JSplitPane viewers = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, reqView, respView);
@@ -81,14 +87,42 @@ public class OrganizerTool implements ToolModule {
         lower.setDividerSize(5);
         Ui.balance(lower, 0.75);
 
-        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, Ui.scroll(table), lower);
+        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tableArea, lower);
         split.setDividerSize(5);
         Ui.balance(split, 0.4);
 
         JPanel root = new JPanel(new BorderLayout());
         root.add(bar, BorderLayout.NORTH);
         root.add(split, BorderLayout.CENTER);
+        updateEmpty();
         return new Tab[]{ new Tab("organizer", root) };
+    }
+
+    /** A centred hint shown while the Organizer has no saved items. */
+    private JComponent emptyState() {
+        JPanel p = new JPanel(new GridBagLayout());
+        JPanel col = new JPanel();
+        col.setLayout(new BoxLayout(col, BoxLayout.Y_AXIS));
+        col.setOpaque(false);
+        JLabel title = new JLabel("Nothing saved yet");
+        title.setFont(Ui.HEADING.deriveFont(16f));
+        title.setForeground(Theme.TEXT);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel hint = new JLabel("Right-click any request and choose “Send to organizer” to stash it here.");
+        hint.setFont(Ui.PLAIN);
+        hint.setForeground(Theme.MUTED);
+        hint.setAlignmentX(Component.CENTER_ALIGNMENT);
+        col.add(title);
+        col.add(Box.createVerticalStrut(8));
+        col.add(hint);
+        p.add(col);
+        return p;
+    }
+
+    private void updateEmpty() {
+        if (tableArea != null) {
+            tableCards.show(tableArea, model.getRowCount() == 0 ? "empty" : "table");
+        }
     }
 
     private void showSelected() {
@@ -105,7 +139,7 @@ public class OrganizerTool implements ToolModule {
     }
 
     private final class Model extends AbstractTableModel {
-        private final String[] cols = {"status", "caption", "host", "path", "time"};
+        private final String[] cols = {"Status", "Caption", "Host", "Path", "Time"};
         private List<OrganizerItem> rows = store == null ? java.util.List.of() : store.all();
         private final DateFormat fmt = DateFormat.getTimeInstance(DateFormat.MEDIUM);
 

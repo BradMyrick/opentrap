@@ -111,8 +111,8 @@ public class LoggerTool implements ToolModule {
     }
 
     private final class Model extends AbstractTableModel {
-        private final String[] cols = {"#", "time", "tool", "method", "host", "path",
-                "query", "status", "length", "MIME type", "title"};
+        private final String[] cols = {"#", "Time", "Tool", "Method", "Host", "Path",
+                "Query", "Status", "Length", "MIME type", "Title"};
         private final List<LogEntry> all = new ArrayList<>();
         private final List<LogEntry> shown = new ArrayList<>();
         private final DateFormat fmt = DateFormat.getTimeInstance(DateFormat.MEDIUM);

@@ -46,7 +46,7 @@ public final class Ui {
             @Override public Component getTableCellRendererComponent(JTable t, Object v,
                     boolean sel, boolean focus, int row, int column) {
                 super.getTableCellRendererComponent(t, v, sel, focus, row, column);
-                setHorizontalAlignment(SwingConstants.CENTER);
+                setHorizontalAlignment(SwingConstants.LEADING);
                 setFont(BOLD);
                 String s = (v == null) ? "" : v.toString();
                 Color c = switch (s) {
@@ -60,6 +60,45 @@ public final class Ui {
             }
         };
         table.getColumnModel().getColumn(col).setCellRenderer(r);
+    }
+
+    /** A small filled circle coloured by severity, for the issue-type column. */
+    public static javax.swing.Icon severityDot(String severity) {
+        Color c = switch (severity == null ? "" : severity) {
+            case "High" -> SEV_HIGH;
+            case "Medium" -> SEV_MEDIUM;
+            case "Low" -> SEV_LOW;
+            default -> SEV_INFO;
+        };
+        int d = 10;
+        java.awt.image.BufferedImage img =
+                new java.awt.image.BufferedImage(d + 2, d + 2, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(c);
+        g.fillOval(1, 1, d, d);
+        g.dispose();
+        return new javax.swing.ImageIcon(img);
+    }
+
+    /**
+     * Show a small severity dot in front of the text of {@code textCol}, coloured
+     * by the value in {@code sevCol} on the same row (reads via the model so it
+     * survives sorting).
+     */
+    public static void severityIconColumn(JTable table, int textCol, int sevCol) {
+        table.getColumnModel().getColumn(textCol).setCellRenderer(
+            new javax.swing.table.DefaultTableCellRenderer() {
+                @Override public Component getTableCellRendererComponent(JTable t, Object v,
+                        boolean sel, boolean focus, int row, int column) {
+                    super.getTableCellRendererComponent(t, v, sel, focus, row, column);
+                    int mr = t.convertRowIndexToModel(row);
+                    Object sev = t.getModel().getValueAt(mr, sevCol);
+                    setIcon(severityDot(String.valueOf(sev)));
+                    setIconTextGap(6);
+                    return this;
+                }
+            });
     }
 
     /** A small filled dot in a severity's colour, for the issue tree. */
@@ -218,6 +257,26 @@ public final class Ui {
         t.setIntercellSpacing(new Dimension(0, 0));
         t.setSelectionBackground(SELECTION);
         t.setSelectionForeground(Color.BLACK);
+        leftAlign(t);
+    }
+
+    /**
+     * Left-align the header labels and every cell, the convention used by other
+     * proxy-first suites. The Metal look and feel centres headers and
+     * right-aligns numbers by default, which looks untidy, so override both.
+     */
+    public static void leftAlign(JTable t) {
+        javax.swing.table.DefaultTableCellRenderer left = new javax.swing.table.DefaultTableCellRenderer();
+        left.setHorizontalAlignment(SwingConstants.LEADING);
+        t.setDefaultRenderer(Object.class, left);
+        t.setDefaultRenderer(Number.class, left);
+        t.setDefaultRenderer(Integer.class, left);
+        t.setDefaultRenderer(Long.class, left);
+        t.setDefaultRenderer(String.class, left);
+        if (t.getTableHeader().getDefaultRenderer()
+                instanceof javax.swing.table.DefaultTableCellRenderer h) {
+            h.setHorizontalAlignment(SwingConstants.LEADING);
+        }
     }
 
     /** Center the text in every non-boolean cell of a table, for a tidy grid. */
@@ -231,24 +290,22 @@ public final class Ui {
         t.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         t.getTableHeader().setResizingAllowed(true);
         t.getTableHeader().setReorderingAllowed(false);
+        // Never let a column squeeze narrower than its own header text, so the
+        // header labels never truncate to "met...", "st...", "MIM..." etc.
+        java.awt.FontMetrics fm = t.getTableHeader().getFontMetrics(t.getTableHeader().getFont());
         int cols = t.getColumnModel().getColumnCount();
         for (int i = 0; i < weights.length && i < cols; i++) {
             javax.swing.table.TableColumn c = t.getColumnModel().getColumn(i);
-            c.setPreferredWidth(weights[i]);
-            c.setMinWidth(Math.max(24, weights[i] / 3));
+            String name = String.valueOf(c.getHeaderValue());
+            int headerMin = fm.stringWidth(name) + 18;
+            c.setPreferredWidth(Math.max(weights[i], headerMin));
+            c.setMinWidth(Math.max(Math.max(24, weights[i] / 3), headerMin));
         }
     }
 
+    /** Retained for call sites; tables are left-aligned throughout now. */
     public static void centerCells(JTable t) {
-        javax.swing.table.DefaultTableCellRenderer r = new javax.swing.table.DefaultTableCellRenderer();
-        r.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        t.setDefaultRenderer(Object.class, r);
-        t.setDefaultRenderer(Number.class, r);
-        t.setDefaultRenderer(String.class, r);
-        t.setDefaultRenderer(Integer.class, r);
-        // Center the header labels too.
-        ((javax.swing.table.DefaultTableCellRenderer) t.getTableHeader().getDefaultRenderer())
-                .setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        leftAlign(t);
     }
 
     /**
@@ -258,10 +315,12 @@ public final class Ui {
      */
     public static void setWidths(JTable t, int... widths) {
         t.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        java.awt.FontMetrics fm = t.getTableHeader().getFontMetrics(t.getTableHeader().getFont());
         for (int i = 0; i < widths.length && i < t.getColumnCount(); i++) {
             javax.swing.table.TableColumn c = t.getColumnModel().getColumn(i);
-            c.setPreferredWidth(widths[i]);
-            c.setMinWidth(Math.max(24, widths[i] / 3));
+            int headerMin = fm.stringWidth(String.valueOf(c.getHeaderValue())) + 18;
+            c.setPreferredWidth(Math.max(widths[i], headerMin));
+            c.setMinWidth(Math.max(Math.max(24, widths[i] / 3), headerMin));
         }
     }
 

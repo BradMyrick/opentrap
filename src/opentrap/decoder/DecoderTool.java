@@ -57,6 +57,18 @@ public class DecoderTool implements ToolModule {
 
     @Override public Tab[] tabs() { return new Tab[]{ new Tab("decoder", root) }; }
 
+    @Override public java.io.Serializable saveState() {
+        if (stages.isEmpty()) return null;
+        String input = stages.get(0).area.getText();
+        return (input == null || input.isEmpty()) ? null : input;
+    }
+
+    @Override public void restoreState(java.io.Serializable state) {
+        // Setting the first stage's text fires its listener, which re-runs the
+        // whole decode pipeline.
+        if (state instanceof String s && !stages.isEmpty()) stages.get(0).area.setText(s);
+    }
+
     @Override public void init(SuiteContext ctx) {
         ctx.registerSink("decoder", (svc, req, resp, caption) -> {
             byte[] data = req != null ? req.raw() : resp != null ? resp.raw() : new byte[0];

@@ -165,6 +165,12 @@ clear issue view with the request, response and the matched evidence highlighted
 ready to triage or hand straight to a developer. The detection is built on the
 proven OWASP ZAP engine, so what OpenTRAP reports holds up.
 
+Choose how hard a scan digs with a scan configuration: Lightweight, Fast,
+Balanced or Deep. Every tier tests the same ground, so they differ only in how
+far the crawl reaches and how hard the audit probes, never in what gets checked.
+For full control there is a Custom configuration with its own settings screen,
+exposing crawl depth, attack strength, the input points tested and more.
+
 ## Highlights
 
 - **Proxy-first by design** - intercept, replay and edit live traffic, with the whole toolset one click away.
@@ -173,13 +179,14 @@ proven OWASP ZAP engine, so what OpenTRAP reports holds up.
 - **One self-contained file** - every release is a single Linux AppImage with its own runtime and the scan engine built in; download it and run it.
 - **Open and hackable** - AGPL v3.0: read it, change it, extend it, with no gate on its core capabilities.
 - **Guided from the start** - open or create a project at launch, then drive crawl-and-audit scans through a step-by-step wizard.
+- **Scan configurations that fit the job** - pick a tier from Lightweight to Deep, or build a Custom scan with full control over crawl depth, attack strength and the inputs tested.
 - **Built to be improved** - shaped by the people who use it, with every contribution credited.
 
 ## The toolset
 
 | Tool | What it does |
 |------|--------------|
-| **Dashboard** | Live tasks, issues and event log; start a scan from the guided wizard |
+| **Dashboard** | Live tasks, issues and event log; start a scan from the guided wizard, choosing a configuration from Lightweight to Deep or a Custom one |
 | **Target** | Site map tree and the suite-wide scope that governs every tool |
 | **Proxy** | Intercept, HTTP history, WebSocket capture, per-host certificate authority |
 | **Scanner** | Configure the engine's active and passive rules (enable, disable, threshold) |

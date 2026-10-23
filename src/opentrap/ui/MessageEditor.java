@@ -48,7 +48,15 @@ public class MessageEditor extends JPanel {
     private HttpMessage relatedRequest;
 
     private final JTabbedPane views = new JTabbedPane();
-    private final JTextPane prettyPane = new JTextPane();
+    // A pretty pane that does not word-wrap: very long unbreakable lines (a
+    // base64 VIEWSTATE, a JWT) otherwise render as overlapping, garbled glyphs.
+    // Instead such lines extend and the pane scrolls horizontally.
+    private final JTextPane prettyPane = new JTextPane() {
+        @Override public boolean getScrollableTracksViewportWidth() {
+            Component parent = getParent();
+            return parent == null || getUI().getPreferredSize(this).width <= parent.getSize().width;
+        }
+    };
     private final JTextArea rawArea = new JTextArea();
     private final HexView hexView;
     private final JEditorPane renderPane = new JEditorPane();
@@ -244,6 +252,11 @@ public class MessageEditor extends JPanel {
         left.add(next);
         left.add(matchLabel);
         p.add(left, BorderLayout.WEST);
+        // A flexible centre gap keeps the match count and the length label apart,
+        // and a left margin guarantees a gap even when the editor is narrow so
+        // they never run together ("0 matcheslength: 344").
+        p.add(Box.createHorizontalGlue(), BorderLayout.CENTER);
+        selectionLabel.setBorder(Ui.pad(0, 14, 0, 2));
         p.add(selectionLabel, BorderLayout.EAST);
 
         searchField.getDocument().addDocumentListener(new DocumentListener() {
@@ -337,13 +350,24 @@ public class MessageEditor extends JPanel {
     private void renderHtml() {
         try {
             String body = message.bodyText();
+            if (body == null) body = "";
             body = body.replaceAll("(?is)<script.*?</script>", "")
                        .replaceAll("(?i)<link[^>]*>", "")
                        .replaceAll("(?i)src\\s*=\\s*\"https?://[^\"]*\"", "");
-            renderPane.setText(body);
+            // Reset the document before each render. Reusing the previous
+            // HTMLDocument makes JEditorPane keep showing the earlier page (or
+            // nothing at all) on the next setText, which is why most responses
+            // came up blank. A fresh document forces a clean re-parse every time.
+            renderPane.setContentType("text/html");
+            renderPane.setDocument(renderPane.getEditorKit().createDefaultDocument());
+            if (body.isBlank()) {
+                renderPane.setText("<html><body><i>No HTML body to render.</i></body></html>");
+            } else {
+                renderPane.setText(body);
+            }
             renderPane.setCaretPosition(0);
         } catch (Exception e) {
-            renderPane.setText("<html><body><i>could not render this response</i></body></html>");
+            renderPane.setText("<html><body><i>Could not render this response.</i></body></html>");
         }
     }
 
@@ -359,7 +383,12 @@ public class MessageEditor extends JPanel {
     /** Colour the Pretty view's headers and body without changing any bytes. */
     private void applySyntax() {
         StyledDocument doc = prettyPane.getStyledDocument();
-        String text = prettyPane.getText();
+        // Use the document's own text, not getText(): getText() returns the
+        // original CRLF string while the document stores LF-normalised content,
+        // so their offsets differ and highlighting would drift down the page.
+        String text;
+        try { text = doc.getText(0, doc.getLength()); }
+        catch (javax.swing.text.BadLocationException e) { return; }
         SimpleAttributeSet plain = new SimpleAttributeSet();
         StyleConstants.setForeground(plain, new Color(0x1A, 0x1A, 0x1A));
         doc.setCharacterAttributes(0, text.length(), plain, true);

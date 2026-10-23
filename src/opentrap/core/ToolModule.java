@@ -27,6 +27,15 @@ public interface ToolModule {
     /** Called when the suite is shutting down. */
     default void shutdown() {}
 
+    /**
+     * A serialisable snapshot of this tool's working state, saved with the
+     * project. Return null if the tool has nothing worth persisting.
+     */
+    default java.io.Serializable saveState() { return null; }
+
+    /** Restore a snapshot previously produced by {@link #saveState()}. */
+    default void restoreState(java.io.Serializable state) {}
+
     /** A tab inside a tool: a title and the component to show. */
     record Tab(String title, javax.swing.JComponent component) {}
 }
