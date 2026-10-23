@@ -1,11 +1,14 @@
 <div align="center">
 
-<h1>
-<img src="icon/opentrap.svg" height="36" alt="" valign="middle">&nbsp;&nbsp;OpenTRAP
-</h1>
+<table align="center" border="0" cellspacing="0" cellpadding="0">
+<tr>
+<td valign="middle"><img src="icon/opentrap.svg" height="60" alt="OpenTRAP logo"></td>
+<td valign="middle">&nbsp;&nbsp;<h1>OpenTRAP</h1></td>
+</tr>
+</table>
 
 <p><strong>Open Traffic Replay and Analysis Proxy</strong><br>
-A free, open-source alternative to Burp Suite on the trusted OWASP ZAP engine, with nothing locked behind a licence.</p>
+A free and open-source alternative to Burp Suite, built on the trusted OWASP ZAP engine.</p>
 
 <p>
 <img src="https://img.shields.io/badge/licence-AGPL--3.0-e5484d?style=flat-square" alt="Licence">
