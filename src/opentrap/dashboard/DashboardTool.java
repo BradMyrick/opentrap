@@ -65,6 +65,15 @@ public class DashboardTool implements ToolModule {
     /** Drives the sliding progress-bar animation while a crawl is running. */
     private javax.swing.Timer cardAnimTimer;
 
+    // Background scan threads report progress, issues and log lines far faster
+    // than the UI needs to redraw. These coalescers collapse each storm into at
+    // most one refresh per interval so the event-dispatch thread never floods.
+    private final Coalescer tasksRefresh  = new Coalescer(200, this::rebuildTasks);
+    private final Coalescer issuesRefresh = new Coalescer(200, this::onIssuesChanged);
+    private final Coalescer logRefresh     = new Coalescer(200, this::flushScanLog);
+    private final java.util.Queue<LogEntry> logAddQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    private volatile boolean logHasUpdates;
+
     // ---- right ----
     private final JLabel rightHeader = Ui.heading("");
     private final java.awt.CardLayout rightCards = new java.awt.CardLayout();
@@ -123,17 +132,17 @@ public class DashboardTool implements ToolModule {
 
     @Override public void init(SuiteContext ctx) {
         this.ctx = ctx;
-        ctx.addIssueListener(i -> SwingUtilities.invokeLater(this::onIssuesChanged));
-        ctx.addTaskListener(t -> SwingUtilities.invokeLater(this::rebuildTasks));
+        ctx.addIssueListener(i -> issuesRefresh.request());
+        ctx.addTaskListener(t -> tasksRefresh.request());
 
         // Feed the crawl window's live Logger from the shared store: every crawl
         // or audit request/response the engine records shows up there as it runs.
         ctx.store().addListener(new MessageStore.Listener() {
             @Override public void entryAdded(LogEntry e) {
-                if (isScanEntry(e)) SwingUtilities.invokeLater(() -> scanLogModel.add(e));
+                if (isScanEntry(e)) { logAddQueue.add(e); logRefresh.request(); }
             }
             @Override public void entryUpdated(LogEntry e) {
-                if (isScanEntry(e)) SwingUtilities.invokeLater(() -> scanLogModel.updated(e));
+                if (isScanEntry(e)) { logHasUpdates = true; logRefresh.request(); }
             }
         });
 
@@ -863,6 +872,36 @@ public class DashboardTool implements ToolModule {
     }
 
     // ----------------------------------------------------------- task cards
+
+    /**
+     * Collapses a burst of refresh requests into at most one refresh per
+     * interval on the event-dispatch thread. {@link #request()} may be called
+     * from any thread; the action always runs on the EDT.
+     */
+    private static final class Coalescer {
+        private final javax.swing.Timer timer;
+        private volatile boolean dirty;
+        Coalescer(int intervalMs, Runnable action) {
+            timer = new javax.swing.Timer(intervalMs, e -> {
+                if (dirty) { dirty = false; action.run(); }
+                else ((javax.swing.Timer) e.getSource()).stop();
+            });
+            timer.setRepeats(true);
+            timer.setInitialDelay(0);   // the first refresh is prompt, not delayed
+        }
+        void request() {
+            dirty = true;
+            SwingUtilities.invokeLater(() -> { if (!timer.isRunning()) timer.start(); });
+        }
+    }
+
+    /** Apply queued scan-log entries to the table in one batch (runs on the EDT). */
+    private void flushScanLog() {
+        List<LogEntry> batch = new ArrayList<>();
+        for (LogEntry e; (e = logAddQueue.poll()) != null; ) batch.add(e);
+        if (!batch.isEmpty()) scanLogModel.addAll(batch);
+        if (logHasUpdates) { logHasUpdates = false; scanLogModel.refreshRows(); }
+    }
 
     private void rebuildTasks() {
         List<ScanTask> tasks = ctx == null ? List.of() : ctx.tasks();
@@ -1743,6 +1782,16 @@ public class DashboardTool implements ToolModule {
         void add(LogEntry e) {
             rows.add(e);
             fireTableRowsInserted(rows.size() - 1, rows.size() - 1);
+        }
+        void addAll(List<LogEntry> es) {
+            if (es.isEmpty()) return;
+            int from = rows.size();
+            rows.addAll(es);
+            fireTableRowsInserted(from, rows.size() - 1);
+        }
+        /** Repaint existing rows in one event, for a batch of in-place updates. */
+        void refreshRows() {
+            if (!rows.isEmpty()) fireTableRowsUpdated(0, rows.size() - 1);
         }
         void updated(LogEntry e) {
             int i = rows.indexOf(e);
