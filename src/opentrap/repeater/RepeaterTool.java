@@ -33,6 +33,42 @@ public class RepeaterTool implements ToolModule {
         return new Tab[]{ new Tab("repeater", tabs) };
     }
 
+    @Override public java.io.Serializable saveState() {
+        java.util.ArrayList<TabState> out = new java.util.ArrayList<>();
+        for (int i = 0; i < tabs.getTabCount(); i++) {
+            if (tabs.getComponentAt(i) instanceof RepeaterTab rt) {
+                TabState s = new TabState();
+                s.title = tabs.getTitleAt(i);
+                s.host = rt.hostField.getText();
+                try { s.port = Integer.parseInt(rt.portField.getText().trim()); } catch (Exception e) { s.port = 80; }
+                s.secure = rt.sslBox.isSelected();
+                s.req = rt.reqEditor.message().raw();
+                s.resp = rt.respEditor.message().raw();
+                out.add(s);
+            }
+        }
+        return out.isEmpty() ? null : out;
+    }
+
+    @Override public void restoreState(java.io.Serializable state) {
+        if (!(state instanceof java.util.List<?> list) || list.isEmpty()) return;
+        tabs.removeAll();
+        for (Object o : list) {
+            if (!(o instanceof TabState s)) continue;
+            HttpService svc = new HttpService(s.host == null ? "127.0.0.1" : s.host, s.port, s.secure);
+            newTab(svc, new HttpMessage(s.req == null ? new byte[0] : s.req), s.title);
+            if (tabs.getComponentAt(tabs.getTabCount() - 1) instanceof RepeaterTab rt
+                    && s.resp != null && s.resp.length > 0) {
+                rt.respEditor.setMessage(svc, new HttpMessage(s.resp), rt.reqEditor.message());
+            }
+        }
+    }
+
+    private static final class TabState implements java.io.Serializable {
+        private static final long serialVersionUID = 1L;
+        String title; String host; int port; boolean secure; byte[] req; byte[] resp;
+    }
+
     @Override public boolean alwaysTabbed() { return false; }
 
     @Override public JMenu[] menus() {
@@ -79,7 +115,7 @@ public class RepeaterTool implements ToolModule {
         private final JComboBox<HttpMode> modeCombo = Ui.combo(HttpMode.values());
         private final JLabel status = Ui.label("ready");
         private final JLabel lengthLabel = Ui.label("length: 0");
-        private final JButton go = Ui.primaryButton("go", "send the request");
+        private final JButton go = Ui.primaryButton("Send", "send the request");
         private final JButton cancel = Ui.button("cancel");
         private final JButton prev = Ui.button("<", "previous request/response in this tab");
         private final JButton next = Ui.button(">", "next request/response in this tab");
@@ -129,10 +165,10 @@ public class RepeaterTool implements ToolModule {
             add(north, BorderLayout.NORTH);
 
             JPanel reqPanel = new JPanel(new BorderLayout());
-            reqPanel.add(bold(" request"), BorderLayout.NORTH);
+            reqPanel.add(bold(" Request"), BorderLayout.NORTH);
             reqPanel.add(reqEditor, BorderLayout.CENTER);
             JPanel respPanel = new JPanel(new BorderLayout());
-            respPanel.add(bold(" response"), BorderLayout.NORTH);
+            respPanel.add(bold(" Response"), BorderLayout.NORTH);
             respPanel.add(respEditor, BorderLayout.CENTER);
             // Request and response side by side.
             JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, reqPanel, respPanel);

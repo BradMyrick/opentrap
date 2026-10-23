@@ -41,51 +41,110 @@ public final class ZapScanner {
      * @param crawlTask a LIVE_ACTIVE task to report crawl progress on
      */
     public void crawlAndAudit(HttpService seed, String seedUrl, boolean thenAudit,
-                              int maxDepth, int maxDurationMin, ScanTask crawlTask) throws Exception {
+                              ScanConfig cfg, ScanTask crawlTask) throws Exception {
         String baseurl = seed.url();
         api.accessUrl(seedUrl);
 
         // ---- crawl -------------------------------------------------------
         try {
-            api.setSpiderMaxDepth(maxDepth);
-            api.setSpiderMaxDuration(maxDurationMin);
+            api.setSpiderMaxDepth(cfg.crawlDepth());
+            api.setSpiderMaxDuration(cfg.crawlDurationMin());
+            api.setSpiderProcessForms(cfg.submitForms());
         } catch (Exception ignore) { /* use the engine defaults */ }
-        String sid = api.spiderScan(seedUrl, 20);
-        int lastFound = -1;
+        // 0 = no per-node child limit: crawl every in-scope link within the depth
+        // budget, instead of stopping after 20 links per page.
+        String sid = api.spiderScan(seedUrl, 0);
+        int lastLoc = -1;
+        boolean zapPaused = false;
         while (true) {
-            int st = api.spiderStatus(sid);
-            int found = api.spiderResults(sid).size();
-            if (found != lastFound) {
-                crawlTask.setItemsDone(found);
-                crawlTask.setItemsTotal(found);
-                crawlTask.log("Crawled " + found + " url(s)");
-                ctx.taskChanged(crawlTask);
-                lastFound = found;
+            // Stop the moment the task is deleted, so nothing keeps crawling.
+            if (crawlTask.cancelled()) { stopQuietly(() -> api.spiderStop(sid)); break; }
+            // Honour a paused task by pausing the engine's spider too, so a paused
+            // scan really stops working rather than only changing its label.
+            if (crawlTask.state() == ScanTask.State.PAUSED) {
+                if (!zapPaused) { stopQuietly(() -> api.spiderPause(sid)); zapPaused = true; }
+                Thread.sleep(500);
+                continue;
             }
-            // Stream the crawl's traffic into the logger and the site map as it happens.
+            if (zapPaused) { stopQuietly(() -> api.spiderResume(sid)); zapPaused = false; }
+            int st = api.spiderStatus(sid);
+            // Stream the crawl's traffic into the logger and the site map first,
+            // so the site tree is current before we count unique locations.
             drain("crawl", true, crawlTask);
+            int loc = locations(baseurl);
+            if (loc >= 0 && loc != lastLoc) {
+                crawlTask.setDiscoveredLocations(loc);
+                crawlTask.log("Discovered " + loc + " location(s)");
+                lastLoc = loc;
+            }
             ctx.taskChanged(crawlTask);
             if (st >= 100) break;
             Thread.sleep(1000);
         }
         drain("crawl", true, crawlTask);
-        crawlTask.log("Crawl finished: " + crawlTask.requests() + " request(s)");
+
+        // ---- AJAX crawl: render JavaScript and discover client-side routes ----
+        // This is what lets single-page apps (Angular/React/Vue) be crawled at
+        // all. It runs a real headless Chromium through ZAP's AJAX spider. If the
+        // add-on or a browser is not available the call fails and we skip it,
+        // keeping the traditional-spider results. Bounded by the tier's AJAX
+        // budget; cutting discovery short is fine because the audit still fully
+        // tests whatever was found.
+        if (cfg.ajaxSpider() && !crawlTask.cancelled()) runAjaxCrawl(seedUrl, cfg, crawlTask);
+
+        drain("crawl", true, crawlTask);
+        crawlTask.log(crawlTask.cancelled()
+                ? "Crawl stopped"
+                : "Crawl finished: " + crawlTask.requests() + " request(s)");
         crawlTask.setState(ScanTask.State.FINISHED);
         ctx.taskChanged(crawlTask);
 
-        if (!thenAudit) return;
+        // A deleted crawl does not go on to start an audit.
+        if (crawlTask.cancelled() || !thenAudit) return;
 
         // ---- audit (only now does its task appear) -----------------------
         ScanTask auditTask = new ScanTask(ScanTask.Type.AUDIT,
                 "Audit of " + seed.host(), "ZAP active rules, within scope");
         auditTask.setScope(seed.url());
+        // Carry over what the crawl discovered, and record how many active-scan
+        // rules are enabled, so the dashboard shows real task-progress figures.
+        auditTask.setDiscoveredLocations(crawlTask.discoveredLocations());
+        try {
+            int rules = 0;
+            for (JsonValue s : api.activeScanners())
+                if ("true".equals(ZapApi.str(s, "enabled"))) rules++;
+            auditTask.setAuditItemsTotal(rules);
+        } catch (Exception ignore) { /* leave at 0 if ZAP cannot report it */ }
         ctx.addTask(auditTask);
         try {
-            auditTask.log("Auditing with the ZAP active rules...");
+            // Apply the tier's audit settings to the default scan policy before
+            // starting: every rule probes at the chosen strength and reports at the
+            // chosen threshold, and every injection point and request-body type is
+            // tested. No scan time cap unless the tier sets one, so each test runs
+            // to completion rather than being cut off part-way.
+            try {
+                api.setAllAttackStrength(cfg.attackStrength());
+                api.setAllAlertThreshold(cfg.alertThreshold());
+                api.setInjectableParams(cfg.injectableMask());
+                api.setInjectableRpc(cfg.rpcMask());
+                api.setActiveDelayMs(cfg.delayMs());
+                api.setActiveMaxScanDuration(cfg.scanDurationMin());
+            } catch (Exception ignore) { /* use the engine defaults */ }
+            auditTask.log("Auditing with the ZAP active rules (" + cfg.name()
+                    + ": strength " + cfg.attackStrength() + ", threshold " + cfg.alertThreshold() + ")...");
             ctx.taskChanged(auditTask);
             String aid = api.ascanScan(seedUrl);
             Set<String> seen = new HashSet<>();
+            boolean auditPaused = false;
             while (true) {
+                // Stop attacking the moment the task is deleted.
+                if (auditTask.cancelled()) { stopQuietly(() -> api.ascanStop(aid)); break; }
+                if (auditTask.state() == ScanTask.State.PAUSED) {
+                    if (!auditPaused) { stopQuietly(() -> api.ascanPause(aid)); auditPaused = true; }
+                    Thread.sleep(500);
+                    continue;
+                }
+                if (auditPaused) { stopQuietly(() -> api.ascanResume(aid)); auditPaused = false; }
                 int st = api.ascanStatus(aid);
                 auditTask.setItemsTotal(100);
                 auditTask.setItemsDone(Math.max(0, st));
@@ -97,11 +156,88 @@ public final class ZapScanner {
             }
             pullAlerts(baseurl, seed.host(), auditTask, seen);
             drain("audit", false, auditTask);
-            auditTask.log("Audit finished: " + seen.size() + " finding(s)");
+            auditTask.log(auditTask.cancelled()
+                    ? "Audit stopped"
+                    : "Audit finished: " + seen.size() + " finding(s)");
         } finally {
             auditTask.setState(ScanTask.State.FINISHED);
             ctx.taskChanged(auditTask);
         }
+    }
+
+    /**
+     * Run ZAP's AJAX spider (a real headless Chromium) over the seed, so that
+     * JavaScript-rendered links and routes are discovered and fed to the audit.
+     * Bounded by a time budget; absence of the add-on or a browser is not fatal.
+     */
+    private void runAjaxCrawl(String seedUrl, ScanConfig cfg, ScanTask crawlTask) {
+        try {
+            api.setAjaxBrowser("chrome-headless");
+            api.setAjaxBrowsers(2);   // bound the headless-browser pool
+            try {
+                api.setAjaxMaxDuration(cfg.ajaxMaxDurationMin());
+                api.setAjaxMaxCrawlDepth(cfg.ajaxMaxDepth());
+                api.setAjaxMaxCrawlStates(cfg.ajaxMaxStates());
+            } catch (Exception ignore) { /* use the engine defaults */ }
+            crawlTask.log("Starting AJAX crawl (headless Chromium, executes JavaScript)...");
+            ctx.taskChanged(crawlTask);
+            // inScope=false: crawl from the seed directly (Crawljax stays on the
+            // seed's domain). inScope=true would require a ZAP context we do not
+            // define, and fails with "starting URI is not in scope".
+            api.ajaxSpiderScan(seedUrl, false);
+
+            // Local wall-clock backstop mirroring the engine's own time budget, so
+            // the loop still ends even if the engine does not stop itself. An
+            // unlimited budget (0) gets a generous local cap so a runaway SPA crawl
+            // cannot block the scan for ever.
+            int budgetMin = cfg.ajaxMaxDurationMin() > 0 ? cfg.ajaxMaxDurationMin() : 60;
+            long budgetMs = budgetMin * 60_000L;
+            long deadline = System.currentTimeMillis() + budgetMs;
+            int lastLoc = -1;
+            String baseurl = HttpService.parse(seedUrl).url();
+            while ("running".equalsIgnoreCase(api.ajaxSpiderStatus())) {
+                // A deleted task stops the AJAX spider (the finally block below).
+                if (crawlTask.cancelled()) break;
+                drain("crawl", true, crawlTask);
+                int loc = locations(baseurl);
+                if (loc >= 0 && loc != lastLoc) {
+                    crawlTask.setDiscoveredLocations(loc);
+                    crawlTask.log("Discovered " + loc + " location(s)");
+                    lastLoc = loc;
+                }
+                ctx.taskChanged(crawlTask);
+                if (System.currentTimeMillis() > deadline) {
+                    crawlTask.log("AJAX crawl time budget reached; stopping");
+                    try { api.ajaxSpiderStop(); } catch (Exception ignore) { }
+                    break;
+                }
+                Thread.sleep(1500);
+            }
+            drain("crawl", true, crawlTask);
+            crawlTask.log("AJAX crawl finished");
+        } catch (Exception e) {
+            // Add-on missing, no browser/driver, or the engine refused: carry on
+            // with whatever the traditional spider found.
+            crawlTask.log("AJAX crawl unavailable (" + e.getMessage()
+                    + "); using traditional crawl results only");
+        } finally {
+            // Always stop the AJAX spider so ZAP releases its headless browsers,
+            // even if the crawl was interrupted or threw.
+            try { api.ajaxSpiderStop(); } catch (Exception ignore) { }
+        }
+        ctx.taskChanged(crawlTask);
+    }
+
+    /** A ZAP control call (stop/pause/resume) whose failure must never abort the
+     *  scan loop: the engine may have already finished the scan being stopped. */
+    private interface ZapCall { void run() throws Exception; }
+    private static void stopQuietly(ZapCall c) {
+        try { c.run(); } catch (Exception ignore) { }
+    }
+
+    /** Unique discovered locations under baseurl, or the last value on error. */
+    private int locations(String baseurl) {
+        try { return api.uniqueLocations(baseurl); } catch (Exception e) { return -1; }
     }
 
     /** Fetch alerts and add any not yet seen to the issue tree; recount badges. */

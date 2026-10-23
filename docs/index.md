@@ -41,6 +41,7 @@ title: OpenTRAP
       <li><span class="ic">{% include check.html %}</span><span><b>A complete proxy-first suite</b>Intercept, HTTP history, repeater, intruder, sequencer, decoder, comparer, an out-of-band collaborator and a full traffic logger.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>Scanning that holds up</b>Crawl and audit for real vulnerabilities on the proven OWASP ZAP engine, with findings in a clear issue view and the evidence highlighted.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>Guided from the start</b>Open or create a project at launch, then drive crawl-and-audit scans through a step-by-step wizard.</span></li>
+      <li><span class="ic">{% include check.html %}</span><span><b>Scan configurations that fit the job</b>Pick a tier from Lightweight to Deep, or build a Custom scan with full control over crawl depth, attack strength and which inputs are tested.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>One self-contained file</b>Every release is a single Linux AppImage with its own runtime and the scan engine built in. Download it, run it, scan.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>Genuinely open</b>Licensed under the GNU AGPL v3.0, so it stays open and hackable, with no licence gate on its core capabilities.</span></li>
     </ul>

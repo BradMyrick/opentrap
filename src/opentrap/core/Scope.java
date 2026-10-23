@@ -111,6 +111,23 @@ public class Scope implements Serializable {
     public List<Rule> include() { return include; }
     public List<Rule> exclude() { return exclude; }
 
+    /**
+     * Convert a stored scope pattern back to readable text, for display or for
+     * seeding a URL field. Rules created automatically from a target wrap the
+     * host or path in regex anchors and a {@code \Q...\E} literal quote, so the
+     * raw pattern reads {@code ^\Qexample.com\E$}; strip those so the user sees
+     * {@code example.com}. A hand-written regex has no {@code \Q...\E} and comes
+     * back with only its anchors removed. Hosts and paths never contain the
+     * literal text {@code \E}, so the markers can be removed directly.
+     */
+    public static String display(String pattern) {
+        if (pattern == null) return "";
+        String s = pattern;
+        if (s.startsWith("^")) s = s.substring(1);
+        if (s.endsWith("$")) s = s.substring(0, s.length() - 1);
+        return s.replace("\\Q", "").replace("\\E", "");
+    }
+
     public boolean isInScope(HttpService svc, String path) {
         if (svc == null) return false;
         boolean in = false;

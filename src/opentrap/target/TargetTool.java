@@ -480,7 +480,7 @@ public class TargetTool implements ToolModule {
     }
 
     private static class ItemsModel extends AbstractTableModel {
-        private final String[] cols = {"host", "method", "URL", "status", "length", "MIME type", "title"};
+        private final String[] cols = {"Host", "Method", "URL", "Status", "Length", "MIME type", "Title"};
         private List<LogEntry> all = new ArrayList<>();
         private List<LogEntry> entries = new ArrayList<>();
         private java.util.function.Predicate<LogEntry> filter = e -> true;

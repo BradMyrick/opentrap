@@ -34,7 +34,10 @@ public final class RecentProjects {
                 String[] f = line.split("\t", 3);
                 if (f.length < 3) continue;
                 try {
-                    out.add(new Entry(f[0], new File(f[1]), Long.parseLong(f[2])));
+                    File file = new File(f[1]);
+                    // Skip projects whose file has been deleted or moved.
+                    if (!file.isFile()) continue;
+                    out.add(new Entry(f[0], file, Long.parseLong(f[2])));
                 } catch (NumberFormatException ignored) {}
             }
         } catch (Exception ignored) {}

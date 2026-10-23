@@ -108,6 +108,19 @@ public final class ZapApi {
         return intOf(call("spider", "view", "status", p("scanId", id)), "status");
     }
 
+    /** Stop the spider scan so the engine releases it and stops crawling. */
+    public void spiderStop(String id) throws Exception {
+        call("spider", "action", "stop", p("scanId", id));
+    }
+
+    public void spiderPause(String id) throws Exception {
+        call("spider", "action", "pause", p("scanId", id));
+    }
+
+    public void spiderResume(String id) throws Exception {
+        call("spider", "action", "resume", p("scanId", id));
+    }
+
     public List<JsonValue> spiderResults(String id) throws Exception {
         return arr(call("spider", "view", "results", p("scanId", id)), "results");
     }
@@ -122,8 +135,93 @@ public final class ZapApi {
         return intOf(call("ascan", "view", "status", p("scanId", id)), "status");
     }
 
+    /** Stop the active scan so the engine stops attacking and releases it. */
+    public void ascanStop(String id) throws Exception {
+        call("ascan", "action", "stop", p("scanId", id));
+    }
+
+    public void ascanPause(String id) throws Exception {
+        call("ascan", "action", "pause", p("scanId", id));
+    }
+
+    public void ascanResume(String id) throws Exception {
+        call("ascan", "action", "resume", p("scanId", id));
+    }
+
+    // ------------------------------------------------- AJAX spider (JavaScript)
+
+    /** Pick the browser the AJAX spider drives, e.g. "chrome-headless". */
+    public void setAjaxBrowser(String browserId) throws Exception {
+        call("ajaxSpider", "action", "setOptionBrowserId", p("String", browserId));
+    }
+
+    /** Bound the AJAX spider's concurrent headless-browser pool. */
+    public void setAjaxBrowsers(int n) throws Exception {
+        call("ajaxSpider", "action", "setOptionNumberOfBrowsers", p("Integer", String.valueOf(n)));
+    }
+
+    /** Start the AJAX spider over the URL; it executes JavaScript as it crawls. */
+    public void ajaxSpiderScan(String url, boolean inScope) throws Exception {
+        call("ajaxSpider", "action", "scan", p("url", url, "inScope", String.valueOf(inScope)));
+    }
+
+    /** "running" while the AJAX spider is working, "stopped" once it is done. */
+    public String ajaxSpiderStatus() throws Exception {
+        return str(call("ajaxSpider", "view", "status", null), "status");
+    }
+
+    /** How many results (URLs) the AJAX spider has found so far. */
+    public int ajaxSpiderResults() throws Exception {
+        return intOf(call("ajaxSpider", "view", "numberOfResults", null), "numberOfResults");
+    }
+
+    /** Stop the AJAX spider early (e.g. when a time budget is reached). */
+    public void ajaxSpiderStop() throws Exception {
+        call("ajaxSpider", "action", "stop", null);
+    }
+
     public int numberOfAlerts(String baseurl) throws Exception {
         return intOf(call("core", "view", "numberOfAlerts", p("baseurl", baseurl)), "numberOfAlerts");
+    }
+
+    /**
+     * The number of unique locations (endpoints) under {@code baseurl} that ZAP
+     * has discovered, counted at node granularity: a path plus its set of
+     * parameter names, with parameter *values* collapsed. So {@code /p?id=2} and
+     * {@code /p?id=3} count once, while {@code /p?d=1} counts separately. This
+     * reads ZAP's site tree, so it combines the traditional and AJAX spiders
+     * with no double counting.
+     */
+    public int uniqueLocations(String baseurl) throws Exception {
+        java.util.Set<String> nodes = new java.util.HashSet<>();
+        for (JsonValue u : arr(call("core", "view", "urls", p("baseurl", baseurl)), "urls")) {
+            String url = u.asString();
+            if (url != null) nodes.add(nodeKey(url));
+        }
+        return nodes.size();
+    }
+
+    /** host + path + the sorted set of query-parameter names (values dropped). */
+    static String nodeKey(String url) {
+        try {
+            java.net.URI u = java.net.URI.create(url);
+            StringBuilder b = new StringBuilder();
+            if (u.getHost() != null) b.append(u.getHost());
+            b.append(u.getRawPath() == null ? "/" : u.getRawPath());
+            String q = u.getRawQuery();
+            if (q != null && !q.isEmpty()) {
+                java.util.TreeSet<String> names = new java.util.TreeSet<>();
+                for (String pair : q.split("&")) {
+                    if (pair.isEmpty()) continue;
+                    int eq = pair.indexOf('=');
+                    names.add(eq >= 0 ? pair.substring(0, eq) : pair);
+                }
+                b.append('?').append(String.join("&", names));
+            }
+            return b.toString();
+        } catch (Exception e) {
+            return url;   // unparseable: treat the raw URL as its own node
+        }
     }
 
     public List<JsonValue> alerts(String baseurl, int start, int count) throws Exception {
@@ -195,6 +293,80 @@ public final class ZapApi {
     /** threshold is one of OFF, DEFAULT, LOW, MEDIUM, HIGH. */
     public void setActiveThreshold(String id, String threshold) throws Exception {
         call("ascan", "action", "setScannerAlertThreshold", p("id", id, "alertThreshold", threshold));
+    }
+
+    /**
+     * Set the attack strength (LOW, MEDIUM, HIGH, INSANE) on every active rule, so
+     * the whole default scan policy probes at the one intensity. Applied rule by
+     * rule because ZAP has no single global strength control; a rule ZAP refuses
+     * is skipped rather than failing the whole call.
+     */
+    public void setAllAttackStrength(String strength) throws Exception {
+        for (JsonValue s : activeScanners()) {
+            String id = str(s, "id");
+            if (id != null) try { setActiveStrength(id, strength); } catch (Exception ignore) { }
+        }
+    }
+
+    /** Set the alert threshold (OFF, LOW, MEDIUM, HIGH) on every active rule. */
+    public void setAllAlertThreshold(String threshold) throws Exception {
+        for (JsonValue s : activeScanners()) {
+            String id = str(s, "id");
+            if (id != null) try { setActiveThreshold(id, threshold); } catch (Exception ignore) { }
+        }
+    }
+
+    // ----------------------------------------------- active scan engine options
+
+    /**
+     * Which request locations the active scan injects payloads into, as a bitmask
+     * of query string, POST body, URL path, headers and cookies (see
+     * {@link ScanConfig}). More locations means broader coverage and more requests.
+     */
+    public void setInjectableParams(int mask) throws Exception {
+        call("ascan", "action", "setOptionTargetParamsInjectable", p("Integer", String.valueOf(mask)));
+    }
+
+    /**
+     * Which request-body content types the active scan tests (JSON, XML, multipart
+     * and so on), as a bitmask (see {@link ScanConfig}). A type only applies when a
+     * request actually carries it.
+     */
+    public void setInjectableRpc(int mask) throws Exception {
+        call("ascan", "action", "setOptionTargetParamsEnabledRPC", p("Integer", String.valueOf(mask)));
+    }
+
+    /** Throttle between active-scan requests in milliseconds (0 = fastest). */
+    public void setActiveDelayMs(int ms) throws Exception {
+        call("ascan", "action", "setOptionDelayInMs", p("Integer", String.valueOf(Math.max(0, ms))));
+    }
+
+    /** Active-scan time backstop in minutes (0 = no limit). */
+    public void setActiveMaxScanDuration(int minutes) throws Exception {
+        call("ascan", "action", "setOptionMaxScanDurationInMins", p("Integer", String.valueOf(Math.max(0, minutes))));
+    }
+
+    /** Whether the crawler fills and submits forms to reach more of the site. */
+    public void setSpiderProcessForms(boolean on) throws Exception {
+        call("spider", "action", "setOptionPostForm", p("Boolean", String.valueOf(on)));
+        call("spider", "action", "setOptionProcessForm", p("Boolean", String.valueOf(on)));
+    }
+
+    // ------------------------------------------------- AJAX spider budget options
+
+    /** AJAX crawl time budget in minutes (0 = no limit). */
+    public void setAjaxMaxDuration(int minutes) throws Exception {
+        call("ajaxSpider", "action", "setOptionMaxDuration", p("Integer", String.valueOf(Math.max(0, minutes))));
+    }
+
+    /** AJAX crawl click-depth from the seed (0 = unlimited). */
+    public void setAjaxMaxCrawlDepth(int depth) throws Exception {
+        call("ajaxSpider", "action", "setOptionMaxCrawlDepth", p("Integer", String.valueOf(Math.max(0, depth))));
+    }
+
+    /** How many distinct UI states the AJAX crawl explores (0 = unlimited). */
+    public void setAjaxMaxCrawlStates(int states) throws Exception {
+        call("ajaxSpider", "action", "setOptionMaxCrawlStates", p("Integer", String.valueOf(Math.max(0, states))));
     }
 
     // ----------------------------------------------------------- json helpers

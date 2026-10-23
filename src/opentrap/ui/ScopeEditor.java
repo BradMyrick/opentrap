@@ -93,9 +93,14 @@ public class ScopeEditor extends JPanel {
         private void commit() {
             Scope.Rule r = editingRow >= 0 ? rules.get(editingRow) : new Scope.Rule();
             r.protocol = String.valueOf(protocol.getSelectedItem());
-            r.host = host.getText().trim();
-            r.port = port.getText().trim();
-            r.file = file.getText().trim();
+            // The fields show the friendly, unquoted form of each pattern. If the
+            // user left a field untouched, keep its exact stored pattern so an
+            // auto-created rule (^\Qhost\E$) round-trips without quietly losing
+            // its anchors or literal quoting; only a field they actually retyped
+            // is stored as typed.
+            r.host = keptOrTyped(host.getText().trim(), r.host, editingRow >= 0);
+            r.port = keptOrTyped(port.getText().trim(), r.port, editingRow >= 0);
+            r.file = keptOrTyped(file.getText().trim(), r.file, editingRow >= 0);
             if (editingRow < 0) { r.enabled = true; rules.add(r); }
             editingRow = -1;
             addBtn.setText("add");
@@ -109,11 +114,19 @@ public class ScopeEditor extends JPanel {
             if (i < 0) return;
             Scope.Rule r = rules.get(i);
             protocol.setSelectedItem(r.protocol);
-            host.setText(r.host);
-            port.setText(r.port);
-            file.setText(r.file);
+            host.setText(Scope.display(r.host));
+            port.setText(Scope.display(r.port));
+            file.setText(Scope.display(r.file));
             editingRow = i;
             addBtn.setText("update");
+        }
+
+        /** On edit, keep a field's stored pattern verbatim when the user left the
+         *  friendly form unchanged; otherwise store what they typed. A brand-new
+         *  rule always stores the typed text. */
+        private static String keptOrTyped(String typed, String stored, boolean editing) {
+            if (editing && typed.equals(Scope.display(stored))) return stored;
+            return typed;
         }
 
         private void removeSelected() {
@@ -136,9 +149,9 @@ public class ScopeEditor extends JPanel {
                 return switch (c) {
                     case 0 -> x.enabled;
                     case 1 -> x.protocol;
-                    case 2 -> x.host;
-                    case 3 -> x.port;
-                    default -> x.file;
+                    case 2 -> Scope.display(x.host);
+                    case 3 -> Scope.display(x.port);
+                    default -> Scope.display(x.file);
                 };
             }
 

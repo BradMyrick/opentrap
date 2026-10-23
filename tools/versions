@@ -10,6 +10,14 @@ BROTLI_DEC_VERSION=0.1.2
 # OWASP ZAP engine (crawl + active scan backend, run headless)
 ZAP_VERSION=2.17.0
 
+# Extra ZAP add-ons not in the Core package, fetched from the ZAP marketplace so
+# the AJAX spider (JavaScript-rendering crawl) works. spiderAjax needs a newer
+# commonlib than Core ships, so commonlib is upgraded too. Keep these compatible
+# with ZAP_VERSION (see the ZapVersions-2.17 manifest).
+ZAP_ADDON_SELENIUM=15.59.0
+ZAP_ADDON_SPIDERAJAX=23.33.0
+ZAP_ADDON_COMMONLIB=1.44.0
+
 # Portable JDK used to compile OpenTRAP and build the AppImage runtime.
 # Temurin is built on an old glibc, so the AppImage runs on mainstream Linux.
 JDK_VERSION=25

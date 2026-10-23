@@ -62,6 +62,35 @@ public final class EmbeddedBrowser {
         return dirs;
     }
 
+    /**
+     * The chromedriver matching the bundled or system Chromium, for ZAP's AJAX
+     * spider. Prefers the one shipped in {@code browser/}, then the system path.
+     * Returns null if none is found (the AJAX crawl is then skipped).
+     */
+    public static String findDriver() {
+        for (File root : productDirs()) {
+            File[] cands = {
+                new File(root, "browser/chromedriver"),
+                new File(root, "browser/chrome-linux/chromedriver"),
+                new File(root, "browser/chrome-linux64/chromedriver"),
+            };
+            for (File f : cands) if (f.canExecute()) return f.getAbsolutePath();
+        }
+        for (String c : new String[]{
+                "/usr/bin/chromedriver", "/usr/local/bin/chromedriver",
+                "/snap/bin/chromium.chromedriver"}) {
+            if (new File(c).canExecute()) return c;
+        }
+        try {
+            Process p = new ProcessBuilder("which", "chromedriver").start();
+            if (p.waitFor() == 0) {
+                String out = new String(p.getInputStream().readAllBytes()).trim();
+                if (!out.isEmpty() && new File(out).canExecute()) return out;
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     /** True if a Chromium-family browser can be found. */
     public static boolean available() { return findBinary() != null; }
 

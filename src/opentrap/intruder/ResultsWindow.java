@@ -43,7 +43,7 @@ public class ResultsWindow extends JFrame {
         });
 
         List<String> cols = new ArrayList<>(List.of(
-                "request#", "payload", "status", "length", "time (ms)", "error"));
+                "#", "Payload", "Status", "Length", "Time (ms)", "Error"));
         cols.addAll(grepExpressions);
         fixedColumns = 6;
 
@@ -70,8 +70,8 @@ public class ResultsWindow extends JFrame {
             if (!e.getValueIsAdjusting()) showSelected();
         });
         int[] widths = new int[cols.size()];
-        widths[0] = 60; widths[1] = 160; widths[2] = 55; widths[3] = 60; widths[4] = 70; widths[5] = 140;
-        for (int i = fixedColumns; i < widths.length; i++) widths[i] = 70;
+        widths[0] = 55; widths[1] = 170; widths[2] = 70; widths[3] = 70; widths[4] = 85; widths[5] = 150;
+        for (int i = fixedColumns; i < widths.length; i++) widths[i] = 95;
         Ui.setWidths(table, widths);
 
         JScrollPane tableScroll = Ui.scroll(table);
