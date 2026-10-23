@@ -98,6 +98,16 @@ licence.
 <table>
 <tr>
 <td width="50%" valign="top">
+<a href="docs/images/scan-config.png"><img src="docs/images/scan-config.png" alt="New scan wizard on the scan-configuration step, showing the Lightweight, Fast, Balanced, Deep and Custom tiers with one selected"></a>
+<br><sub><b>Scan configurations</b><br>Pick a tier from Lightweight to Deep, each covering the same ground and differing only in how far it crawls and how hard it probes.</sub>
+</td>
+<td width="50%" valign="top">
+<a href="docs/images/custom-config.png"><img src="docs/images/custom-config.png" alt="Custom scan configuration screen with a left category list for Crawl, Audit and Injection points and the settings for each"></a>
+<br><sub><b>Custom configuration</b><br>Its own screen for full control: crawl depth, AJAX budget, attack strength, alert threshold and which inputs are tested.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 <a href="docs/images/target.png"><img src="docs/images/target.png" alt="Target tab: site map tree, request list, and the issues found with a full advisory for a reflected cross-site scripting finding"></a>
 <br><sub><b>Target</b><br>Site map, scope and every issue found, with the advisory, request and response beside it.</sub>
 </td>
