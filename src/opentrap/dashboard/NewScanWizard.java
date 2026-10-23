@@ -280,7 +280,7 @@ public class NewScanWizard extends JDialog {
         StringBuilder sb = new StringBuilder();
         try {
             for (var r : ctx.scope().include()) {
-                String host = r.host == null ? "" : r.host.replaceAll("[\\^$]", "");
+                String host = opentrap.core.Scope.display(r.host);
                 if (!host.isBlank()) sb.append("https://").append(host).append("/\n");
             }
         } catch (Exception ignored) {}

@@ -15,6 +15,7 @@ public final class RunTests {
         new opentrap.core.ParameterParsingTest().run();
         new opentrap.core.HttpModeTest().run();
         new opentrap.core.UpstreamProxyTest().run();
+        new opentrap.core.ScopeDisplayTest().run();
         new opentrap.session.SessionTest().run();
         new opentrap.intruder.PayloadProcessorTest().run();
         new opentrap.report.ExportTest().run();

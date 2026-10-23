@@ -1421,7 +1421,7 @@ public class DashboardTool implements ToolModule {
         String def = "https://";
         // Default to the first in-scope host if scope is set.
         if (!ctx.scope().include().isEmpty()) {
-            String host = ctx.scope().include().get(0).host.replaceAll("[\\^$]", "");
+            String host = opentrap.core.Scope.display(ctx.scope().include().get(0).host);
             if (!host.isBlank()) def = "https://" + host + "/";
         }
         String url = (String) JOptionPane.showInputDialog(ctx.frame(),
