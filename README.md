@@ -1,21 +1,17 @@
 <div align="center">
 
-<img src="icon/opentrap.svg" width="84" alt="OpenTRAP logo">
+<h1>
+<img src="icon/opentrap.svg" height="36" alt="" valign="middle">&nbsp;&nbsp;OpenTRAP
+</h1>
 
-<h1>OpenTRAP</h1>
-
-<p><strong>Open Traffic Replay and Analysis Proxy</strong></p>
-
-<p>A free, open-source alternative to Burp Suite: the intercepting-proxy workflow you
-already know, on top of the trusted OWASP ZAP detection engine, with nothing locked
-behind a licence. If you have used Burp Suite, you will feel at home in minutes.</p>
+<p><strong>Open Traffic Replay and Analysis Proxy</strong><br>
+A free, open-source alternative to Burp Suite on the trusted OWASP ZAP engine, with nothing locked behind a licence.</p>
 
 <p>
 <img src="https://img.shields.io/badge/licence-AGPL--3.0-e5484d?style=flat-square" alt="Licence">
 <img src="https://img.shields.io/badge/Java-17%2B-5b8def?style=flat-square" alt="Java">
 <img src="https://img.shields.io/badge/platform-Linux-9aa7b4?style=flat-square&logo=linux&logoColor=white" alt="Platform">
 <img src="https://img.shields.io/badge/status-active%20development-3fb950?style=flat-square" alt="Status">
-<img src="https://img.shields.io/badge/contributions-welcome-ff6a5f?style=flat-square" alt="Contributions welcome">
 </p>
 
 <p>
@@ -26,13 +22,12 @@ behind a licence. If you have used Burp Suite, you will feel at home in minutes.
 <a href="https://github.com/opentrap/opentrap/releases/latest"><img src="https://img.shields.io/badge/All%20releases-30363d?style=for-the-badge&logo=github&logoColor=white" alt="All releases"></a>
 </p>
 
-<p>
-<sub><b>Share</b></sub>&nbsp;&nbsp;
-<a href="https://twitter.com/intent/tweet?text=OpenTRAP%2C%20an%20open-source%20web%20security%20testing%20suite&url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/X-000000?style=flat-square&logo=x&logoColor=white" alt="Share on X"></a>
-<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=linkedin&logoColor=white" alt="Share on LinkedIn"></a>
-<a href="https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&title=OpenTRAP"><img src="https://img.shields.io/badge/Reddit-FF4500?style=flat-square&logo=reddit&logoColor=white" alt="Share on Reddit"></a>
-<a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP"><img src="https://img.shields.io/badge/Hacker%20News-FF6600?style=flat-square&logo=ycombinator&logoColor=white" alt="Share on Hacker News"></a>
-</p>
+<sub><b>Share:</b>
+<a href="https://twitter.com/intent/tweet?text=OpenTRAP%2C%20an%20open-source%20web%20security%20testing%20suite&url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap">X</a> &middot;
+<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap">LinkedIn</a> &middot;
+<a href="https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&title=OpenTRAP">Reddit</a> &middot;
+<a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP">Hacker News</a>
+</sub>
 
 <br>
 
