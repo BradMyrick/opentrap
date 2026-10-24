@@ -191,10 +191,12 @@ public class DashboardTool implements ToolModule {
 
         // Header: bold "Tasks" + action buttons.
         JButton newScan = Ui.primaryButton("New scan", "crawl and audit a target");
+        JButton newLiveTask = Ui.button("New live task");
         JButton spiderBtn = Ui.button("Spider");
         accentise(newScan);
         accentise(spiderBtn);
         newScan.addActionListener(e -> newScan());
+        opentrap.ui.Unbuilt.DASHBOARD_LIVE_TASK.attach(newLiveTask);
         spiderBtn.addActionListener(e -> startSpider());
 
         JPanel header = new JPanel(new BorderLayout());
@@ -203,6 +205,7 @@ public class DashboardTool implements ToolModule {
         JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         btns.setOpaque(false);
         btns.add(newScan);
+        btns.add(newLiveTask);
         btns.add(spiderBtn);
         header.add(btns, BorderLayout.EAST);
 
@@ -274,6 +277,7 @@ public class DashboardTool implements ToolModule {
         tabs.addTab("Issues", buildIssuesTab());
         tabs.addTab("Event log", buildEventLogTab());
         tabs.addTab("Audit log", buildAuditLogTab());
+        tabs.addTab("Live crawl view", opentrap.ui.Unbuilt.DASHBOARD_LIVE_CRAWL.panel());
 
         rightBody.add(tabs, "scan");
         rightBody.add(buildCrawlCard(), "crawl");
