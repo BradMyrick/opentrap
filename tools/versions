@@ -18,6 +18,12 @@ ZAP_ADDON_SELENIUM=15.59.0
 ZAP_ADDON_SPIDERAJAX=23.33.0
 ZAP_ADDON_COMMONLIB=1.44.0
 
+# Beta scan-rule packs (not in Core): many more active and passive checks than the
+# release packs alone. Beta rules are widely used and reasonably stable; alpha is
+# deliberately not bundled (experimental, noisier).
+ZAP_ADDON_ASCANRULES_BETA=67
+ZAP_ADDON_PSCANRULES_BETA=50
+
 # Portable JDK used to compile OpenTRAP and build the AppImage runtime.
 # Temurin is built on an old glibc, so the AppImage runs on mainstream Linux.
 JDK_VERSION=25
