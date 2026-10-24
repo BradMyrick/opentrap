@@ -32,65 +32,67 @@ public final class ZapScanner {
         this.api = api;
     }
 
+    /** One seed to crawl: the target service and the full seed URL. */
+    public record Seed(HttpService service, String url) {}
+
+    /** Single-seed convenience (the Spider button), delegating to the list form. */
+    public void crawlAndAudit(HttpService seed, String seedUrl, boolean thenAudit,
+                              ScanConfig cfg, ScanTask crawlTask) throws Exception {
+        crawlAndAudit(java.util.List.of(new Seed(seed, seedUrl)), thenAudit, cfg, crawlTask);
+    }
+
     /**
-     * Crawl the seed, then (when {@code thenAudit}) audit what the crawl found.
-     * The audit runs strictly after the crawl has finished, on this one thread;
-     * its task card is created only when the audit actually begins, so it does
-     * not appear to be running alongside the crawl.
+     * Crawl every seed, then (when {@code thenAudit}) audit what was found, all
+     * as one job: one crawl task and one audit task. The seeds are processed one
+     * at a time on this single thread, so the configured thread count applies
+     * once to the engine rather than being multiplied across targets.
      *
      * @param crawlTask a LIVE_ACTIVE task to report crawl progress on
      */
-    public void crawlAndAudit(HttpService seed, String seedUrl, boolean thenAudit,
+    public void crawlAndAudit(java.util.List<Seed> seeds, boolean thenAudit,
                               ScanConfig cfg, ScanTask crawlTask) throws Exception {
-        String baseurl = seed.url();
-        api.accessUrl(seedUrl);
-
-        // ---- crawl -------------------------------------------------------
+        // ---- crawl each seed into the one task ---------------------------
         try {
             api.setSpiderMaxDepth(cfg.crawlDepth());
             api.setSpiderMaxDuration(cfg.crawlDurationMin());
             api.setSpiderProcessForms(cfg.submitForms());
         } catch (Exception ignore) { /* use the engine defaults */ }
-        // 0 = no per-node child limit: crawl every in-scope link within the depth
-        // budget, instead of stopping after 20 links per page.
-        String sid = api.spiderScan(seedUrl, 0);
-        int lastLoc = -1;
-        boolean zapPaused = false;
-        while (true) {
-            // Stop the moment the task is deleted, so nothing keeps crawling.
-            if (crawlTask.cancelled()) { stopQuietly(() -> api.spiderStop(sid)); break; }
-            // Honour a paused task by pausing the engine's spider too, so a paused
-            // scan really stops working rather than only changing its label.
-            if (crawlTask.state() == ScanTask.State.PAUSED) {
-                if (!zapPaused) { stopQuietly(() -> api.spiderPause(sid)); zapPaused = true; }
-                Thread.sleep(500);
-                continue;
-            }
-            if (zapPaused) { stopQuietly(() -> api.spiderResume(sid)); zapPaused = false; }
-            int st = api.spiderStatus(sid);
-            // Stream the crawl's traffic into the logger and the site map first,
-            // so the site tree is current before we count unique locations.
-            drain("crawl", true, crawlTask);
-            int loc = locations(baseurl);
-            if (loc >= 0 && loc != lastLoc) {
-                crawlTask.setDiscoveredLocations(loc);
-                crawlTask.log("Discovered " + loc + " location(s)");
-                lastLoc = loc;
-            }
-            ctx.taskChanged(crawlTask);
-            if (st >= 100) break;
-            Thread.sleep(1000);
-        }
-        drain("crawl", true, crawlTask);
 
-        // ---- AJAX crawl: render JavaScript and discover client-side routes ----
-        // This is what lets single-page apps (Angular/React/Vue) be crawled at
-        // all. It runs a real headless Chromium through ZAP's AJAX spider. If the
-        // add-on or a browser is not available the call fails and we skip it,
-        // keeping the traditional-spider results. Bounded by the tier's AJAX
-        // budget; cutting discovery short is fine because the audit still fully
-        // tests whatever was found.
-        if (cfg.ajaxSpider() && !crawlTask.cancelled()) runAjaxCrawl(seedUrl, cfg, crawlTask);
+        int lastLoc = -1;
+        for (Seed seed : seeds) {
+            if (crawlTask.cancelled()) break;
+            if (seeds.size() > 1) { crawlTask.log("Crawling " + seed.url()); ctx.taskChanged(crawlTask); }
+            api.accessUrl(seed.url());
+            // 0 = no per-node child limit: crawl every in-scope link within the
+            // depth budget, instead of stopping after 20 links per page.
+            final String sid = api.spiderScan(seed.url(), 0);
+            boolean zapPaused = false;
+            while (true) {
+                // Stop the moment the task is deleted, so nothing keeps crawling.
+                if (crawlTask.cancelled()) { stopQuietly(() -> api.spiderStop(sid)); break; }
+                // Honour a paused task by pausing the engine's spider too.
+                if (crawlTask.state() == ScanTask.State.PAUSED) {
+                    if (!zapPaused) { stopQuietly(() -> api.spiderPause(sid)); zapPaused = true; }
+                    Thread.sleep(500);
+                    continue;
+                }
+                if (zapPaused) { stopQuietly(() -> api.spiderResume(sid)); zapPaused = false; }
+                int st = api.spiderStatus(sid);
+                drain("crawl", true, crawlTask);
+                int loc = totalLocations(seeds);
+                if (loc >= 0 && loc != lastLoc) {
+                    crawlTask.setDiscoveredLocations(loc);
+                    crawlTask.log("Discovered " + loc + " location(s)");
+                    lastLoc = loc;
+                }
+                ctx.taskChanged(crawlTask);
+                if (st >= 100) break;
+                Thread.sleep(1000);
+            }
+            drain("crawl", true, crawlTask);
+            // AJAX crawl (headless Chromium) for JavaScript-rendered routes.
+            if (cfg.ajaxSpider() && !crawlTask.cancelled()) runAjaxCrawl(seed.url(), cfg, crawlTask);
+        }
 
         drain("crawl", true, crawlTask);
         crawlTask.log(crawlTask.cancelled()
@@ -102,12 +104,10 @@ public final class ZapScanner {
         // A deleted crawl does not go on to start an audit.
         if (crawlTask.cancelled() || !thenAudit) return;
 
-        // ---- audit (only now does its task appear) -----------------------
+        // ---- audit: one task over every seed -----------------------------
         ScanTask auditTask = new ScanTask(ScanTask.Type.AUDIT,
-                "Audit of " + seed.host(), "ZAP active rules, within scope");
-        auditTask.setScope(seed.url());
-        // Carry over what the crawl discovered, and record how many active-scan
-        // rules are enabled, so the dashboard shows real task-progress figures.
+                "Audit of " + targetLabel(seeds), "ZAP active rules, within scope");
+        auditTask.setScope(seeds.size() == 1 ? seeds.get(0).service().url() : seeds.size() + " targets");
         auditTask.setDiscoveredLocations(crawlTask.discoveredLocations());
         try {
             int rules = 0;
@@ -117,11 +117,7 @@ public final class ZapScanner {
         } catch (Exception ignore) { /* leave at 0 if ZAP cannot report it */ }
         ctx.addTask(auditTask);
         try {
-            // Apply the tier's audit settings to the default scan policy before
-            // starting: every rule probes at the chosen strength and reports at the
-            // chosen threshold, and every injection point and request-body type is
-            // tested. No scan time cap unless the tier sets one, so each test runs
-            // to completion rather than being cut off part-way.
+            // Apply the tier's audit settings once before starting.
             try {
                 api.setAllAttackStrength(cfg.attackStrength());
                 api.setAllAlertThreshold(cfg.alertThreshold());
@@ -133,36 +129,75 @@ public final class ZapScanner {
             auditTask.log("Auditing with the ZAP active rules (" + cfg.name()
                     + ": strength " + cfg.attackStrength() + ", threshold " + cfg.alertThreshold() + ")...");
             ctx.taskChanged(auditTask);
-            String aid = api.ascanScan(seedUrl);
+
             Set<String> seen = new HashSet<>();
-            boolean auditPaused = false;
-            while (true) {
-                // Stop attacking the moment the task is deleted.
-                if (auditTask.cancelled()) { stopQuietly(() -> api.ascanStop(aid)); break; }
-                if (auditTask.state() == ScanTask.State.PAUSED) {
-                    if (!auditPaused) { stopQuietly(() -> api.ascanPause(aid)); auditPaused = true; }
-                    Thread.sleep(500);
+            int doneSeeds = 0;
+            for (Seed seed : seeds) {
+                if (auditTask.cancelled()) break;
+                final String aid = api.ascanScan(seed.url());
+                // Nothing crawled for this seed: skip it with a note rather than
+                // driving the audit loop with a null id the API would reject.
+                if (aid == null || aid.isBlank()) {
+                    auditTask.log("Nothing to audit for " + seed.service().host()
+                            + (crawlTask.discoveredLocations() <= 0 ? " (no crawlable content found)" : ""));
+                    doneSeeds++;
                     continue;
                 }
-                if (auditPaused) { stopQuietly(() -> api.ascanResume(aid)); auditPaused = false; }
-                int st = api.ascanStatus(aid);
-                auditTask.setItemsTotal(100);
-                auditTask.setItemsDone(Math.max(0, st));
-                pullAlerts(baseurl, seed.host(), auditTask, seen);
-                drain("audit", false, auditTask);   // stream the attack traffic to the logger
-                ctx.taskChanged(auditTask);
-                if (st >= 100) break;
-                Thread.sleep(2000);
+                boolean auditPaused = false;
+                while (true) {
+                    if (auditTask.cancelled()) { stopQuietly(() -> api.ascanStop(aid)); break; }
+                    if (auditTask.state() == ScanTask.State.PAUSED) {
+                        if (!auditPaused) { stopQuietly(() -> api.ascanPause(aid)); auditPaused = true; }
+                        Thread.sleep(500);
+                        continue;
+                    }
+                    if (auditPaused) { stopQuietly(() -> api.ascanResume(aid)); auditPaused = false; }
+                    int st = api.ascanStatus(aid);
+                    // Overall progress blends finished seeds with the current one.
+                    auditTask.setItemsTotal(100);
+                    auditTask.setItemsDone(Math.min(100, (doneSeeds * 100 + Math.max(0, st)) / seeds.size()));
+                    pullAlerts(seed.service().url(), auditTask, seen);
+                    drain("audit", false, auditTask);
+                    ctx.taskChanged(auditTask);
+                    if (st >= 100) break;
+                    Thread.sleep(2000);
+                }
+                pullAlerts(seed.service().url(), auditTask, seen);
+                drain("audit", false, auditTask);
+                doneSeeds++;
             }
-            pullAlerts(baseurl, seed.host(), auditTask, seen);
-            drain("audit", false, auditTask);
             auditTask.log(auditTask.cancelled()
                     ? "Audit stopped"
-                    : "Audit finished: " + seen.size() + " finding(s)");
+                    : "Audit finished: " + sourceCount(auditTask) + " finding(s)");
         } finally {
             auditTask.setState(ScanTask.State.FINISHED);
             ctx.taskChanged(auditTask);
         }
+    }
+
+    /** Short label for a job that may cover several targets. */
+    private static String targetLabel(java.util.List<Seed> seeds) {
+        if (seeds.isEmpty()) return "targets";
+        String first = seeds.get(0).service().host();
+        return seeds.size() == 1 ? first : first + " +" + (seeds.size() - 1) + " more";
+    }
+
+    /** Unique discovered locations across every seed host, or -1 if none known. */
+    private int totalLocations(java.util.List<Seed> seeds) {
+        int total = 0; boolean any = false;
+        for (Seed seed : seeds) {
+            int n = locations(seed.service().url());
+            if (n >= 0) { total += n; any = true; }
+        }
+        return any ? total : -1;
+    }
+
+    /** Count issues this task has reported, across every target. */
+    private int sourceCount(ScanTask task) {
+        String src = "Scan " + task.number;
+        int n = 0;
+        for (Issue is : ctx.issues()) if (src.equals(is.source())) n++;
+        return n;
     }
 
     /**
@@ -241,20 +276,21 @@ public final class ZapScanner {
     }
 
     /** Fetch alerts and add any not yet seen to the issue tree; recount badges. */
-    private void pullAlerts(String baseurl, String host, ScanTask task, Set<String> seen) throws Exception {
+    private void pullAlerts(String baseurl, ScanTask task, Set<String> seen) throws Exception {
         for (JsonValue a : api.alerts(baseurl, 0, 100000)) {
             String id = ZapApi.str(a, "id");
             if (id != null && !seen.add(id)) continue;
             Issue is = mapAlert(api, a);
             if (is != null) { is.setSource("Scan " + task.number); ctx.addIssue(is); }
         }
-        recount(task, host);
+        recount(task);
     }
 
-    private void recount(ScanTask task, String host) {
+    private void recount(ScanTask task) {
+        String src = "Scan " + task.number;
         int h = 0, m = 0, l = 0, i = 0;
         for (Issue is : ctx.issues()) {
-            if (is.host() == null || !host.equalsIgnoreCase(is.host())) continue;
+            if (!src.equals(is.source())) continue;
             switch (is.severity()) {
                 case HIGH -> h++;
                 case MEDIUM -> m++;

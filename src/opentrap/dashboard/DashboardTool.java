@@ -1584,7 +1584,8 @@ public class DashboardTool implements ToolModule {
         NewScanWizard w = new NewScanWizard(ctx, ctx == null ? null : ctx.frame());
         w.setVisible(true);
         if (!w.started()) return;
-        startSpiderFor(w.targetUrl(), w.crawlAndAudit(), w.config(), w.threads());
+        // One job for every URL listed: a single crawl task and audit task.
+        startSpiderFor(w.targetUrls(), w.crawlAndAudit(), w.config(), w.threads());
     }
 
     private void startSpider() {
@@ -1610,21 +1611,21 @@ public class DashboardTool implements ToolModule {
         startSpiderFor(url, thenAudit, opentrap.engine.ScanConfig.crawlDefault(), 10);
     }
 
-    /**
-     * Crawl the URL with the ZAP engine, and when {@code thenAudit} is set, audit
-     * the endpoints the crawl discovered using the given {@link opentrap.engine.ScanConfig}.
-     * The engine is required: detection is ZAP's job, so there is no home-grown
-     * fall-back scanner. If the engine is not installed, scanning is unavailable
-     * until it is fetched.
-     */
     private void startSpiderFor(String url, boolean thenAudit, opentrap.engine.ScanConfig cfg, int threads) {
-        HttpService svc = HttpService.parse(url.trim());
-        if (svc == null) {
-            JOptionPane.showMessageDialog(ctx.frame(),
-                    "Could not parse that URL. Use the form https://host/path.",
-                    "Scan", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+        startSpiderFor(java.util.List.of(url), thenAudit, cfg, threads);
+    }
+
+    /**
+     * Crawl every URL with the ZAP engine as one job, and when {@code thenAudit}
+     * is set, audit what the crawl discovered. All the URLs share one crawl task
+     * and one audit task, scanned one after another, so the thread setting is
+     * applied once to the engine rather than multiplied per target. The engine is
+     * required: detection is ZAP's job, so there is no home-grown fall-back
+     * scanner. If the engine is not installed, scanning is unavailable until it
+     * is fetched.
+     */
+    private void startSpiderFor(java.util.List<String> urls, boolean thenAudit,
+                                opentrap.engine.ScanConfig cfg, int threads) {
         opentrap.engine.ZapEngine ze = zapEngine();
         if (ze == null || !ze.available()) {
             JOptionPane.showMessageDialog(ctx.frame(),
@@ -1633,44 +1634,60 @@ public class DashboardTool implements ToolModule {
                     "Scan engine required", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        String pathq = "/";
-        try {
-            java.net.URI u = java.net.URI.create(url.trim());
-            if (u.getRawPath() != null && !u.getRawPath().isEmpty()) pathq = u.getRawPath();
-        } catch (Exception ignored) {}
-        final HttpService seed = svc;
-        final String seedUrl = seed.url() + (pathq.startsWith("/") ? pathq : "/" + pathq);
-        // Keep the crawl within scope: include the seed host so a scheme fall-back
-        // (https to http or the reverse) stays in scope.
-        if (!ctx.scope().isInScope(seed, pathq)) {
-            ctx.scope().includeHost(seed);
-            ctx.scopeChanged();
+        // Parse every URL, add each host to scope, and collect the seeds.
+        java.util.List<opentrap.engine.ZapScanner.Seed> seeds = new ArrayList<>();
+        for (String raw : urls) {
+            String url = raw.trim();
+            if (url.isEmpty()) continue;
+            HttpService svc = HttpService.parse(url);
+            if (svc == null) {
+                JOptionPane.showMessageDialog(ctx.frame(),
+                        "Could not parse this URL, skipping it:\n" + url
+                        + "\n\nUse the form https://host/path.",
+                        "Scan", JOptionPane.WARNING_MESSAGE);
+                continue;
+            }
+            String pathq = "/";
+            try {
+                java.net.URI u = java.net.URI.create(url);
+                if (u.getRawPath() != null && !u.getRawPath().isEmpty()) pathq = u.getRawPath();
+            } catch (Exception ignored) {}
+            String seedUrl = svc.url() + (pathq.startsWith("/") ? pathq : "/" + pathq);
+            if (!ctx.scope().isInScope(svc, pathq)) {
+                ctx.scope().includeHost(svc);
+                ctx.scopeChanged();
+            }
+            seeds.add(new opentrap.engine.ZapScanner.Seed(svc, seedUrl));
         }
+        if (seeds.isEmpty()) return;
+
+        String first = seeds.get(0).service().host();
+        String title = seeds.size() == 1 ? "Crawl of " + first
+                : "Crawl of " + first + " +" + (seeds.size() - 1) + " more";
         opentrap.core.ScanTask task = new opentrap.core.ScanTask(
-                opentrap.core.ScanTask.Type.LIVE_ACTIVE,
-                "Crawl of " + seed.host(),
+                opentrap.core.ScanTask.Type.LIVE_ACTIVE, title,
                 thenAudit ? "Crawl then audit, within scope" : "Crawl within scope");
-        task.setScope(seed.url());
+        task.setScope(seeds.size() == 1 ? seeds.get(0).service().url() : seeds.size() + " targets");
         ctx.addTask(task);
         // Remember how to run this exact scan again, for the task's "Scan again".
+        final java.util.List<String> againUrls = new ArrayList<>(urls);
         final boolean againAudit = thenAudit;
         final opentrap.engine.ScanConfig againCfg = cfg;
         final int againThreads = threads;
-        final String againUrl = url.trim();
-        rerun.put(task, () -> startSpiderFor(againUrl, againAudit, againCfg, againThreads));
+        rerun.put(task, () -> startSpiderFor(againUrls, againAudit, againCfg, againThreads));
         task.log("Starting scan engine (first run can take ~30s)...");
         ctx.taskChanged(task);
+        final java.util.List<opentrap.engine.ZapScanner.Seed> fseeds = seeds;
         Thread zth = new Thread(() -> {
             try {
                 ze.start();
+                // Threads are set once here, not per target.
                 try { ze.api().setSpiderThreads(threads); ze.api().setActiveThreadPerHost(threads); }
                 catch (Exception ignored) {}
-                task.log("Engine ready. Crawling " + seedUrl);
+                task.log("Engine ready. Crawling " + fseeds.size() + " target(s)");
                 ctx.taskChanged(task);
-                // The audit, if requested, runs only after the crawl finishes, and
-                // its own task card is created at that point by the scanner.
                 new opentrap.engine.ZapScanner(ctx, ze.api())
-                        .crawlAndAudit(seed, seedUrl, thenAudit, cfg, task);
+                        .crawlAndAudit(fseeds, thenAudit, cfg, task);
             } catch (Exception ex) {
                 task.log("Scan engine error: " + ex.getMessage());
                 task.setState(opentrap.core.ScanTask.State.FINISHED);

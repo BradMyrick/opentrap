@@ -1,21 +1,15 @@
 <div align="center">
 
-<img src="icon/opentrap.svg" width="84" alt="OpenTRAP logo">
+<img src="icon/wordmark.svg" alt="OpenTRAP" height="56">
 
-<h1>OpenTRAP</h1>
-
-<p><strong>Open Traffic Replay and Analysis Proxy</strong></p>
-
-<p>A free, open-source alternative to Burp Suite: the intercepting-proxy workflow you
-already know, on top of the trusted OWASP ZAP detection engine, with nothing locked
-behind a licence. If you have used Burp Suite, you will feel at home in minutes.</p>
+<p><strong>Open Traffic Replay and Analysis Proxy</strong><br>
+A free and open-source alternative to Burp Suite, built on the trusted OWASP ZAP engine.</p>
 
 <p>
 <img src="https://img.shields.io/badge/licence-AGPL--3.0-e5484d?style=flat-square" alt="Licence">
 <img src="https://img.shields.io/badge/Java-17%2B-5b8def?style=flat-square" alt="Java">
 <img src="https://img.shields.io/badge/platform-Linux-9aa7b4?style=flat-square&logo=linux&logoColor=white" alt="Platform">
 <img src="https://img.shields.io/badge/status-active%20development-3fb950?style=flat-square" alt="Status">
-<img src="https://img.shields.io/badge/contributions-welcome-ff6a5f?style=flat-square" alt="Contributions welcome">
 </p>
 
 <p>
@@ -26,15 +20,22 @@ behind a licence. If you have used Burp Suite, you will feel at home in minutes.
 <a href="https://github.com/opentrap/opentrap/releases/latest"><img src="https://img.shields.io/badge/All%20releases-30363d?style=for-the-badge&logo=github&logoColor=white" alt="All releases"></a>
 </p>
 
-<p>
-<sub><b>Share</b></sub>&nbsp;&nbsp;
-<a href="https://twitter.com/intent/tweet?text=OpenTRAP%2C%20an%20open-source%20web%20security%20testing%20suite&url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/X-000000?style=flat-square&logo=x&logoColor=white" alt="Share on X"></a>
-<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=linkedin&logoColor=white" alt="Share on LinkedIn"></a>
-<a href="https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&title=OpenTRAP"><img src="https://img.shields.io/badge/Reddit-FF4500?style=flat-square&logo=reddit&logoColor=white" alt="Share on Reddit"></a>
-<a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP"><img src="https://img.shields.io/badge/Hacker%20News-FF6600?style=flat-square&logo=ycombinator&logoColor=white" alt="Share on Hacker News"></a>
-</p>
+<sub><b>Share:</b>
+<a href="https://twitter.com/intent/tweet?text=OpenTRAP%2C%20an%20open-source%20web%20security%20testing%20suite&url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap">X</a> &middot;
+<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap">LinkedIn</a> &middot;
+<a href="https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&title=OpenTRAP">Reddit</a> &middot;
+<a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fopentrap%2Fopentrap&t=OpenTRAP">Hacker News</a>
+</sub>
 
-<br>
+</div>
+
+<p align="center"><b>One command to download and run the tool:</b></p>
+
+```
+wget https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage && chmod +x opentrap-x86_64.appimage && ./opentrap-x86_64.appimage
+```
+
+<div align="center">
 
 <a href="docs/images/dashboard.png"><img src="docs/images/dashboard.png" width="100%" alt="OpenTRAP dashboard with a crawl finished, an active audit running, and the live table of the most serious vulnerabilities found"></a>
 
@@ -95,6 +96,16 @@ licence.
 ## See it in action
 
 <table>
+<tr>
+<td width="50%" valign="top">
+<a href="docs/images/scan-config.png"><img src="docs/images/scan-config.png" alt="New scan wizard on the scan-configuration step, showing the Lightweight, Fast, Balanced, Deep and Custom tiers with one selected"></a>
+<br><sub><b>Scan configurations</b><br>Pick a tier from Lightweight to Deep, each covering the same ground and differing only in how far it crawls and how hard it probes.</sub>
+</td>
+<td width="50%" valign="top">
+<a href="docs/images/custom-config.png"><img src="docs/images/custom-config.png" alt="Custom scan configuration screen with a left category list for Crawl, Audit and Injection points and the settings for each"></a>
+<br><sub><b>Custom configuration</b><br>Its own screen for full control: crawl depth, AJAX budget, attack strength, alert threshold and which inputs are tested.</sub>
+</td>
+</tr>
 <tr>
 <td width="50%" valign="top">
 <a href="docs/images/target.png"><img src="docs/images/target.png" alt="Target tab: site map tree, request list, and the issues found with a full advisory for a reflected cross-site scripting finding"></a>
@@ -165,6 +176,12 @@ clear issue view with the request, response and the matched evidence highlighted
 ready to triage or hand straight to a developer. The detection is built on the
 proven OWASP ZAP engine, so what OpenTRAP reports holds up.
 
+Choose how hard a scan digs with a scan configuration: Lightweight, Fast,
+Balanced or Deep. Every tier tests the same ground, so they differ only in how
+far the crawl reaches and how hard the audit probes, never in what gets checked.
+For full control there is a Custom configuration with its own settings screen,
+exposing crawl depth, attack strength, the input points tested and more.
+
 ## Highlights
 
 - **Proxy-first by design** - intercept, replay and edit live traffic, with the whole toolset one click away.
@@ -173,13 +190,14 @@ proven OWASP ZAP engine, so what OpenTRAP reports holds up.
 - **One self-contained file** - every release is a single Linux AppImage with its own runtime and the scan engine built in; download it and run it.
 - **Open and hackable** - AGPL v3.0: read it, change it, extend it, with no gate on its core capabilities.
 - **Guided from the start** - open or create a project at launch, then drive crawl-and-audit scans through a step-by-step wizard.
+- **Scan configurations that fit the job** - pick a tier from Lightweight to Deep, or build a Custom scan with full control over crawl depth, attack strength and the inputs tested.
 - **Built to be improved** - shaped by the people who use it, with every contribution credited.
 
 ## The toolset
 
 | Tool | What it does |
 |------|--------------|
-| **Dashboard** | Live tasks, issues and event log; start a scan from the guided wizard |
+| **Dashboard** | Live tasks, issues and event log; start a scan from the guided wizard, choosing a configuration from Lightweight to Deep or a Custom one |
 | **Target** | Site map tree and the suite-wide scope that governs every tool |
 | **Proxy** | Intercept, HTTP history, WebSocket capture, per-host certificate authority |
 | **Scanner** | Configure the engine's active and passive rules (enable, disable, threshold) |
@@ -199,30 +217,25 @@ audited as you browse.
 
 ## Get started
 
-Download the latest release from the [releases page](https://github.com/opentrap/opentrap/releases/latest) and run it. Nothing to install.
+Download the one file and run it. There is nothing to install: the AppImage
+carries its own Java runtime and the scan engine inside it.
 
-**One file: the AppImage.** It bundles its own Java runtime and the scan engine,
-so there is no Java to install. This link always points at the latest release: [opentrap-x86_64.appimage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)
+**[Download the latest AppImage](https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage)** - this link always points at the newest release.
 
-Or from a terminal, fetch it:
+Linux does not let a freshly downloaded file run until you allow it, so the
+first time you need to mark it runnable. The quickest way, no terminal needed:
+
+1. Right-click the downloaded **opentrap-x86_64.appimage** and choose **Properties**.
+2. On the **Permissions** tab, tick **Allow executing file as a program**.
+3. Close, then **double-click** the file to launch OpenTRAP.
+
+Prefer the terminal? Three lines do the same:
 
 ```
 wget https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage
-```
-
-make it executable:
-
-```
 chmod +x opentrap-x86_64.appimage
-```
-
-and run it:
-
-```
 ./opentrap-x86_64.appimage
 ```
-
-You can also double-click the downloaded file in your file manager.
 
 The download is complete: the Java runtime and the scan engine are inside the
 file and set themselves up on first use. Every release is this one AppImage, so

@@ -41,6 +41,7 @@ title: OpenTRAP
       <li><span class="ic">{% include check.html %}</span><span><b>A complete proxy-first suite</b>Intercept, HTTP history, repeater, intruder, sequencer, decoder, comparer, an out-of-band collaborator and a full traffic logger.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>Scanning that holds up</b>Crawl and audit for real vulnerabilities on the proven OWASP ZAP engine, with findings in a clear issue view and the evidence highlighted.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>Guided from the start</b>Open or create a project at launch, then drive crawl-and-audit scans through a step-by-step wizard.</span></li>
+      <li><span class="ic">{% include check.html %}</span><span><b>Scan configurations that fit the job</b>Pick a tier from Lightweight to Deep, or build a Custom scan with full control over crawl depth, attack strength and which inputs are tested.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>One self-contained file</b>Every release is a single Linux AppImage with its own runtime and the scan engine built in. Download it, run it, scan.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>Genuinely open</b>Licensed under the GNU AGPL v3.0, so it stays open and hackable, with no licence gate on its core capabilities.</span></li>
     </ul>
@@ -53,6 +54,8 @@ title: OpenTRAP
     <p>Every tool lives in one window. Click any screenshot for the full-size image.</p>
   </div>
   <div class="gallery">
+    <a class="card" href="images/scan-config.png"><img src="images/scan-config.png" alt="New scan wizard showing the Lightweight, Fast, Balanced, Deep and Custom scan tiers"><div class="cap"><b>Scan configurations</b><span>Pick a tier from Lightweight to Deep. Each covers the same ground and differs only in how far it crawls and how hard it probes, or build a Custom one.</span></div></a>
+    <a class="card" href="images/custom-config.png"><img src="images/custom-config.png" alt="Custom scan configuration screen with Crawl, Audit and Injection point settings"><div class="cap"><b>Custom configuration</b><span>Its own screen for full control: crawl depth, AJAX budget, attack strength, alert threshold and which inputs are tested.</span></div></a>
     <a class="card" href="images/target.png"><img src="images/target.png" alt="Target tab: site map, request list and issues with a full advisory"><div class="cap"><b>Target</b><span>Site map and scope on the left, every request in the middle, every issue on the right with its advisory, request and response beside it.</span></div></a>
     <a class="card" href="images/proxy.png"><img src="images/proxy.png" alt="Proxy tab with interception and the built-in browser"><div class="cap"><b>Proxy &amp; built-in browser</b><span>One click opens a bundled Chromium, already routed through the proxy and trusting its certificate authority. No certificate to install.</span></div></a>
     <a class="card" href="images/collaborator.png"><img src="images/collaborator.png" alt="Collaborator tab with captured out-of-band interactions"><div class="cap"><b>Collaborator</b><span>Generate a payload and watch the out-of-band DNS and HTTP callbacks arrive, each on record, so blind vulnerabilities are proven, not guessed.</span></div></a>

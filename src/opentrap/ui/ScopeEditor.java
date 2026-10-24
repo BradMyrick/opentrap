@@ -179,6 +179,9 @@ public class ScopeEditor extends JPanel {
         /** On edit, keep a field's stored pattern verbatim when the user left the
          *  friendly form unchanged; otherwise store what they typed. A brand-new
          *  rule always stores the typed text. */
+        /** On edit, keep a field's stored pattern verbatim when the user left the
+         *  friendly form unchanged; otherwise store what they typed. A brand-new
+         *  rule always stores the typed text. */
         private static String keptOrTyped(String typed, String stored, boolean editing) {
             if (editing && typed.equals(Scope.display(stored))) return stored;
             return typed;

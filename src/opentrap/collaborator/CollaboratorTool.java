@@ -93,14 +93,11 @@ public class CollaboratorTool implements ToolModule {
             }
         });
 
-        // Toolbar, as in the reference: how many payloads to generate and a copy
-        // button, then polling controls and the session status.
+        // Toolbar: one button mints a fresh payload and copies it, then the
+        // polling controls and the session status.
         statusLabel = Ui.label("not started");
-        JSpinner count = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
-        count.setFont(Ui.PLAIN);
-        count.setPreferredSize(new Dimension(64, count.getPreferredSize().height));
         JButton copy = Ui.primaryButton("Copy to clipboard",
-                "generate that many fresh payload hostnames and copy them to the clipboard");
+                "generate a fresh payload hostname and copy it to the clipboard");
         JButton pollNow = Ui.button("Poll now", "check the server for new interactions now");
         JCheckBox auto = Ui.check("Polling automatically", false);
         auto.setToolTipText("register with the collaborator server and keep polling it");
@@ -121,24 +118,17 @@ public class CollaboratorTool implements ToolModule {
                 }
                 auto.setSelected(true);
             }
-            int n = (Integer) count.getValue();
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < n; i++) {
-                String h = collab.payloadHost();
-                if (h == null) break;
-                if (sb.length() > 0) sb.append('\n');
-                sb.append(h);
-            }
-            if (sb.length() == 0) {
+            String h = collab.payloadHost();
+            if (h == null) {
                 JOptionPane.showMessageDialog(ctx.frame(), "Could not generate a payload.",
                         "Collaborator", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            payloadField.setText(sb.toString().replace('\n', ' '));
+            payloadField.setText(h);
             payloadField.setCaretPosition(0);
             Toolkit.getDefaultToolkit().getSystemClipboard()
-                    .setContents(new StringSelection(sb.toString()), null);
-            ctx.alert("collaborator", "copied " + n + " collaborator payload" + (n == 1 ? "" : "s"));
+                    .setContents(new StringSelection(h), null);
+            ctx.alert("collaborator", "copied collaborator payload " + h);
             refreshStatus();
         });
         pollNow.addActionListener(e -> {
@@ -164,8 +154,6 @@ public class CollaboratorTool implements ToolModule {
 
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
         bar.setOpaque(false);
-        bar.add(Ui.label("Payloads to generate:"));
-        bar.add(count);
         bar.add(copy);
         bar.add(Box.createHorizontalStrut(12));
         bar.add(pollNow);
