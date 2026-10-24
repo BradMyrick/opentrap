@@ -1,9 +1,9 @@
 package opentrap.engine;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import opentrap.core.Bytes;
 import opentrap.core.HttpMessage;
@@ -130,7 +130,7 @@ public final class ZapScanner {
                     + ": strength " + cfg.attackStrength() + ", threshold " + cfg.alertThreshold() + ")...");
             ctx.taskChanged(auditTask);
 
-            Set<String> seen = new HashSet<>();
+            Map<String, Issue.Severity> seen = new HashMap<>();
             int doneSeeds = 0;
             for (Seed seed : seeds) {
                 if (auditTask.cancelled()) break;
@@ -168,7 +168,7 @@ public final class ZapScanner {
             }
             auditTask.log(auditTask.cancelled()
                     ? "Audit stopped"
-                    : "Audit finished: " + sourceCount(auditTask) + " finding(s)");
+                    : "Audit finished: " + seen.size() + " finding(s)");
         } finally {
             auditTask.setState(ScanTask.State.FINISHED);
             ctx.taskChanged(auditTask);
@@ -193,13 +193,6 @@ public final class ZapScanner {
     }
 
     /** Count issues this task has reported, across every target. */
-    private int sourceCount(ScanTask task) {
-        String src = "Scan " + task.number;
-        int n = 0;
-        for (Issue is : ctx.issues()) if (src.equals(is.source())) n++;
-        return n;
-    }
-
     /**
      * Run ZAP's AJAX spider (a real headless Chromium) over the seed, so that
      * JavaScript-rendered links and routes are discovered and fed to the audit.
@@ -275,23 +268,27 @@ public final class ZapScanner {
         try { return api.uniqueLocations(baseurl); } catch (Exception e) { return -1; }
     }
 
-    /** Fetch alerts and add any not yet seen to the issue tree; recount badges. */
-    private void pullAlerts(String baseurl, ScanTask task, Set<String> seen) throws Exception {
+    /**
+     * Fetch the engine's alerts for the target and add any this audit has not
+     * seen to the issue list, then recount the task's badges from what it has
+     * seen. The badges count every alert the audit found, whether or not the
+     * shared issue list already held the same finding: the live passive audit
+     * usually raises the header and disclosure findings first, and an audit
+     * that found them too still found them.
+     */
+    private void pullAlerts(String baseurl, ScanTask task, Map<String, Issue.Severity> seen) throws Exception {
         for (JsonValue a : api.alerts(baseurl, 0, 100000)) {
             String id = ZapApi.str(a, "id");
-            if (id != null && !seen.add(id)) continue;
+            if (id == null || seen.containsKey(id)) continue;
             Issue is = mapAlert(api, a);
-            if (is != null) { is.setSource("Scan " + task.number); ctx.addIssue(is); }
+            if (is == null) continue;
+            seen.put(id, is.severity());
+            is.setSource("Scan " + task.number);
+            ctx.addIssue(is);
         }
-        recount(task);
-    }
-
-    private void recount(ScanTask task) {
-        String src = "Scan " + task.number;
         int h = 0, m = 0, l = 0, i = 0;
-        for (Issue is : ctx.issues()) {
-            if (!src.equals(is.source())) continue;
-            switch (is.severity()) {
+        for (Issue.Severity sev : seen.values()) {
+            switch (sev) {
                 case HIGH -> h++;
                 case MEDIUM -> m++;
                 case LOW -> l++;
