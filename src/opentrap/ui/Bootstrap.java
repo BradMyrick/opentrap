@@ -19,11 +19,13 @@ public final class Bootstrap {
         frame.register(new opentrap.intruder.IntruderTool(ctx));
         frame.register(new opentrap.repeater.RepeaterTool());
         frame.register(new opentrap.collaborator.CollaboratorTool());
-        frame.register(new opentrap.logger.LoggerTool());
-        frame.register(new opentrap.organizer.OrganizerTool());
         frame.register(new opentrap.sequencer.SequencerTool());
         frame.register(new opentrap.decoder.DecoderTool());
         frame.register(new opentrap.comparer.ComparerTool());
+        frame.register(new opentrap.logger.LoggerTool());
+        frame.register(new opentrap.organizer.OrganizerTool());
+        frame.register(new opentrap.extensions.ExtensionsTool());
+        frame.register(new opentrap.discover.DiscoverTool());
 
         registerEngagementActions(ctx);
     }

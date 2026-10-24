@@ -35,9 +35,7 @@ class DatesGenerator extends AbstractGenerator {
         unit.addActionListener(e -> fire());
 
         panel = Ui.vbox(
-                Ui.row(Ui.label("from:"), from, Ui.label("to:"), to),
-                Ui.row(Ui.label("step:"), step, unit),
-                Ui.row(Ui.label("format:"), pattern));
+                Ui.form("From:", from, "To:", to, "Step:", Ui.row(step, unit), "Format:", pattern));
     }
 
     private LocalDate date(JTextField f) {

@@ -16,7 +16,29 @@ import java.util.List;
 public class SuiteFrame extends JFrame {
 
     private final SuiteContext ctx;
-    private final JTabbedPane tabs = new JTabbedPane();
+    /** Width reserved at the right of the tab row for the tool icons. */
+    private static final int TAB_ROW_RESERVE = 124;
+
+    /**
+     * The main tab strip. The right end of its tab row is kept clear for the
+     * top-right tool icons (browser, console, search, settings), as in the
+     * reference. The reserve is an empty right border, which is what the
+     * scrolling tab layout sizes its tab viewport and scroll buttons from; the
+     * content area is widened back by the same amount so pages still fill the
+     * window. Re-applied on updateUI so it survives a theme switch.
+     */
+    private final JTabbedPane tabs = new JTabbedPane() {
+        @Override public void updateUI() {
+            setUI(new opentrap.ui.theme.FlatTabbedPaneUI() {
+                @Override protected void installDefaults() {
+                    super.installDefaults();
+                    contentBorderInsets = new Insets(contentBorderInsets.top, contentBorderInsets.left,
+                            contentBorderInsets.bottom, -TAB_ROW_RESERVE);
+                }
+            });
+            setBorder(BorderFactory.createEmptyBorder(0, 0, 0, TAB_ROW_RESERVE));
+        }
+    };
     private final JMenuBar menuBar = new JMenuBar();
     private final List<ToolModule> modules = new ArrayList<>();
     private final JLabel statusLabel = new JLabel(" ");
@@ -33,8 +55,12 @@ public class SuiteFrame extends JFrame {
         setIconImages(AppIcon.images());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         tabs.setFont(Ui.PLAIN);
+        // One compact row, as in the reference: tabs keep their natural width and
+        // never wrap onto a second row (which would stretch them to fill the
+        // width). On a narrow window the row scrolls instead.
+        tabs.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         setLayout(new BorderLayout());
-        add(tabs, BorderLayout.CENTER);
+        add(buildCenter(), BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
         setJMenuBar(menuBar);
 
@@ -156,9 +182,9 @@ public class SuiteFrame extends JFrame {
             tabs.addTab(m.name(), comp);
         }
 
-        // Two suite-level tabs after the tools, matching the original's shape.
-        SuiteOptionsPanel opts = new SuiteOptionsPanel(ctx);
-        tabs.addTab("comms", opts);
+        // Suite-level tab after the tools. Settings used to live here as a "comms"
+        // tab; they now live in the Settings dialog (the gear in the top bar), so
+        // there is one home for them.
         alertsPanel = new AlertsPanel(ctx);
         tabs.addTab("alerts", alertsPanel);
 
@@ -173,6 +199,8 @@ public class SuiteFrame extends JFrame {
         // Search is built into the places it belongs: the quick URL box and the
         // filter popup on the proxy history and the target site map. It is no
         // longer a separate window reached from this menu.
+        addItem(suite, "settings", e -> SettingsDialog.open(this, ctx));
+        suite.addSeparator();
         addItem(suite, "save state", e -> StateIO.saveDialog(ctx, this));
         addItem(suite, "restore state", e -> StateIO.restoreDialog(ctx, this));
         suite.addSeparator();
@@ -180,6 +208,15 @@ public class SuiteFrame extends JFrame {
         suite.addSeparator();
         addItem(suite, "exit", e -> confirmExit());
         menuBar.add(suite);
+
+        // Project menu (not yet implemented - each item invites a contribution).
+        JMenu project = new JMenu("Project");
+        project.setFont(Ui.PLAIN);
+        for (String item : new String[]{"project settings", "rename project",
+                "save copy", "import project file"}) {
+            addItem(project, item, e -> Unbuilt.PROJECT.showDialog(this));
+        }
+        menuBar.add(project);
 
         for (ToolModule m : modules) {
             JMenu[] ms = m.menus();
@@ -226,6 +263,76 @@ public class SuiteFrame extends JFrame {
         addItem(help, "proxy setup instructions", e -> showProxyHelp());
         addItem(help, "about", e -> AboutDialog.show(this));
         menuBar.add(help);
+    }
+
+    /**
+     * The tab strip with the top-right tool icons on its tab row, as in the
+     * reference: a globe (browser), a console, a magnifier (search) and a gear
+     * (settings). The tab UI reserves the right end of the row for them, so the
+     * tabs wrap before that point and never sit under the icons. The browser,
+     * console and search are not yet implemented; the gear opens Settings.
+     */
+    private JComponent buildCenter() {
+        final JPanel tools = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        tools.setOpaque(false);
+        tools.add(iconButton(ToolIcons.browser(), "Open browser", this::launchBrowser));
+        tools.add(iconButton(ToolIcons.console(), "Console", () -> Unbuilt.CONSOLE.showDialog(this)));
+        tools.add(iconButton(ToolIcons.search(), "Search", () -> new SearchWindow(ctx).setVisible(true)));
+        tools.add(iconButton(ToolIcons.gear(), "Settings", () -> SettingsDialog.open(this, ctx)));
+
+        final JLayeredPane layer = new JLayeredPane();
+        layer.setLayout(null);
+        layer.add(tabs, JLayeredPane.DEFAULT_LAYER);
+        layer.add(tools, JLayeredPane.PALETTE_LAYER);
+        layer.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                int w = layer.getWidth(), h = layer.getHeight();
+                tabs.setBounds(0, 0, w, h);
+                tabs.doLayout();
+                Dimension ts = tools.getPreferredSize();
+                int rowH = tabs.getTabCount() > 0
+                        ? tabs.getUI().getTabBounds(tabs, 0).height : ts.height;
+                tools.setBounds(w - ts.width - 10, Math.max(0, (rowH - ts.height) / 2), ts.width, ts.height);
+            }
+        });
+        return layer;
+    }
+
+    /**
+     * Launch the bundled browser routed through the proxy, with the CA already
+     * trusted: the same action as Open browser on the Proxy tab, reachable from
+     * the globe in the top bar.
+     */
+    private void launchBrowser() {
+        opentrap.proxy.ProxyServer server = null;
+        for (ToolModule m : modules) {
+            if (m instanceof opentrap.proxy.ProxyTool p) { server = p.server(); break; }
+        }
+        if (server == null) {
+            JOptionPane.showMessageDialog(this, "The proxy is not running, so the browser cannot be launched.",
+                    "Open browser", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        boolean relax = ctx.settings().getBool(opentrap.proxy.BrowserFlags.RELAX_KEY, true);
+        String err = opentrap.proxy.EmbeddedBrowser.launch(server, "http://opentrap/", relax);
+        if (err != null) {
+            JOptionPane.showMessageDialog(this, err, "Open browser", JOptionPane.WARNING_MESSAGE);
+        } else {
+            ctx.alert("proxy", "launched browser through the proxy, "
+                    + opentrap.proxy.BrowserFlags.describe(relax));
+        }
+    }
+
+    /** A flat, icon-only button for the top-right tool strip. */
+    private JButton iconButton(Icon icon, String tip, Runnable action) {
+        JButton b = new JButton(icon);
+        b.setToolTipText(tip);
+        b.setFocusable(false);
+        b.setContentAreaFilled(false);
+        b.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.addActionListener(e -> action.run());
+        return b;
     }
 
     private void showProxyHelp() {

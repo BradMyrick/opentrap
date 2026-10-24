@@ -18,23 +18,42 @@ public class MatchReplacePanel extends JPanel {
         this.server = server;
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(false);
-        JLabel h = Ui.heading("match and replace");
+        // Laid out as in the reference: a heading and description, the button
+        // column to the left of the rules table, and the fields for a new rule
+        // beneath it. A second section covers WebSocket rules.
+        JLabel h = Ui.heading("HTTP match and replace rules");
         h.setAlignmentX(LEFT_ALIGNMENT);
         add(h);
+        add(Box.createVerticalStrut(4));
+        JTextArea desc = Ui.note("Use these settings to automatically replace parts of HTTP "
+                + "requests and responses passing through the Proxy.");
+        desc.setAlignmentX(LEFT_ALIGNMENT);
+        desc.setMaximumSize(new Dimension(760, desc.getPreferredSize().height));
+        add(desc);
         add(Box.createVerticalStrut(8));
 
         Ui.styleTable(table);
-        Ui.setWidths(table, 50, 110, 170, 170, 150);
+        Ui.setWidths(table, 60, 120, 170, 170, 150);
         // The type column edits through a dropdown of the four scopes.
         JComboBox<String> typeEditor = new JComboBox<>(MatchReplaceRule.TYPES);
         typeEditor.setFont(Ui.PLAIN);
         table.getColumnModel().getColumn(1).setCellEditor(new DefaultCellEditor(typeEditor));
         JScrollPane sp = Ui.scroll(table);
-        sp.setPreferredSize(new Dimension(640, 130));
-        sp.setMaximumSize(new Dimension(760, 130));
-        sp.setAlignmentX(LEFT_ALIGNMENT);
-        add(sp);
-        add(Box.createVerticalStrut(8));
+        sp.setPreferredSize(new Dimension(640, 150));
+
+        JButton add = Ui.button("Add", "add a rule from the fields below");
+        JButton remove = Ui.button("Remove", "remove the selected rule");
+        JButton up = Ui.button("Up", "move the selected rule earlier");
+        JButton down = Ui.button("Down", "move the selected rule later");
+        JPanel rulesRow = new JPanel(new BorderLayout(8, 0));
+        rulesRow.setOpaque(false);
+        rulesRow.setAlignmentX(LEFT_ALIGNMENT);
+        rulesRow.add(Ui.buttonColumn(add, remove, up, down), BorderLayout.WEST);
+        rulesRow.add(sp, BorderLayout.CENTER);
+        rulesRow.setMaximumSize(new Dimension(760, 150));
+        rulesRow.setPreferredSize(new Dimension(760, 150));
+        add(rulesRow);
+        add(Box.createVerticalStrut(6));
 
         JPanel entry = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         entry.setOpaque(false);
@@ -43,27 +62,38 @@ public class MatchReplacePanel extends JPanel {
         JTextField match = Ui.field("", 14);
         JTextField replace = Ui.field("", 14);
         JTextField comment = Ui.field("", 10);
-        JButton add = Ui.button("add", "add the item");
-        JButton remove = Ui.button("remove", "remove the selected item");
-        JButton up = Ui.button("up", "move the selected rule earlier");
-        JButton down = Ui.button("down", "move the selected rule later");
         type.setToolTipText("applies to request/response header/body");
         match.setToolTipText("regex to match (leave blank to insert new header)");
         replace.setToolTipText("replacement string (leave blank to remove matched header)");
         comment.setToolTipText("optional note");
+        entry.add(Ui.label("New rule:"));
         entry.add(type);
         entry.add(match);
         entry.add(replace);
         entry.add(comment);
-        entry.add(add);
-        entry.add(remove);
-        entry.add(up);
-        entry.add(down);
         add(entry);
-        JLabel hint = Ui.label("double-click any cell to edit a rule in place; rules apply top to bottom");
+        JLabel hint = Ui.label("Fill in the fields and click Add. Double-click any cell to edit a "
+                + "rule in place; rules apply top to bottom.");
+        hint.setForeground(opentrap.ui.Theme.MUTED);
         hint.setAlignmentX(LEFT_ALIGNMENT);
-        add(Box.createVerticalStrut(4));
+        add(Box.createVerticalStrut(2));
         add(hint);
+
+        add(Box.createVerticalStrut(18));
+        JLabel wh = Ui.heading("WebSocket match and replace rules");
+        wh.setAlignmentX(LEFT_ALIGNMENT);
+        add(wh);
+        add(Box.createVerticalStrut(4));
+        JTextArea wsDesc = Ui.note("Use these settings to automatically replace parts of "
+                + "WebSocket messages passing through the Proxy.");
+        wsDesc.setAlignmentX(LEFT_ALIGNMENT);
+        wsDesc.setMaximumSize(new Dimension(760, wsDesc.getPreferredSize().height));
+        add(wsDesc);
+        add(Box.createVerticalStrut(6));
+        JComponent ws = opentrap.ui.Unbuilt.PROXY_WS_MATCH.panel(false);
+        ws.setAlignmentX(LEFT_ALIGNMENT);
+        ws.setMaximumSize(new Dimension(760, ws.getPreferredSize().height));
+        add(ws);
 
         add.addActionListener(e -> {
             server.matchReplace.add(new MatchReplaceRule(true,
@@ -80,7 +110,7 @@ public class MatchReplacePanel extends JPanel {
         });
         up.addActionListener(e -> move(-1));
         down.addActionListener(e -> move(1));
-        setMaximumSize(new Dimension(760, 300));
+        setBorder(Ui.pad(10, 10, 10, 10));
     }
 
     /** Swap the selected rule with its neighbour, keeping the selection on it. */
@@ -96,7 +126,7 @@ public class MatchReplacePanel extends JPanel {
     }
 
     private class Model extends AbstractTableModel {
-        private final String[] cols = {"enabled", "type", "match", "replace", "comment"};
+        private final String[] cols = {"Enabled", "Type", "Match", "Replace", "Comment"};
         @Override public int getRowCount() { return server.matchReplace.size(); }
         @Override public int getColumnCount() { return cols.length; }
         @Override public String getColumnName(int c) { return cols[c]; }

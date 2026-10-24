@@ -45,7 +45,6 @@ public class SequencerTool implements ToolModule {
     private volatile HttpService baseService;
     private volatile HttpMessage baseRequest;
     private volatile HttpMessage baseResponse;
-    private JTextArea requestInfo;
     private JComboBox<String> cookieCombo;
     private JComboBox<String> formCombo;
     private JRadioButton rCookie, rForm, rManual;
@@ -92,6 +91,43 @@ public class SequencerTool implements ToolModule {
 
     @Override public void shutdown() {
         capturing = false;
+    }
+
+    // ---- the requests sent here, listed for live capture ----
+
+    private record Received(HttpService svc, HttpMessage req, HttpMessage resp) {}
+
+    private JTable requestTable;
+    private RequestListModel requestModel;
+
+    private static final class RequestListModel extends javax.swing.table.AbstractTableModel {
+        private final List<Received> rows = new ArrayList<>();
+        private final String[] cols = {"#", "Host", "Request"};
+        void add(Received r) { rows.add(r); fireTableRowsInserted(rows.size() - 1, rows.size() - 1); }
+        void remove(int i) { if (i >= 0 && i < rows.size()) { rows.remove(i); fireTableDataChanged(); } }
+        void clear() { rows.clear(); fireTableDataChanged(); }
+        Received at(int i) { return (i >= 0 && i < rows.size()) ? rows.get(i) : null; }
+        @Override public int getRowCount() { return rows.size(); }
+        @Override public int getColumnCount() { return cols.length; }
+        @Override public String getColumnName(int c) { return cols[c]; }
+        @Override public Object getValueAt(int r, int c) {
+            Received x = rows.get(r);
+            return switch (c) {
+                case 0 -> r + 1;
+                case 1 -> x.svc() == null ? "" : x.svc().url();
+                default -> x.req() == null ? "" : x.req().startLine();
+            };
+        }
+    }
+
+    /** Make the chosen request the one a live capture will replay. */
+    private void selectReceived(int viewRow) {
+        Received r = viewRow < 0 ? null : requestModel.at(requestTable.convertRowIndexToModel(viewRow));
+        baseService = r == null ? null : r.svc();
+        baseRequest = r == null ? null : r.req();
+        baseResponse = r == null ? null : r.resp();
+        populateCombos(baseResponse);
+        startCaptureButton.setEnabled(baseRequest != null && baseService != null);
     }
 
     // ================================================================
@@ -255,54 +291,74 @@ public class SequencerTool implements ToolModule {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(Ui.pad(10, 10, 10, 10));
 
-        // --- North: request selection ---
-        JPanel north = new JPanel(new BorderLayout(0, 5));
-        north.setOpaque(false);
-        north.setBorder(Ui.pad(0, 0, 15, 0));
-        north.add(Ui.bold("select request"), BorderLayout.NORTH);
+        // --- Select live capture request ---
+        requestModel = new RequestListModel();
+        requestTable = new JTable(requestModel);
+        Ui.styleTable(requestTable);
+        Ui.distributeWidths(requestTable, 40, 240, 700);
+        requestTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        requestTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) selectReceived(requestTable.getSelectedRow());
+        });
+        requestTable.setToolTipText("find a request within the application which returns a token "
+            + "whose randomness you want to analyse, and send it here");
+        JScrollPane reqScroll = Ui.scroll(requestTable);
+        reqScroll.setPreferredSize(new Dimension(10, 120));
+        JButton remove = Ui.button("Remove", "remove the selected request");
+        JButton clearReq = Ui.button("Clear", "remove every request");
+        remove.addActionListener(e -> {
+            int r = requestTable.getSelectedRow();
+            if (r >= 0) requestModel.remove(requestTable.convertRowIndexToModel(r));
+            selectReceived(requestTable.getSelectedRow());
+        });
+        clearReq.addActionListener(e -> { requestModel.clear(); selectReceived(-1); });
+        JPanel reqRow = new JPanel(new BorderLayout(8, 0));
+        reqRow.setOpaque(false);
+        reqRow.add(Ui.buttonColumn(remove, clearReq), BorderLayout.WEST);
+        reqRow.add(reqScroll, BorderLayout.CENTER);
+        reqRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
 
-        requestInfo = Ui.note("send requests here from other tools to configure a live capture");
-        requestInfo.setBorder(Ui.pad(30, 10, 30, 10));
-        JScrollPane reqScroll = Ui.scroll(requestInfo);
-        reqScroll.setPreferredSize(new Dimension(10, 110));
-        reqScroll.setToolTipText("find a request within the application which returns a token "
-            + "whose randomness you want to analyse");
-        north.add(reqScroll, BorderLayout.CENTER);
-        panel.add(north, BorderLayout.NORTH);
-
-        // --- Center: identify token + tabs ---
-        JPanel centre = new JPanel(new BorderLayout(0, 5));
-        centre.setOpaque(false);
-        centre.add(Ui.bold("identify token in response"), BorderLayout.NORTH);
-
-        JTabbedPane configTabs = new JTabbedPane();
-        configTabs.addTab("token location", buildTokenLocation());
-        configTabs.addTab("capture options", buildCaptureOptions());
-        centre.add(configTabs, BorderLayout.CENTER);
-        panel.add(centre, BorderLayout.CENTER);
-
-        // --- South: start capture + status ---
-        startCaptureButton = Ui.button("start capture");
+        startCaptureButton = Ui.button("Start live capture");
         startCaptureButton.setFont(Ui.BOLD);
         startCaptureButton.setEnabled(false);
         startCaptureButton.addActionListener(e -> toggleCapture());
-
         captureStatus = Ui.label(" ");
+        JPanel startRow = Ui.row(startCaptureButton, captureStatus);
 
-        JPanel south = new JPanel(new BorderLayout());
-        south.setOpaque(false);
-        south.setBorder(Ui.pad(15, 0, 0, 0));
-        south.add(captureStatus, BorderLayout.WEST);
-        south.add(startCaptureButton, BorderLayout.EAST);
-        panel.add(south, BorderLayout.SOUTH);
+        JTextArea selectNote = Ui.note("Send requests here from other tools to configure a live "
+            + "capture. Select the request to use, configure the other options below, then click "
+            + "\"Start live capture\".");
+        selectNote.setMaximumSize(new Dimension(Integer.MAX_VALUE, selectNote.getPreferredSize().height));
+        JTextArea tokenNote = Ui.note("Select the location in the response where the token appears.");
+        tokenNote.setMaximumSize(new Dimension(Integer.MAX_VALUE, tokenNote.getPreferredSize().height));
 
-        return panel;
+        JPanel body = Ui.vbox(
+            Ui.heading("Select live capture request"),
+            Box.createVerticalStrut(4),
+            selectNote,
+            Box.createVerticalStrut(8),
+            reqRow,
+            Box.createVerticalStrut(8),
+            startRow,
+            Box.createVerticalStrut(18),
+            Ui.heading("Token location within response"),
+            Box.createVerticalStrut(4),
+            tokenNote,
+            Box.createVerticalStrut(8),
+            buildTokenLocation(),
+            Box.createVerticalStrut(18),
+            Ui.heading("Live capture options"),
+            Box.createVerticalStrut(4),
+            buildCaptureOptions());
+
+        panel.add(body, BorderLayout.NORTH);
+        return Ui.scroll(panel);
     }
 
     private JComponent buildTokenLocation() {
-        rCookie = Ui.radio("cookie:", false);
-        rForm   = Ui.radio("form field:", false);
-        rManual = Ui.radio("manual selection:", true);
+        rCookie = Ui.radio("Cookie:", false);
+        rForm   = Ui.radio("Form field:", false);
+        rManual = Ui.radio("Custom location:", true);
         ButtonGroup g = new ButtonGroup();
         g.add(rCookie); g.add(rForm); g.add(rManual);
         rCookie.setEnabled(false);
@@ -312,65 +368,22 @@ public class SequencerTool implements ToolModule {
         formCombo   = Ui.combo(new String[0]);
         cookieCombo.setEnabled(false);
         formCombo.setEnabled(false);
+        startDelim = Ui.field("", 14);
+        endDelim   = Ui.field("", 14);
+        startDelim.setToolTipText("the token starts after this expression");
+        endDelim.setToolTipText("the token ends at this delimiter");
+        JPanel custom = Ui.row(Ui.label("starts after"), startDelim, Ui.label("ends at"), endDelim);
 
-        JPanel locLeft = new JPanel(new GridLayout(3, 0, 0, 5));
-        locLeft.setOpaque(false);
-        locLeft.add(rCookie);
-        locLeft.add(rForm);
-        locLeft.add(rManual);
-
-        JPanel locRight = new JPanel(new GridLayout(3, 0, 0, 5));
-        locRight.setOpaque(false);
-        locRight.add(cookieCombo);
-        locRight.add(formCombo);
-        locRight.add(Ui.label(" (uses delimiters below)"));
-
-        JPanel loc = new JPanel(new BorderLayout(10, 0));
-        loc.setOpaque(false);
-        loc.add(locLeft, BorderLayout.WEST);
-        loc.add(locRight, BorderLayout.CENTER);
-
-        startDelim = Ui.field("", 16);
-        endDelim   = Ui.field("", 16);
-
-        // Lay the two delimiter fields on one grid so the labels share a column
-        // and the fields start at the same x.
-        JPanel delims = new JPanel(new GridBagLayout());
-        delims.setOpaque(false);
-        GridBagConstraints dc = new GridBagConstraints();
-        dc.insets = new Insets(2, 0, 2, 8);
-        dc.gridx = 0; dc.gridy = 0; dc.gridwidth = 2; dc.anchor = GridBagConstraints.LINE_START;
-        delims.add(Ui.bold("token delimiters"), dc);
-        dc.gridwidth = 1;
-        dc.gridx = 0; dc.gridy = 1; dc.anchor = GridBagConstraints.LINE_END;
-        delims.add(Ui.label("token starts after:"), dc);
-        dc.gridx = 1; dc.anchor = GridBagConstraints.LINE_START;
-        delims.add(startDelim, dc);
-        dc.gridx = 0; dc.gridy = 2; dc.anchor = GridBagConstraints.LINE_END;
-        delims.add(Ui.label("token ends at:"), dc);
-        dc.gridx = 1; dc.anchor = GridBagConstraints.LINE_START;
-        delims.add(endDelim, dc);
-        // Absorb spare width on the right so the fields stay packed to the left,
-        // under the radios above, rather than centring in the panel.
-        dc.gridx = 2; dc.gridy = 0; dc.weightx = 1; dc.fill = GridBagConstraints.HORIZONTAL;
-        dc.insets = new Insets(0, 0, 0, 0);
-        delims.add(Box.createHorizontalGlue(), dc);
-        delims.setBorder(Ui.pad(14, 0, 0, 10));
-
-        // Stack the location and delimiter blocks at the top, so nothing is
-        // stretched into the empty space below (the gap the old layout showed).
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setOpaque(false);
-        loc.setAlignmentX(Component.LEFT_ALIGNMENT);
-        delims.setAlignmentX(Component.LEFT_ALIGNMENT);
-        content.add(loc);
-        content.add(delims);
-
+        // The two choosers are as wide as the custom-location row, so the three
+        // controls share one right edge as well as one left edge.
+        int w = custom.getPreferredSize().width;
+        cookieCombo.setPreferredSize(new Dimension(w, cookieCombo.getPreferredSize().height));
+        formCombo.setPreferredSize(new Dimension(w, formCombo.getPreferredSize().height));
+        JPanel form = Ui.form(rCookie, cookieCombo, rForm, formCombo, rManual, custom);
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        panel.setBorder(Ui.pad(10, 10, 15, 15));
-        panel.add(content, BorderLayout.NORTH);
+        panel.setBorder(Ui.pad(0, 16, 0, 0));
+        panel.add(form, BorderLayout.WEST);
         return panel;
     }
 
@@ -378,32 +391,22 @@ public class SequencerTool implements ToolModule {
         threadsField  = Ui.field("5", 6);
         throttleField = Ui.field("0", 6);
 
-        JPanel body = Ui.vbox(
-            Ui.row(Ui.label("threads:"), threadsField),
-            Ui.row(Ui.label("throttle (millis):"), throttleField)
-        );
-        body.setBorder(Ui.pad(10, 10, 10, 10));
+        JPanel body = Ui.form(
+            "Number of threads:", threadsField,
+            "Throttle between requests (milliseconds):", throttleField);
+        body.setBorder(Ui.pad(0, 16, 0, 0));
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        panel.add(body, BorderLayout.NORTH);
+        panel.add(body, BorderLayout.WEST);
         return panel;
     }
 
-    /** "send to sequencer" lands here. */
+    /** "send to sequencer" lands here: list the request and select it. */
     private void receive(HttpService svc, HttpMessage req, HttpMessage resp) {
-        this.baseService = svc;
-        this.baseRequest = req;
-        this.baseResponse = resp;
-
-        StringBuilder sb = new StringBuilder();
-        if (svc != null) sb.append(svc.url());
-        if (req != null) sb.append("  ").append(req.startLine());
-        requestInfo.setText(sb.length() == 0 ? "(request received)" : sb.toString());
-        requestInfo.setBorder(Ui.pad(10, 10, 10, 10));
-
-        populateCombos(resp);
-        startCaptureButton.setEnabled(baseRequest != null && baseService != null);
+        requestModel.add(new Received(svc, req, resp));
+        int last = requestTable.convertRowIndexToView(requestModel.getRowCount() - 1);
+        requestTable.setRowSelectionInterval(last, last);
     }
 
     private void populateCombos(HttpMessage resp) {
@@ -455,7 +458,7 @@ public class SequencerTool implements ToolModule {
         liveRequests.set(0);
         liveErrors.set(0);
         capturing = true;
-        startCaptureButton.setText("stop capture");
+        startCaptureButton.setText("Stop live capture");
 
         captureCounter++;
         String id = "[live capture #" + captureCounter + ": "
@@ -558,7 +561,7 @@ public class SequencerTool implements ToolModule {
 
     private void stopCapture() {
         capturing = false;
-        startCaptureButton.setText("start capture");
+        startCaptureButton.setText("Start live capture");
         for (Thread t : captureThreads) t.interrupt();
         captureThreads.clear();
         if (liveWindow != null) liveWindow.setTokens(new ArrayList<>(liveTokens));

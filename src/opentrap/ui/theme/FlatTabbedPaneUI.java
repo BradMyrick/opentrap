@@ -40,6 +40,9 @@ public class FlatTabbedPaneUI extends BasicTabbedPaneUI {
         });
     }
 
+    /** Never stretch a row of tabs to fill the width; tabs keep their natural size. */
+    @Override protected boolean shouldPadTabRun(int p, int run) { return false; }
+
     @Override protected int getTabLabelShiftX(int p, int i, boolean s) { return 0; }
     @Override protected int getTabLabelShiftY(int p, int i, boolean s) { return 0; }
     @Override protected int calculateTabHeight(int p, int i, int fontHeight) { return fontHeight + tabInsets.top + tabInsets.bottom + 4; }
@@ -80,11 +83,13 @@ public class FlatTabbedPaneUI extends BasicTabbedPaneUI {
     }
 
     @Override protected void paintContentBorder(Graphics g, int p, int sel) {
+        // The hairline under the tab row runs the full width, even when a right
+        // inset keeps the end of the row clear for the suite's tool icons.
         int w = tabPane.getWidth();
         Insets ins = tabPane.getInsets();
         int y = ins.top + calculateTabAreaHeight(p, runCount, maxTabHeight) - 1;
         g.setColor(Theme.BORDER);
-        g.fillRect(ins.left, y, w - ins.left - ins.right, 1);
+        g.fillRect(0, y, w, 1);
     }
 
     @Override protected void paintFocusIndicator(Graphics g, int p, Rectangle[] rects, int i, Rectangle ir, Rectangle tr, boolean sel) {}

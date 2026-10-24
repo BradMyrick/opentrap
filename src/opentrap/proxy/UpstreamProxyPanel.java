@@ -29,20 +29,29 @@ public class UpstreamProxyPanel extends JPanel {
         Ui.styleTable(table);
         Ui.distributeWidths(table, 55, 70, 170, 60, 110, 160);
 
-        JButton add = Ui.primaryButton("add", "add an upstream proxy rule");
-        JButton edit = Ui.button("edit");
-        JButton del = Ui.button("delete");
+        JButton add = Ui.button("Add", "add an upstream proxy rule");
+        JButton edit = Ui.button("Edit");
+        JButton del = Ui.button("Remove");
         add.addActionListener(e -> { UpstreamProxy p = new UpstreamProxy(); if (editRule(p)) { mgr.rules().add(p); persist(); } });
         edit.addActionListener(e -> { int i = table.getSelectedRow(); if (i >= 0 && editRule(mgr.rules().get(i))) persist(); });
         del.addActionListener(e -> { int i = table.getSelectedRow(); if (i >= 0) { mgr.rules().remove(i); persist(); } });
 
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
-        bar.add(add); bar.add(edit); bar.add(del);
-        bar.add(Ui.note("Matching destinations are routed through the proxy; the first matching rule wins. "
-                + "HTTP CONNECT supports Basic auth."));
+        // A description on its own line above the table, and the button column
+        // beside it, as the other settings pages do.
+        JTextArea note = Ui.note("Matching destinations are routed through the proxy; the first "
+                + "matching rule wins. HTTP CONNECT supports Basic auth.");
+        note.setBorder(Ui.pad(0, 0, 6, 0));
+        JScrollPane sp = Ui.scroll(table);
+        sp.setPreferredSize(new Dimension(640, 120));
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        row.add(Ui.buttonColumn(add, edit, del), BorderLayout.WEST);
+        row.add(sp, BorderLayout.CENTER);
 
-        add(bar, BorderLayout.NORTH);
-        add(Ui.scroll(table), BorderLayout.CENTER);
+        setOpaque(false);
+        add(note, BorderLayout.NORTH);
+        add(row, BorderLayout.CENTER);
+        setMaximumSize(new Dimension(760, 170));
     }
 
     private void persist() { mgr.save(); model.fireTableDataChanged(); }
@@ -80,7 +89,7 @@ public class UpstreamProxyPanel extends JPanel {
     }
 
     private final class Model extends AbstractTableModel {
-        private final String[] cols = {"enabled", "type", "proxy host", "port", "auth", "destination"};
+        private final String[] cols = {"Enabled", "Type", "Proxy host", "Port", "Auth", "Destination"};
         @Override public int getRowCount() { return mgr.rules().size(); }
         @Override public int getColumnCount() { return cols.length; }
         @Override public String getColumnName(int c) { return cols[c]; }

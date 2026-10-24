@@ -58,8 +58,8 @@ public class OrganizerTool implements ToolModule {
             public void changedUpdate(javax.swing.event.DocumentEvent e) { saveNotes(); }
         });
 
-        JButton delete = Ui.button("delete");
-        JButton clear = Ui.button("clear all");
+        JButton delete = Ui.button("Delete");
+        JButton clear = Ui.button("Clear all");
         delete.addActionListener(e -> {
             OrganizerItem it = model.at(table.getSelectedRow());
             if (it != null) store.remove(it);
@@ -104,11 +104,11 @@ public class OrganizerTool implements ToolModule {
         JPanel col = new JPanel();
         col.setLayout(new BoxLayout(col, BoxLayout.Y_AXIS));
         col.setOpaque(false);
-        JLabel title = new JLabel("Nothing saved yet");
+        JLabel title = new JLabel("Organizer inbox is empty");
         title.setFont(Ui.HEADING.deriveFont(16f));
         title.setForeground(Theme.TEXT);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
-        JLabel hint = new JLabel("Right-click any request and choose “Send to organizer” to stash it here.");
+        JLabel hint = new JLabel("To get started, send a message to Organizer from anywhere in OpenTRAP.");
         hint.setFont(Ui.PLAIN);
         hint.setForeground(Theme.MUTED);
         hint.setAlignmentX(Component.CENTER_ALIGNMENT);

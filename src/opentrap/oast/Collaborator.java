@@ -134,9 +134,18 @@ public final class Collaborator {
             } catch (Exception e) {
                 setStatus("poll error: " + e.getMessage());
             }
-            try { Thread.sleep(POLL_INTERVAL_MS); }
-            catch (InterruptedException e) { return; }
+            synchronized (pollLock) {
+                try { pollLock.wait(POLL_INTERVAL_MS); }
+                catch (InterruptedException e) { return; }
+            }
         }
+    }
+
+    private final Object pollLock = new Object();
+
+    /** Poll the server right away instead of waiting out the interval. */
+    public void pollNow() {
+        synchronized (pollLock) { pollLock.notifyAll(); }
     }
 
     private void setStatus(String s) {

@@ -85,18 +85,18 @@ public class ScannerTool implements ToolModule {
         JPanel top = new JPanel(new BorderLayout(8, 0));
         top.setOpaque(false);
         top.setBorder(Ui.pad(8, 10, 8, 10));
-        JPanel left = Ui.row(Ui.label("filter:"), filterField, Ui.button("clear", "Show every rule again"));
+        JPanel left = Ui.row(Ui.label("Filter:"), filterField, Ui.button("Clear", "Show every rule again"));
         ((JButton) left.getComponent(2)).addActionListener(e -> { filterField.setText(""); applyFilter(); });
         top.add(left, BorderLayout.WEST);
         top.add(summary, BorderLayout.EAST);
 
-        JButton enableAll  = Ui.button("enable all", "Switch on every rule in the current filter");
-        JButton disableAll = Ui.button("disable all", "Switch off every rule in the current filter");
-        JButton setLow     = Ui.button("threshold low", "Report on weaker evidence, more false positives");
-        JButton setMed     = Ui.button("threshold medium", "The balanced setting");
-        JButton setHigh    = Ui.button("threshold high", "Report only on strong evidence, more misses");
-        JButton setDef     = Ui.button("threshold default", "Use each rule's own default");
-        JButton refresh    = Ui.button("refresh", "Reload the rules from the engine");
+        JButton enableAll  = Ui.button("Enable all", "Switch on every rule in the current filter");
+        JButton disableAll = Ui.button("Disable all", "Switch off every rule in the current filter");
+        JButton setLow     = Ui.button("Threshold low", "Report on weaker evidence, more false positives");
+        JButton setMed     = Ui.button("Threshold medium", "The balanced setting");
+        JButton setHigh    = Ui.button("Threshold high", "Report only on strong evidence, more misses");
+        JButton setDef     = Ui.button("Threshold default", "Use each rule's own default");
+        JButton refresh    = Ui.button("Refresh", "Reload the rules from the engine");
 
         enableAll.addActionListener(e -> bulkEnabled(true));
         disableAll.addActionListener(e -> bulkEnabled(false));
@@ -261,7 +261,7 @@ public class ScannerTool implements ToolModule {
     }
 
     private final class RuleTableModel extends AbstractTableModel {
-        private final String[] cols = {"enabled", "id", "rule", "quality", "threshold"};
+        private final String[] cols = {"Enabled", "ID", "Rule", "Quality", "Threshold"};
         private List<Rule> rules = new ArrayList<>();
 
         void setRules(List<Rule> r) { this.rules = r; fireTableDataChanged(); }

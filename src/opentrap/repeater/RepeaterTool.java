@@ -116,7 +116,7 @@ public class RepeaterTool implements ToolModule {
         private final JLabel status = Ui.label("ready");
         private final JLabel lengthLabel = Ui.label("length: 0");
         private final JButton go = Ui.primaryButton("Send", "send the request");
-        private final JButton cancel = Ui.button("cancel");
+        private final JButton cancel = Ui.button("Cancel");
         private final JButton prev = Ui.button("<", "previous request/response in this tab");
         private final JButton next = Ui.button(">", "next request/response in this tab");
         private final JLabel histLabel = Ui.label("");

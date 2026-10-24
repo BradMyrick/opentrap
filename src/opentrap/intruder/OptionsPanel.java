@@ -26,7 +26,7 @@ public class OptionsPanel extends OptionsPage {
     private final JCheckBox followRedirects = Ui.check("follow redirects", false);
 
     private final DefaultTableModel grepModel =
-            new DefaultTableModel(new Object[]{"expression"}, 0) {
+            new DefaultTableModel(new Object[]{"Expression"}, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
     private final JTable grepTable = new JTable(grepModel);
@@ -67,7 +67,7 @@ public class OptionsPanel extends OptionsPage {
                 OptionsPage.fieldRow("throttle (ms between requests):", throttle, ""));
         section("protocol",
                 Ui.note("HTTP/1 is raw and byte-exact; HTTP/2 and auto use the JDK transport."),
-                Ui.row(Ui.label("send requests over:"), mode));
+                OptionsPage.labelRow("send requests over:", mode));
         section("redirects", followRedirects);
         section("grep - match",
                 Ui.note("Flag result items whose response contains these expressions. Each "

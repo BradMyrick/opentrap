@@ -47,7 +47,7 @@ public class PayloadSet extends JPanel {
             if (onChange != null) onChange.run();
         });
 
-        JPanel top = Ui.row(Ui.label("payload type:"), typeCombo);
+        JPanel top = Ui.form("Payload type:", typeCombo);
         top.setAlignmentX(LEFT_ALIGNMENT);
         cards.setAlignmentX(LEFT_ALIGNMENT);
         processor.setAlignmentX(LEFT_ALIGNMENT);

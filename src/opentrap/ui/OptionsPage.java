@@ -42,6 +42,7 @@ public class OptionsPage extends JPanel {
 
     /** Add a section with a heading and a body of stacked components. */
     public JPanel section(String title, Component... parts) {
+        title = Ui.sentence(title);
         if (!first) {
             JSeparator sep = new JSeparator();
             sep.setMaximumSize(new Dimension(620, 10));

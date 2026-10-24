@@ -19,10 +19,8 @@ public class ListenersPanel extends JPanel {
         this.server = server;
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(false);
-        JLabel h = Ui.heading("proxy listeners");
-        h.setAlignmentX(LEFT_ALIGNMENT);
-        add(h);
-        add(Box.createVerticalStrut(4));
+        // The page gives this block its titled section; the panel starts with
+        // the live listening status.
         JLabel status = Ui.bold(server.listeningSummary());
         status.setAlignmentX(LEFT_ALIGNMENT);
         add(status);
@@ -108,7 +106,7 @@ public class ListenersPanel extends JPanel {
     }
 
     private class Model extends AbstractTableModel {
-        private final String[] cols = {"running", "port", "loopback only", "invisible", "redirect"};
+        private final String[] cols = {"Running", "Port", "Loopback only", "Invisible", "Redirect"};
         @Override public int getRowCount() { return server.listeners().size(); }
         @Override public int getColumnCount() { return cols.length; }
         @Override public String getColumnName(int c) { return cols[c]; }

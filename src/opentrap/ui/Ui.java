@@ -119,26 +119,39 @@ public final class Ui {
         };
     }
 
+    /**
+     * User-facing text starts with a capital, as in the reference, so a label
+     * written in lower case in code still reads as a proper heading or button.
+     * Leading spaces and symbols are kept; only the first letter is raised.
+     */
+    public static String sentence(String text) {
+        if (text == null || text.isEmpty()) return text;
+        int i = 0;
+        while (i < text.length() && !Character.isLetter(text.charAt(i))) i++;
+        if (i >= text.length() || Character.isUpperCase(text.charAt(i))) return text;
+        return text.substring(0, i) + Character.toUpperCase(text.charAt(i)) + text.substring(i + 1);
+    }
+
     public static JLabel heading(String text) {
-        JLabel l = new JLabel(text);
+        JLabel l = new JLabel(sentence(text));
         l.setFont(HEADING);
         return l;
     }
 
     public static JLabel label(String text) {
-        JLabel l = new JLabel(text);
+        JLabel l = new JLabel(sentence(text));
         l.setFont(PLAIN);
         return l;
     }
 
     public static JLabel bold(String text) {
-        JLabel l = new JLabel(text);
+        JLabel l = new JLabel(sentence(text));
         l.setFont(BOLD);
         return l;
     }
 
     public static JCheckBox check(String text, boolean selected) {
-        JCheckBox c = new JCheckBox(text, selected);
+        JCheckBox c = new JCheckBox(sentence(text), selected);
         c.setFont(PLAIN);
         c.setFocusable(false);
         c.setOpaque(false);
@@ -146,7 +159,7 @@ public final class Ui {
     }
 
     public static JRadioButton radio(String text, boolean selected) {
-        JRadioButton r = new JRadioButton(text, selected);
+        JRadioButton r = new JRadioButton(sentence(text), selected);
         r.setFont(PLAIN);
         r.setFocusable(false);
         r.setOpaque(false);
@@ -154,7 +167,7 @@ public final class Ui {
     }
 
     public static JButton button(String text) {
-        JButton b = new JButton(text);
+        JButton b = new JButton(sentence(text));
         b.setFont(PLAIN);
         return b;
     }
@@ -184,8 +197,26 @@ public final class Ui {
         return c;
     }
 
+    /**
+     * A wrapping, read-only paragraph. A plain wrapping text area has no idea
+     * how wide it will be laid out, so it reports a one-line (or a one-column)
+     * preferred size and gets squashed or clipped. This one reports an honest
+     * size for its text: up to {@link #NOTE_COLUMNS} wide and as many rows as
+     * that needs. Laid out wider it just uses fewer lines.
+     */
     public static JTextArea note(String text) {
-        JTextArea a = new JTextArea(text);
+        JTextArea a = new JTextArea() {
+            @Override public Dimension getPreferredSize() {
+                Insets in = getInsets();
+                int w = getColumns() * getColumnWidth() + in.left + in.right;
+                int h = getRows() * getRowHeight() + in.top + in.bottom;
+                return new Dimension(w, h);
+            }
+            @Override public void setText(String t) {
+                super.setText(t);
+                sizeNote(this);
+            }
+        };
         a.setFont(PLAIN);
         a.setEditable(false);
         a.setOpaque(false);
@@ -193,7 +224,22 @@ public final class Ui {
         a.setWrapStyleWord(true);
         a.setBorder(null);
         a.setFocusable(false);
+        a.setText(text);
         return a;
+    }
+
+    /** The widest a note lays itself out before wrapping, in characters. */
+    public static final int NOTE_COLUMNS = 90;
+
+    /** Size a note's rows and columns to its text, and stop layouts stretching it. */
+    public static void sizeNote(JTextArea a) {
+        String t = a.getText();
+        int len = t == null ? 0 : t.length();
+        int cols = Math.max(24, Math.min(NOTE_COLUMNS, len));
+        a.setColumns(cols);
+        // Word wrap lands a little short of the column count, so allow for it.
+        a.setRows(Math.max(1, (int) Math.ceil(len / (cols * 0.9))));
+        a.setMaximumSize(new Dimension(Integer.MAX_VALUE, a.getPreferredSize().height));
     }
 
     public static Border pad(int t, int l, int b, int r) {
@@ -249,6 +295,12 @@ public final class Ui {
         t.setFont(PLAIN);
         t.setRowHeight(22);
         t.getTableHeader().setFont(BOLD);
+        // Column titles read with a leading capital, as in the reference.
+        for (int i = 0; i < t.getColumnModel().getColumnCount(); i++) {
+            javax.swing.table.TableColumn c = t.getColumnModel().getColumn(i);
+            Object v = c.getHeaderValue();
+            if (v instanceof String s) c.setHeaderValue(sentence(s));
+        }
         t.getTableHeader().setReorderingAllowed(false);
         t.getTableHeader().setToolTipText("click column to sort ascending (SHIFT-click = descending)");
         t.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -391,20 +443,36 @@ public final class Ui {
         JPanel p = new JPanel(new GridBagLayout());
         p.setOpaque(false);
         GridBagConstraints c = new GridBagConstraints();
-        for (int i = 0; i + 1 < labelThenComponent.length; i += 2) {
-            c.gridy = i / 2;
-            c.insets = new Insets(2, 0, 2, 8);
+        int rows = 0;
+        for (int i = 0; i + 1 < labelThenComponent.length; i += 2, rows++) {
+            Object l = labelThenComponent[i];
+            c.gridy = rows;
+            c.insets = new Insets(3, 0, 3, 10);
             c.gridx = 0; c.weightx = 0;
-            c.anchor = GridBagConstraints.LINE_END;
             c.fill = GridBagConstraints.NONE;
-            p.add(label(String.valueOf(labelThenComponent[i])), c);
+            if (l instanceof Component lc) {
+                // A control standing in for the label (a radio button, say)
+                // keeps its own text left-aligned, as a row of options reads.
+                c.anchor = GridBagConstraints.LINE_START;
+                p.add(lc, c);
+            } else {
+                c.anchor = GridBagConstraints.LINE_END;
+                p.add(label(String.valueOf(l)), c);
+            }
 
-            c.insets = new Insets(2, 0, 2, 0);
-            c.gridx = 1; c.weightx = 1;
+            // The field keeps its natural width and starts at the shared edge.
+            c.insets = new Insets(3, 0, 3, 0);
+            c.gridx = 1; c.weightx = 0;
             c.anchor = GridBagConstraints.LINE_START;
-            c.fill = GridBagConstraints.HORIZONTAL;
+            c.fill = GridBagConstraints.NONE;
             p.add((Component) labelThenComponent[i + 1], c);
         }
+        // Spare width goes to a trailing column, so the two columns stay packed
+        // to the left instead of drifting towards the centre of a wide panel.
+        c.gridx = 2; c.gridy = 0; c.gridheight = Math.max(1, rows);
+        c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(0, 0, 0, 0);
+        p.add(Box.createHorizontalGlue(), c);
         return p;
     }
 

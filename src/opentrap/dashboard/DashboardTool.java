@@ -191,10 +191,13 @@ public class DashboardTool implements ToolModule {
 
         // Header: bold "Tasks" + action buttons.
         JButton newScan = Ui.primaryButton("New scan", "crawl and audit a target");
+        JButton newLiveTask = Ui.primaryButton("New live task", "start a live task");
         JButton spiderBtn = Ui.button("Spider");
         accentise(newScan);
+        accentise(newLiveTask);
         accentise(spiderBtn);
         newScan.addActionListener(e -> newScan());
+        opentrap.ui.Unbuilt.DASHBOARD_LIVE_TASK.attach(newLiveTask);
         spiderBtn.addActionListener(e -> startSpider());
 
         JPanel header = new JPanel(new BorderLayout());
@@ -203,6 +206,7 @@ public class DashboardTool implements ToolModule {
         JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         btns.setOpaque(false);
         btns.add(newScan);
+        btns.add(newLiveTask);
         btns.add(spiderBtn);
         header.add(btns, BorderLayout.EAST);
 
@@ -260,8 +264,10 @@ public class DashboardTool implements ToolModule {
                 if (ctx != null) ctx.taskChanged(selected);
             }
         }));
-        headerControls.add(new HeaderIconButton("gear", "Task settings", () -> {}));
-        headerControls.add(new HeaderIconButton("help", "Help", () -> {}));
+        headerControls.add(new HeaderIconButton("gear", "Task settings",
+                () -> opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.showDialog(rightHeader)));
+        headerControls.add(new HeaderIconButton("help", "Getting started",
+                () -> { if (ctx != null && ctx.frame() instanceof opentrap.ui.SuiteFrame sf) sf.selectTool("discover"); }));
 
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
@@ -274,6 +280,7 @@ public class DashboardTool implements ToolModule {
         tabs.addTab("Issues", buildIssuesTab());
         tabs.addTab("Event log", buildEventLogTab());
         tabs.addTab("Audit log", buildAuditLogTab());
+        tabs.addTab("Live crawl view", opentrap.ui.Unbuilt.DASHBOARD_LIVE_CRAWL.panel());
 
         rightBody.add(tabs, "scan");
         rightBody.add(buildCrawlCard(), "crawl");
@@ -374,7 +381,8 @@ public class DashboardTool implements ToolModule {
         top.setOpaque(false);
         top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
         addLeft(top, sectionHeader("Task configuration", sectionIcon("pencil"),
-                "View configuration", () -> {}));
+                "View configuration",
+                () -> opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.showDialog(top)));
         top.add(Box.createVerticalStrut(10));
         addLeft(top, configGrid());
         top.add(Box.createVerticalStrut(16));
@@ -618,12 +626,17 @@ public class DashboardTool implements ToolModule {
                 case "play" -> g2.fillPolygon(new int[]{cx - 3, cx - 3, cx + 5},
                         new int[]{cy - 5, cy + 5, cy}, 3);
                 case "gear" -> {
-                    g2.drawOval(cx - 3, cy - 3, 6, 6);
+                    // A cog: eight short, thick teeth on a ring with a solid hub.
+                    g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
                     for (int a = 0; a < 360; a += 45) {
                         double r = Math.toRadians(a);
-                        g2.drawLine((int) (cx + 4 * Math.cos(r)), (int) (cy + 4 * Math.sin(r)),
-                                    (int) (cx + 6 * Math.cos(r)), (int) (cy + 6 * Math.sin(r)));
+                        g2.draw(new java.awt.geom.Line2D.Double(
+                                cx + 5.0 * Math.cos(r), cy + 5.0 * Math.sin(r),
+                                cx + 7.5 * Math.cos(r), cy + 7.5 * Math.sin(r)));
                     }
+                    g2.setStroke(new BasicStroke(1.6f));
+                    g2.draw(new java.awt.geom.Ellipse2D.Double(cx - 5, cy - 5, 10, 10));
+                    g2.fill(new java.awt.geom.Ellipse2D.Double(cx - 2, cy - 2, 4, 4));
                 }
                 case "help" -> {
                     g2.setFont(new Font("Dialog", Font.BOLD, 13));
@@ -1245,8 +1258,7 @@ public class DashboardTool implements ToolModule {
                     if (r != null) r.run();
                 }));
                 JMenuItem settings = new JMenuItem("Settings");
-                settings.setEnabled(false);   // no per-task settings screen yet
-                settings.setToolTipText("Per-task settings are coming soon.");
+                opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.attach(settings);
                 m.add(settings);
                 m.addSeparator();
                 m.add(mi("Delete", () -> deleteTask(task)));

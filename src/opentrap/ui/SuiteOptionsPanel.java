@@ -57,7 +57,7 @@ public class SuiteOptionsPanel extends JPanel {
         });
         JTextArea themeNote = Ui.note("Switches between the light and dark palette. "
                 + "Changing it restarts the app so every panel comes up in the new theme.");
-        themeNote.setPreferredSize(new java.awt.Dimension(600, 40));
+        themeNote.setMaximumSize(new java.awt.Dimension(600, themeNote.getPreferredSize().height));
 
         page.section("display",
                 OptionsPage.labelRow("interface scale", scaleCombo),
