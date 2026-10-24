@@ -1211,10 +1211,11 @@ public class DashboardTool implements ToolModule {
                 stateRow.add(st);
             }
 
-            // Cards show the "Issues:" pill row (zeros for a crawl until its audit
-            // runs), matching the reference. A finished crawl shows nothing more;
-            // its figures live in the crawl window and the Summary task progress.
-            JComponent tail = (crawl && finished) ? null : issuesRow();
+            // A crawl discovers, it does not detect: its card carries its real
+            // figures (locations and requests) rather than issue pills that could
+            // only ever read zero. Audits show their issue pills; the live passive
+            // card counts every issue found so far, and says so.
+            JComponent tail = crawl ? crawlFigures() : issuesRow();
 
             JPanel body = new JPanel();
             body.setOpaque(false);
@@ -1267,7 +1268,7 @@ public class DashboardTool implements ToolModule {
             row.setOpaque(false);
             row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
             row.add(Box.createHorizontalGlue());
-            JLabel lbl = Ui.label("Issues:");
+            JLabel lbl = Ui.label(task.type() == ScanTask.Type.LIVE_PASSIVE ? "All issues:" : "Issues:");
             lbl.setForeground(GREY_TEXT);
             row.add(lbl);
             row.add(Box.createHorizontalStrut(6));
@@ -1278,12 +1279,24 @@ public class DashboardTool implements ToolModule {
             return row;
         }
 
+        /** What a crawl found, right-aligned where an audit shows its pills. */
+        private JComponent crawlFigures() {
+            JPanel row = new JPanel();
+            row.setOpaque(false);
+            row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+            row.add(Box.createHorizontalGlue());
+            int loc = Math.max(0, task.discoveredLocations());
+            JLabel lbl = Ui.label("Discovered " + loc + (loc == 1 ? " location, " : " locations, ")
+                    + task.requests() + (task.requests() == 1 ? " request" : " requests"));
+            lbl.setForeground(GREY_TEXT);
+            row.add(lbl);
+            return row;
+        }
+
         private int getPreferredHeight() {
             boolean finished = task.state() == ScanTask.State.FINISHED;
-            boolean crawl    = task.type() == ScanTask.Type.LIVE_ACTIVE;
-            if (crawl && finished) return 96;    // title, subtitle, status only
             if (task.type() == ScanTask.Type.LIVE_PASSIVE) return 118;
-            if (finished) return 120;            // issues row, no progress bar
+            if (finished) return 120;            // figures or issues row, no progress bar
             return 148;
         }
 

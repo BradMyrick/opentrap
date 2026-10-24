@@ -70,7 +70,7 @@ public final class StateIO {
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
             zos.putNextEntry(new ZipEntry("opentrap"));
             ObjectOutputStream oos = new ObjectOutputStream(zos);
-            oos.writeInt(4);                            // format version
+            oos.writeInt(5);                            // format version
             oos.writeObject(ctx.store().all());         // history
             oos.writeObject(ctx.scope());               // scope
             oos.writeObject(ctx.settings().snapshot()); // settings
@@ -84,6 +84,7 @@ public final class StateIO {
                 if (s != null) toolStates.put(t.name(), s);
             }
             oos.writeObject(toolStates);
+            oos.writeObject(new ArrayList<>(ctx.taskSnapshots()));   // v5: the scans on the dashboard
             oos.flush();
             zos.closeEntry();
         }
@@ -96,7 +97,7 @@ public final class StateIO {
             if (e == null) throw new IOException("Input file is not in correct format");
             ObjectInputStream ois = new ObjectInputStream(zis);
             int version = ois.readInt();
-            if (version > 3) {
+            if (version > 5) {
                 ctx.alert("suite", "This file was saved by a later version - restore may fail");
             }
             List<LogEntry> entries = (List<LogEntry>) ois.readObject();
@@ -116,6 +117,10 @@ public final class StateIO {
                 savedIssues = (java.util.List<opentrap.core.Issue>) ois.readObject();
                 toolStates = (java.util.Map<String, java.io.Serializable>) ois.readObject();
             }
+            java.util.List<opentrap.core.ScanTask.Snapshot> savedTasks = null;
+            if (version >= 5) {
+                savedTasks = (java.util.List<opentrap.core.ScanTask.Snapshot>) ois.readObject();
+            }
 
             ctx.store().replaceAll(entries == null ? new ArrayList<>() : entries);
             if (scope != null) {
@@ -128,6 +133,7 @@ public final class StateIO {
             if (session != null) ctx.sessions().restore(session);
             if (organizer != null) ctx.organizer().restore(organizer);
             if (savedIssues != null) ctx.restoreIssues(savedIssues);
+            if (savedTasks != null) ctx.restoreTasks(savedTasks);
             if (toolStates != null) {
                 for (opentrap.core.ToolModule t : ctx.tools()) {
                     java.io.Serializable s = toolStates.get(t.name());

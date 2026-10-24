@@ -30,6 +30,7 @@ public final class RunTests {
         new opentrap.proxy.WsMatchReplaceTest().run();
         new opentrap.engine.ScanConfigStoreTest().run();
         new opentrap.ui.SendToComparerTest().run();
+        new opentrap.ui.ProjectTasksTest().run();
 
         System.exit(Harness.report());
     }

@@ -214,6 +214,29 @@ public class SuiteContext {
         synchronized (tasks) { return new ArrayList<>(tasks); }
     }
 
+    /** The scans worth saving: everything but the always-present live passive audit. */
+    public List<ScanTask.Snapshot> taskSnapshots() {
+        List<ScanTask.Snapshot> out = new ArrayList<>();
+        for (ScanTask t : tasks()) {
+            if (t.type() != ScanTask.Type.LIVE_PASSIVE) out.add(t.snapshot());
+        }
+        return out;
+    }
+
+    /**
+     * Put a project's saved scans back on the dashboard, replacing any scans of
+     * this session; the live passive audit stays. Each comes back finished.
+     */
+    public void restoreTasks(List<ScanTask.Snapshot> saved) {
+        List<ScanTask> restored = new ArrayList<>();
+        if (saved != null) for (ScanTask.Snapshot s : saved) if (s != null) restored.add(ScanTask.fromSnapshot(s));
+        synchronized (tasks) {
+            tasks.removeIf(t -> t.type() != ScanTask.Type.LIVE_PASSIVE);
+            tasks.addAll(restored);
+        }
+        for (ScanTask t : restored) taskChanged(t);
+    }
+
     public void taskChanged(ScanTask t) {
         for (TaskListener l : taskListeners) l.taskChanged(t);
     }
