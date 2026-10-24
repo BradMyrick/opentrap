@@ -540,7 +540,7 @@ public class DashboardTool implements ToolModule {
     }
 
     /**
-     * Put a Burp-style severity glyph (a coloured disc with "!" for serious
+     * Put a severity glyph (a coloured disc with "!" for serious
      * findings, "i" for informational ones) in front of the issue-type text.
      */
     private void summaryIssueIconColumn(JTable table, int textCol) {
@@ -1120,7 +1120,7 @@ public class DashboardTool implements ToolModule {
                 stateRow.add(sw);
             } else {
                 // Active task, or a finished one: show the status word next to a
-                // small state icon. A finished task reads in green, as Burp does.
+                // small state icon. A finished task reads in green.
                 JLabel st = Ui.label(statusText(finished, crawl));
                 st.setIcon(statusIcon(task.state()));
                 st.setIconTextGap(5);
