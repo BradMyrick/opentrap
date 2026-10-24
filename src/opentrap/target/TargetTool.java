@@ -37,11 +37,66 @@ public class TargetTool implements ToolModule {
 
     @Override public void init(SuiteContext ctx) {
         this.ctx = ctx;
-        ctx.addSiteMapListener(e -> SwingUtilities.invokeLater(() -> {
-            siteMap.add(e);
-            syncTree();
-        }));
-        ctx.addIssueListener(i -> SwingUtilities.invokeLater(this::refreshIssues));
+        ctx.addSiteMapListener(new SuiteContext.SiteMapListener() {
+            @Override public void siteMapChanged(LogEntry e) {
+                // Coalesce: queue the entry and sync the tree once per tick, so a
+                // burst of traffic (or a crawl) costs one tree sync, not one each.
+                pendingEntries.add(e);
+                SwingUtilities.invokeLater(() -> { if (!syncTimer.isRunning()) syncTimer.start(); });
+            }
+            @Override public void siteMapReloaded(List<LogEntry> all) {
+                pendingEntries.clear();
+                SwingUtilities.invokeLater(() -> reloadSiteMap(all));
+            }
+        });
+        ctx.addIssueListener(new SuiteContext.IssueListener() {
+            @Override public void issueAdded(Issue i) { SwingUtilities.invokeLater(TargetTool.this::refreshIssues); }
+            @Override public void issuesReloaded()    { SwingUtilities.invokeLater(TargetTool.this::refreshIssues); }
+        });
+    }
+
+    /** Entries recorded since the last tree sync, drained by {@link #syncTimer}. */
+    private final java.util.concurrent.ConcurrentLinkedQueue<LogEntry> pendingEntries =
+            new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+    /** Fires once per burst of traffic: adds every queued entry, then syncs the tree once. */
+    private final javax.swing.Timer syncTimer = new javax.swing.Timer(120, e -> {
+        LogEntry le;
+        boolean any = false;
+        while ((le = pendingEntries.poll()) != null) { siteMap.add(le); any = true; }
+        if (any) syncTree();
+        if (pendingEntries.isEmpty()) ((javax.swing.Timer) e.getSource()).stop();
+    });
+
+    /**
+     * Rebuild the site map and its tree from a restored history in one pass:
+     * every node is created up front and the model is reloaded once, instead of
+     * a tree sync per entry, which made opening a large project take minutes.
+     */
+    private void reloadSiteMap(List<LogEntry> all) {
+        siteMap.clear();
+        for (LogEntry e : all) siteMap.add(e);
+        if (treeModel == null || tree == null) return;
+        DefaultMutableTreeNode rootTn = (DefaultMutableTreeNode) treeModel.getRoot();
+        rootTn.removeAllChildren();
+        treeNodes.clear();
+        treeNodes.put(siteMap.root(), rootTn);
+        buildTree(siteMap.root(), rootTn);
+        selectedNodes = new ArrayList<>();
+        selectedNode = null;
+        treeModel.reload();
+        tree.expandPath(new TreePath(rootTn));
+        if (tree.getRowCount() > 0) tree.setSelectionRow(0);
+        refreshIssues();
+    }
+
+    private void buildTree(SiteMap.Node sm, DefaultMutableTreeNode tn) {
+        for (SiteMap.Node child : sm.children.values()) {
+            DefaultMutableTreeNode c = new DefaultMutableTreeNode(child);
+            treeNodes.put(child, c);
+            tn.add(c);
+            buildTree(child, c);
+        }
     }
 
     @Override public Tab[] tabs() {

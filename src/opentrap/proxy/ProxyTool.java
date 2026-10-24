@@ -281,6 +281,15 @@ public class ProxyTool implements ToolModule {
                 }
                 public void statusChanged(String text) {}
             });
+            // A restored project replaces the history wholesale: reload the
+            // table once from the store rather than leaving it empty.
+            ctx.store().addListener(new MessageStore.Listener() {
+                @Override public void entryAdded(LogEntry e) {}
+                @Override public void entryUpdated(LogEntry e) {}
+                @Override public void reloaded(java.util.List<LogEntry> all) {
+                    SwingUtilities.invokeLater(() -> model.reload(all));
+                }
+            });
 
             ctx.addScopeListener(() -> { filter.scope = ctx.scope(); applyFilter(); });
             applyFilter();

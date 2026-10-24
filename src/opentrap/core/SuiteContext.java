@@ -31,9 +31,17 @@ public class SuiteContext {
 
     public interface ScopeListener { void scopeChanged(); }
 
-    public interface SiteMapListener { void siteMapChanged(LogEntry e); }
+    public interface SiteMapListener {
+        void siteMapChanged(LogEntry e);
+        /** The whole history was replaced (a project was restored): rebuild once from {@code all}. */
+        default void siteMapReloaded(List<LogEntry> all) {}
+    }
 
-    public interface IssueListener { void issueAdded(Issue i); }
+    public interface IssueListener {
+        void issueAdded(Issue i);
+        /** All issues were replaced at once (a project was restored): refresh once. */
+        default void issuesReloaded() {}
+    }
 
     public interface TaskListener { void taskChanged(ScanTask t); }
 
@@ -139,6 +147,11 @@ public class SuiteContext {
         for (SiteMapListener l : siteMapListeners) l.siteMapChanged(e);
     }
 
+    /** Tell the site map listeners the history was replaced wholesale. */
+    public void siteMapReloaded(List<LogEntry> all) {
+        for (SiteMapListener l : siteMapListeners) l.siteMapReloaded(all);
+    }
+
     public void addSiteMapListener(SiteMapListener l) { siteMapListeners.add(l); }
 
     // ---- issues ----
@@ -155,13 +168,21 @@ public class SuiteContext {
         synchronized (issues) { return new ArrayList<>(issues); }
     }
 
-    /** Replace all issues (used when restoring a saved project). */
+    /**
+     * Replace all issues (used when restoring a saved project). Listeners get
+     * one {@code issuesReloaded} rather than an event per issue.
+     */
     public void restoreIssues(List<Issue> saved) {
         synchronized (issues) {
             issues.clear();
             issueKeys.clear();
+            if (saved != null) {
+                for (Issue i : saved) {
+                    if (i != null && issueKeys.add(i.dedupeKey())) issues.add(i);
+                }
+            }
         }
-        if (saved != null) for (Issue i : saved) addIssue(i);
+        for (IssueListener l : issueListeners) l.issuesReloaded();
     }
 
     public void addIssueListener(IssueListener l) { issueListeners.add(l); }

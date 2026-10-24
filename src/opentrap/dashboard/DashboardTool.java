@@ -132,7 +132,10 @@ public class DashboardTool implements ToolModule {
 
     @Override public void init(SuiteContext ctx) {
         this.ctx = ctx;
-        ctx.addIssueListener(i -> issuesRefresh.request());
+        ctx.addIssueListener(new SuiteContext.IssueListener() {
+            @Override public void issueAdded(Issue i) { issuesRefresh.request(); }
+            @Override public void issuesReloaded()    { issuesRefresh.request(); }
+        });
         ctx.addTaskListener(t -> tasksRefresh.request());
 
         // Feed the crawl window's live Logger from the shared store: every crawl
@@ -143,6 +146,10 @@ public class DashboardTool implements ToolModule {
             }
             @Override public void entryUpdated(LogEntry e) {
                 if (isScanEntry(e)) { logHasUpdates = true; logRefresh.request(); }
+            }
+            @Override public void reloaded(List<LogEntry> all) {
+                for (LogEntry e : all) if (isScanEntry(e)) logAddQueue.add(e);
+                logRefresh.request();
             }
         });
 

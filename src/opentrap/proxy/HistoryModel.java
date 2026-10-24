@@ -49,6 +49,15 @@ public class HistoryModel extends AbstractTableModel {
         fireTableDataChanged();
     }
 
+    /** Replace the contents from a restored history in one go (one table event). */
+    public synchronized void reload(java.util.List<LogEntry> entries) {
+        all.clear();
+        for (LogEntry e : entries) {
+            if (toolFilter == null || toolFilter.equals(e.tool())) all.add(e);
+        }
+        reapply();
+    }
+
     public synchronized void clear() { all.clear(); shown.clear(); fireTableDataChanged(); }
 
     public synchronized LogEntry at(int row) {

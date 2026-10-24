@@ -57,16 +57,13 @@ public final class StateIO {
         JFileChooser fc = new JFileChooser();
         fc.setDialogTitle("restore state");
         if (fc.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) return;
-        try {
-            int n = restore(ctx, fc.getSelectedFile());
-            ctx.alert("suite", "restored " + n + " items from " + fc.getSelectedFile().getName());
+        final File file = fc.getSelectedFile();
+        restoreAsync(ctx, parent, file, n -> {
+            ctx.alert("suite", "restored " + n + " items from " + file.getName());
             JOptionPane.showMessageDialog(parent,
                     "Restore completed. " + n + " history items loaded.",
                     "restore state", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(parent, "An error occurred: " + e.getMessage(),
-                    "error", JOptionPane.ERROR_MESSAGE);
-        }
+        });
     }
 
     public static void save(SuiteContext ctx, File file) throws IOException {
@@ -140,11 +137,58 @@ public final class StateIO {
                 }
             }
             int max = 0;
-            for (LogEntry le : ctx.store().all()) max = Math.max(max, le.number());
+            List<LogEntry> all = ctx.store().all();
+            for (LogEntry le : all) max = Math.max(max, le.number());
             LogEntry.setCounter(max);
             ctx.scopeChanged();
-            for (LogEntry le : ctx.store().all()) ctx.siteMapChanged(le);
-            return ctx.store().size();
+            // One bulk rebuild of the site map, not one tree sync per entry.
+            ctx.siteMapReloaded(all);
+            return all.size();
         }
+    }
+
+    /**
+     * Restore off the event thread, with a small progress dialog, so a large
+     * project never freezes the window. The UI fans the restored data out in
+     * bulk on the event thread. {@code onDone} runs on the event thread with
+     * the number of history items restored.
+     */
+    public static void restoreAsync(SuiteContext ctx, java.awt.Component parent, File file,
+                                    java.util.function.IntConsumer onDone) {
+        java.awt.Window owner = parent == null ? null : SwingUtilities.getWindowAncestor(parent);
+        if (owner == null && parent instanceof java.awt.Window w) owner = w;
+        final JDialog progress = new JDialog(owner, "Opening project", java.awt.Dialog.ModalityType.MODELESS);
+        JProgressBar bar = new JProgressBar();
+        bar.setIndeterminate(true);
+        JLabel label = Ui.label("Reading " + file.getName() + " (" + (file.length() / (1024 * 1024)) + " MB)...");
+        JPanel body = new JPanel(new java.awt.BorderLayout(0, 8));
+        body.setBorder(Ui.pad(16, 20, 16, 20));
+        body.add(label, java.awt.BorderLayout.NORTH);
+        body.add(bar, java.awt.BorderLayout.CENTER);
+        progress.setContentPane(body);
+        progress.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        progress.pack();
+        progress.setSize(Math.max(380, progress.getWidth()), progress.getHeight());
+        progress.setLocationRelativeTo(owner);
+        progress.setVisible(true);
+
+        Thread t = new Thread(() -> {
+            int n = -1;
+            Exception failure = null;
+            try { n = restore(ctx, file); } catch (Exception e) { failure = e; }
+            final int count = n;
+            final Exception err = failure;
+            SwingUtilities.invokeLater(() -> {
+                progress.dispose();
+                if (err != null) {
+                    JOptionPane.showMessageDialog(parent, "An error occurred: " + err.getMessage(),
+                            "error", JOptionPane.ERROR_MESSAGE);
+                } else if (onDone != null) {
+                    onDone.accept(count);
+                }
+            });
+        }, "project-restore");
+        t.setDaemon(true);
+        t.start();
     }
 }

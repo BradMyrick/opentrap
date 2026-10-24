@@ -12,7 +12,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * by the UI layer, not here.
  */
 public class MessageStore {
-    public interface Listener { void entryAdded(LogEntry e); void entryUpdated(LogEntry e); }
+    public interface Listener {
+        void entryAdded(LogEntry e);
+        void entryUpdated(LogEntry e);
+        /**
+         * The whole history was replaced at once (a project was restored).
+         * Listeners rebuild from {@code all} in one go rather than one entry at
+         * a time, which is what keeps a large restore fast.
+         */
+        default void reloaded(List<LogEntry> all) {}
+    }
 
     private final List<LogEntry> entries = new ArrayList<>();
     private final List<Listener> listeners = new CopyOnWriteArrayList<>();
@@ -38,9 +47,14 @@ public class MessageStore {
 
     public synchronized void remove(LogEntry e) { entries.remove(e); }
 
-    public synchronized void replaceAll(List<LogEntry> list) {
-        entries.clear();
-        entries.addAll(list);
+    public void replaceAll(List<LogEntry> list) {
+        List<LogEntry> copy;
+        synchronized (this) {
+            entries.clear();
+            entries.addAll(list);
+            copy = new ArrayList<>(entries);
+        }
+        for (Listener l : listeners) l.reloaded(copy);
     }
 
     public void addListener(Listener l)    { listeners.add(l); }

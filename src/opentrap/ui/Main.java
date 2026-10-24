@@ -147,16 +147,14 @@ public class Main {
                     }
                 }
                 case OPEN -> {
-                    try {
-                        int n = StateIO.restore(ctx, projectFile);
+                    // Off the event thread with a progress dialog: a large
+                    // project must never freeze the window while it loads.
+                    final String projectName = startup.projectName();
+                    StateIO.restoreAsync(ctx, frame, projectFile, n -> {
                         ctx.setProjectFile(projectFile);
-                        RecentProjects.record(startup.projectName(), projectFile);
+                        RecentProjects.record(projectName, projectFile);
                         ctx.alert("suite", "Opened project " + projectFile.getName() + " (" + n + " items)");
-                    } catch (Exception e) {
-                        JOptionPane.showMessageDialog(frame,
-                                "Could not open the project file:\n" + e.getMessage(),
-                                "Open project", JOptionPane.ERROR_MESSAGE);
-                    }
+                    });
                 }
                 default -> { /* temporary in-memory project: nothing to load */ }
             }

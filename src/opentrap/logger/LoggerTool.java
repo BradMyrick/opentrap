@@ -36,6 +36,7 @@ public class LoggerTool implements ToolModule {
                 if (loggingOn) SwingUtilities.invokeLater(() -> model.add(e));
             }
             @Override public void entryUpdated(LogEntry e) { SwingUtilities.invokeLater(() -> model.updated(e)); }
+            @Override public void reloaded(List<LogEntry> all) { SwingUtilities.invokeLater(() -> model.reload(all)); }
         });
     }
 
@@ -149,6 +150,8 @@ public class LoggerTool implements ToolModule {
             refreshFilterLabel();
         }
         void clear() { all.clear(); shown.clear(); fireTableDataChanged(); refreshFilterLabel(); }
+        /** Replace the contents from a restored history in one go. */
+        void reload(List<LogEntry> entries) { all.clear(); all.addAll(entries); reapply(); }
         private void refreshFilterLabel() {
             viewFilterLabel.setText(filter.isEmpty()
                     ? "View filter: showing all items"
