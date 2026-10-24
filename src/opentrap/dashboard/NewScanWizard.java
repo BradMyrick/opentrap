@@ -222,10 +222,18 @@ public class NewScanWizard extends JDialog {
                 "Maps the attack surface and tests it for vulnerabilities, including any detected APIs.", true));
         cardsRow.add(typeCard(typeCrawl, "Crawl",
                 "Maps the attack surface of the application and any detected APIs.", true));
-        // API-only scanning is not implemented yet, so the card is shown but not
-        // selectable, rather than pretending to offer it.
-        cardsRow.add(typeCard(typeApiOnly, "API-only scan",
-                "Scans only detected APIs. Not yet available.", false));
+        // API-only scanning is not implemented yet: the card is shown but not
+        // selectable as a scan type; clicking it opens the "not yet implemented"
+        // dialog to invite a contribution.
+        Component apiCard = typeCard(typeApiOnly, "API-only scan",
+                "Scans only detected APIs. Not yet implemented.", false);
+        apiCard.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        addClickToTree(apiCard, new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                opentrap.ui.Unbuilt.SCAN_TYPE_API.showDialog(apiCard);
+            }
+        });
+        cardsRow.add(apiCard);
 
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.setOpaque(false);
@@ -371,12 +379,13 @@ public class NewScanWizard extends JDialog {
         listWrap.add(list, BorderLayout.NORTH);
         body.add(listWrap, BorderLayout.NORTH);
 
-        // Save / Load named configurations is not implemented, so disabled.
+        // Save / Load named configurations is not implemented yet: the controls
+        // stay enabled and open the "not yet implemented" dialog to invite a
+        // contribution, rather than being dead disabled buttons.
         JButton save = Ui.button("Save");
         JButton load = Ui.button("Load");
-        save.setEnabled(false); load.setEnabled(false);
-        save.setToolTipText("Saving named configurations is coming soon.");
-        load.setToolTipText("Loading named configurations is coming soon.");
+        opentrap.ui.Unbuilt.SCAN_CONFIG_LIBRARY.attach(save);
+        opentrap.ui.Unbuilt.SCAN_CONFIG_LIBRARY.attach(load);
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         actions.setOpaque(false);
         actions.add(save); actions.add(load);
@@ -451,15 +460,9 @@ public class NewScanWizard extends JDialog {
     }
 
     private JComponent buildApplicationLogin() {
-        JPanel box = new JPanel(new GridBagLayout());
-        box.setOpaque(false);
-        JLabel msg = new JLabel("<html><div style='text-align:center'><b>Application login</b><br><br>"
-                + "Recorded login sequences and credential-based login are <b>coming soon</b>.<br>"
-                + "This section is under construction.</div></html>");
-        msg.setFont(Ui.PLAIN);
-        msg.setForeground(Theme.MUTED);
-        box.add(msg);
-        return stepPanel("Application login", "Configure how the scan authenticates (not yet available).", box);
+        return stepPanel("Application login",
+                "Configure how the scan authenticates.",
+                opentrap.ui.Unbuilt.SCAN_LOGIN.panel());
     }
 
     private JComponent buildResourcePool() {

@@ -50,6 +50,12 @@ public final class Unbuilt {
     // Dashboard
     public static final Unbuilt DASHBOARD_LIVE_TASK  = of("OT-DASHBOARD-LIVE-TASK",  "Dashboard > New live task");
     public static final Unbuilt DASHBOARD_LIVE_CRAWL = of("OT-DASHBOARD-LIVE-CRAWL", "Dashboard > Live crawl view");
+    public static final Unbuilt DASHBOARD_TASK_SETTINGS = of("OT-DASHBOARD-TASK-SETTINGS", "Dashboard > Task settings");
+
+    // New scan wizard
+    public static final Unbuilt SCAN_TYPE_API        = of("OT-SCAN-TYPE-API",        "New scan > API-only scan");
+    public static final Unbuilt SCAN_CONFIG_LIBRARY  = of("OT-SCAN-CONFIG-LIBRARY",  "New scan > Save and load configurations");
+    public static final Unbuilt SCAN_LOGIN           = of("OT-SCAN-LOGIN",           "New scan > Application login");
 
     // Intruder
     public static final Unbuilt INTRUDER_RESPOOL     = of("OT-INTRUDER-RESPOOL",     "Intruder > Resource pool");

@@ -263,8 +263,10 @@ public class DashboardTool implements ToolModule {
                 if (ctx != null) ctx.taskChanged(selected);
             }
         }));
-        headerControls.add(new HeaderIconButton("gear", "Task settings", () -> {}));
-        headerControls.add(new HeaderIconButton("help", "Help", () -> {}));
+        headerControls.add(new HeaderIconButton("gear", "Task settings",
+                () -> opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.showDialog(rightHeader)));
+        headerControls.add(new HeaderIconButton("help", "Getting started",
+                () -> { if (ctx != null && ctx.frame() instanceof opentrap.ui.SuiteFrame sf) sf.selectTool("discover"); }));
 
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
@@ -378,7 +380,8 @@ public class DashboardTool implements ToolModule {
         top.setOpaque(false);
         top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
         addLeft(top, sectionHeader("Task configuration", sectionIcon("pencil"),
-                "View configuration", () -> {}));
+                "View configuration",
+                () -> opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.showDialog(top)));
         top.add(Box.createVerticalStrut(10));
         addLeft(top, configGrid());
         top.add(Box.createVerticalStrut(16));
@@ -1249,8 +1252,7 @@ public class DashboardTool implements ToolModule {
                     if (r != null) r.run();
                 }));
                 JMenuItem settings = new JMenuItem("Settings");
-                settings.setEnabled(false);   // no per-task settings screen yet
-                settings.setToolTipText("Per-task settings are coming soon.");
+                opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.attach(settings);
                 m.add(settings);
                 m.addSeparator();
                 m.add(mi("Delete", () -> deleteTask(task)));
