@@ -63,7 +63,8 @@ public class SuiteContext {
     private final opentrap.organizer.OrganizerStore organizer = new opentrap.organizer.OrganizerStore();
     private final List<Alert> alerts = new ArrayList<>();
     private final List<Issue> issues = new ArrayList<>();
-    private final java.util.Set<String> issueKeys = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.ConcurrentHashMap<String, Issue> issueByKey =
+            new java.util.concurrent.ConcurrentHashMap<>();
     private final List<ScanTask> tasks = new ArrayList<>();
 
     private final Map<String, MessageSink> sinks = new LinkedHashMap<>();
@@ -158,10 +159,20 @@ public class SuiteContext {
 
     /** Add a scanner issue, de-duplicated. Returns true if newly added. */
     public boolean addIssue(Issue i) {
-        if (i == null || !issueKeys.add(i.dedupeKey())) return false;
+        if (i == null || issueByKey.putIfAbsent(i.dedupeKey(), i) != null) return false;
         synchronized (issues) { issues.add(i); }
         for (IssueListener l : issueListeners) l.issueAdded(i);
         return true;
+    }
+
+    /** The issue already held for the same finding as {@code i}, or null. */
+    public Issue existingIssue(Issue i) {
+        return i == null ? null : issueByKey.get(i.dedupeKey());
+    }
+
+    /** Issues were edited in place (not added): refresh the views once. */
+    public void issuesChanged() {
+        for (IssueListener l : issueListeners) l.issuesReloaded();
     }
 
     public List<Issue> issues() {
@@ -175,10 +186,10 @@ public class SuiteContext {
     public void restoreIssues(List<Issue> saved) {
         synchronized (issues) {
             issues.clear();
-            issueKeys.clear();
+            issueByKey.clear();
             if (saved != null) {
                 for (Issue i : saved) {
-                    if (i != null && issueKeys.add(i.dedupeKey())) issues.add(i);
+                    if (i != null && issueByKey.putIfAbsent(i.dedupeKey(), i) == null) issues.add(i);
                 }
             }
         }

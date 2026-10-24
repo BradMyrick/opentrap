@@ -19,6 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class LivePassiveScanner {
 
+    /** The source every finding the live poller raises carries. */
+    public static final String SOURCE = "Live audit";
+
     private final SuiteContext ctx;
     private volatile boolean enabled;
     private volatile ZapEngine engine;
@@ -87,7 +90,7 @@ public final class LivePassiveScanner {
                         String id = ZapApi.str(a, "id");
                         if (id != null && !seen.add(id)) continue;   // already mapped
                         Issue is = ZapScanner.mapAlert(ze.api(), a);
-                        if (is != null) { is.setSource("Live audit"); ctx.addIssue(is); }
+                        if (is != null) { is.setSource(SOURCE); ctx.addIssue(is); }
                     }
                 } catch (Exception ignored) {}
             }

@@ -277,15 +277,27 @@ public final class ZapScanner {
      * that found them too still found them.
      */
     private void pullAlerts(String baseurl, ScanTask task, Map<String, Issue.Severity> seen) throws Exception {
+        String source = "Scan " + task.number;
+        boolean reattributed = false;
         for (JsonValue a : api.alerts(baseurl, 0, 100000)) {
             String id = ZapApi.str(a, "id");
             if (id == null || seen.containsKey(id)) continue;
             Issue is = mapAlert(api, a);
             if (is == null) continue;
             seen.put(id, is.severity());
-            is.setSource("Scan " + task.number);
-            ctx.addIssue(is);
+            is.setSource(source);
+            if (!ctx.addIssue(is)) {
+                // The live passive poller reads every engine alert, including the
+                // ones this audit raises, and usually gets there first. A finding
+                // the audit made belongs to the audit, so take it over.
+                Issue held = ctx.existingIssue(is);
+                if (held != null && LivePassiveScanner.SOURCE.equals(held.source())) {
+                    held.setSource(source);
+                    reattributed = true;
+                }
+            }
         }
+        if (reattributed) ctx.issuesChanged();
         int h = 0, m = 0, l = 0, i = 0;
         for (Issue.Severity sev : seen.values()) {
             switch (sev) {
