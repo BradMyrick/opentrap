@@ -173,6 +173,8 @@ public class SuiteFrame extends JFrame {
         // Search is built into the places it belongs: the quick URL box and the
         // filter popup on the proxy history and the target site map. It is no
         // longer a separate window reached from this menu.
+        addItem(suite, "settings", e -> SettingsDialog.open(this, ctx));
+        suite.addSeparator();
         addItem(suite, "save state", e -> StateIO.saveDialog(ctx, this));
         addItem(suite, "restore state", e -> StateIO.restoreDialog(ctx, this));
         suite.addSeparator();
@@ -236,24 +238,25 @@ public class SuiteFrame extends JFrame {
         addItem(help, "about", e -> AboutDialog.show(this));
         menuBar.add(help);
 
-        // Top-bar tools on the right: browser / console / global search (each not
-        // yet implemented), and the Settings gear (opens the Settings dialog).
+        // Top-right tool icons, as in the reference: a globe (browser), a console,
+        // a magnifier (search) and a gear (settings). Placed at the right of the
+        // menu bar - OpenTRAP's tab row wraps to several rows, so the icons cannot
+        // share it cleanly. Browser/console/search are not yet implemented; the
+        // gear opens the Settings dialog.
         menuBar.add(Box.createHorizontalGlue());
-        menuBar.add(topBarButton("browser", "Embedded browser", () -> Unbuilt.BROWSER.showDialog(this)));
-        menuBar.add(topBarButton("console", "Console", () -> Unbuilt.CONSOLE.showDialog(this)));
-        menuBar.add(topBarButton("search", "Global search", () -> Unbuilt.SEARCH.showDialog(this)));
-        menuBar.add(topBarButton("settings", "Settings", () -> SettingsDialog.open(this, ctx)));
+        menuBar.add(iconButton(ToolIcons.browser(), "Embedded browser", () -> Unbuilt.BROWSER.showDialog(this)));
+        menuBar.add(iconButton(ToolIcons.console(), "Console", () -> Unbuilt.CONSOLE.showDialog(this)));
+        menuBar.add(iconButton(ToolIcons.search(), "Global search", () -> Unbuilt.SEARCH.showDialog(this)));
+        menuBar.add(iconButton(ToolIcons.gear(), "Settings", () -> SettingsDialog.open(this, ctx)));
     }
 
-    /** A flat clickable button for the top-bar tool strip on the right of the menu bar. */
-    private JButton topBarButton(String text, String tip, Runnable action) {
-        JButton b = new JButton(text);
-        b.setFont(Ui.PLAIN);
+    /** A flat, icon-only button for the top-right tool strip. */
+    private JButton iconButton(Icon icon, String tip, Runnable action) {
+        JButton b = new JButton(icon);
         b.setToolTipText(tip);
         b.setFocusable(false);
         b.setContentAreaFilled(false);
-        b.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-        b.setForeground(Theme.MUTED);
+        b.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.addActionListener(e -> action.run());
         return b;
