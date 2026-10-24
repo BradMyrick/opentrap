@@ -108,7 +108,7 @@ public class ResultsWindow extends JFrame {
     }
 
     private JComponent buildToolbar() {
-        JToggleButton pause = new JToggleButton("pause");
+        JToggleButton pause = new JToggleButton("Pause");
         pause.setFont(Ui.PLAIN);
         pause.setFocusable(false);
         pause.addActionListener(e -> {

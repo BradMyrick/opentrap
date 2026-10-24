@@ -173,7 +173,7 @@ public class ScopeEditor extends JPanel {
             port.setText(Scope.display(r.port));
             file.setText(Scope.display(r.file));
             editingRow = i;
-            addBtn.setText("update");
+            addBtn.setText("Update");
         }
 
         /** On edit, keep a field's stored pattern verbatim when the user left the

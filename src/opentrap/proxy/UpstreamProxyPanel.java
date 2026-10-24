@@ -80,7 +80,7 @@ public class UpstreamProxyPanel extends JPanel {
     }
 
     private final class Model extends AbstractTableModel {
-        private final String[] cols = {"enabled", "type", "proxy host", "port", "auth", "destination"};
+        private final String[] cols = {"Enabled", "Type", "Proxy host", "Port", "Auth", "Destination"};
         @Override public int getRowCount() { return mgr.rules().size(); }
         @Override public int getColumnCount() { return cols.length; }
         @Override public String getColumnName(int c) { return cols[c]; }

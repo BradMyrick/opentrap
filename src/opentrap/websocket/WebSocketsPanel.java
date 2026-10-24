@@ -197,7 +197,7 @@ public class WebSocketsPanel extends JPanel implements WsInterceptor {
     private void resolve(WsInterceptor.Decision d) { decision.offer(d); }
 
     private final class HistoryModel extends AbstractTableModel {
-        private final String[] cols = {"#", "conn", "direction", "opcode", "length", "preview"};
+        private final String[] cols = {"#", "Conn", "Direction", "Opcode", "Length", "Preview"};
         private final List<WebSocketMessage> rows = new ArrayList<>();
         void add(WebSocketMessage m) { rows.add(m); fireTableRowsInserted(rows.size() - 1, rows.size() - 1); }
         void clear() { rows.clear(); fireTableDataChanged(); }

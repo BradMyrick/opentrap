@@ -309,15 +309,19 @@ public class TargetTool implements ToolModule {
 
 
     private JComponent buildScope() {
-        OptionsPage page = new OptionsPage();
+        // Heading, one-line description and the editor, as in the reference.
         JTextArea note = Ui.note(
-            "Define the in-scope targets for your current work. This configuration affects the "
-            + "behaviour of tools throughout the suite. All fields take regex strings. The easiest "
-            + "way to configure scope is to browse to your target and use the context menus in the "
-            + "site map to include or exclude URL paths.");
-        note.setPreferredSize(new Dimension(600, 80));
-        page.section("target scope", note, new ScopeEditor(ctx, ctx.scope()));
-        return page;
+            "Use these settings to define exactly what hosts and URLs constitute the target for "
+            + "your current work. This configuration affects the behaviour of tools throughout "
+            + "the suite. Fields take regex strings; the easiest way to configure scope is to "
+            + "browse to your target and use the site map's context menus.");
+        note.setMaximumSize(new Dimension(900, 40));
+        JPanel body = Ui.vbox(Ui.heading("Target scope"), Box.createVerticalStrut(4), note,
+                Box.createVerticalStrut(14), new ScopeEditor(ctx, ctx.scope()));
+        body.setBorder(Ui.pad(10, 10, 10, 10));
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(body, BorderLayout.NORTH);
+        return Ui.scroll(panel);
     }
 
     /** Insert only newly-discovered nodes, preserving expansion and selection. */

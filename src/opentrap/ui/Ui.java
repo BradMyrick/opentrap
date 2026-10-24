@@ -119,26 +119,39 @@ public final class Ui {
         };
     }
 
+    /**
+     * User-facing text starts with a capital, as in the reference, so a label
+     * written in lower case in code still reads as a proper heading or button.
+     * Leading spaces and symbols are kept; only the first letter is raised.
+     */
+    public static String sentence(String text) {
+        if (text == null || text.isEmpty()) return text;
+        int i = 0;
+        while (i < text.length() && !Character.isLetter(text.charAt(i))) i++;
+        if (i >= text.length() || Character.isUpperCase(text.charAt(i))) return text;
+        return text.substring(0, i) + Character.toUpperCase(text.charAt(i)) + text.substring(i + 1);
+    }
+
     public static JLabel heading(String text) {
-        JLabel l = new JLabel(text);
+        JLabel l = new JLabel(sentence(text));
         l.setFont(HEADING);
         return l;
     }
 
     public static JLabel label(String text) {
-        JLabel l = new JLabel(text);
+        JLabel l = new JLabel(sentence(text));
         l.setFont(PLAIN);
         return l;
     }
 
     public static JLabel bold(String text) {
-        JLabel l = new JLabel(text);
+        JLabel l = new JLabel(sentence(text));
         l.setFont(BOLD);
         return l;
     }
 
     public static JCheckBox check(String text, boolean selected) {
-        JCheckBox c = new JCheckBox(text, selected);
+        JCheckBox c = new JCheckBox(sentence(text), selected);
         c.setFont(PLAIN);
         c.setFocusable(false);
         c.setOpaque(false);
@@ -146,7 +159,7 @@ public final class Ui {
     }
 
     public static JRadioButton radio(String text, boolean selected) {
-        JRadioButton r = new JRadioButton(text, selected);
+        JRadioButton r = new JRadioButton(sentence(text), selected);
         r.setFont(PLAIN);
         r.setFocusable(false);
         r.setOpaque(false);
@@ -154,7 +167,7 @@ public final class Ui {
     }
 
     public static JButton button(String text) {
-        JButton b = new JButton(text);
+        JButton b = new JButton(sentence(text));
         b.setFont(PLAIN);
         return b;
     }
@@ -249,6 +262,12 @@ public final class Ui {
         t.setFont(PLAIN);
         t.setRowHeight(22);
         t.getTableHeader().setFont(BOLD);
+        // Column titles read with a leading capital, as in the reference.
+        for (int i = 0; i < t.getColumnModel().getColumnCount(); i++) {
+            javax.swing.table.TableColumn c = t.getColumnModel().getColumn(i);
+            Object v = c.getHeaderValue();
+            if (v instanceof String s) c.setHeaderValue(sentence(s));
+        }
         t.getTableHeader().setReorderingAllowed(false);
         t.getTableHeader().setToolTipText("click column to sort ascending (SHIFT-click = descending)");
         t.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);

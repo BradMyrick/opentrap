@@ -26,7 +26,7 @@ public class OptionsPanel extends OptionsPage {
     private final JCheckBox followRedirects = Ui.check("follow redirects", false);
 
     private final DefaultTableModel grepModel =
-            new DefaultTableModel(new Object[]{"expression"}, 0) {
+            new DefaultTableModel(new Object[]{"Expression"}, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
     private final JTable grepTable = new JTable(grepModel);

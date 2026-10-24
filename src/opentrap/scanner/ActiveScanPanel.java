@@ -43,9 +43,9 @@ public class ActiveScanPanel extends JPanel {
         table.getColumnModel().getColumn(4).setCellEditor(new DefaultCellEditor(thrEd));
         Ui.distributeWidths(table, 60, 60, 420, 110, 110);
 
-        JButton enableAll = Ui.button("enable all");
-        JButton disableAll = Ui.button("disable all");
-        JButton refresh = Ui.button("refresh");
+        JButton enableAll = Ui.button("Enable all");
+        JButton disableAll = Ui.button("Disable all");
+        JButton refresh = Ui.button("Refresh");
         enableAll.addActionListener(e -> bulkEnabled(true));
         disableAll.addActionListener(e -> bulkEnabled(false));
         refresh.addActionListener(e -> load());
@@ -133,7 +133,7 @@ public class ActiveScanPanel extends JPanel {
     }
 
     private final class Model extends AbstractTableModel {
-        private final String[] cols = {"enabled", "id", "rule", "strength", "threshold"};
+        private final String[] cols = {"Enabled", "ID", "Rule", "Strength", "Threshold"};
         private List<Rule> rules = new ArrayList<>();
         void setRules(List<Rule> r) { rules = r; fireTableDataChanged(); }
 

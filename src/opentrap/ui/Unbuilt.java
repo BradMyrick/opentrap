@@ -139,15 +139,29 @@ public final class Unbuilt {
 
     /** An inline placeholder panel for a whole empty area (e.g. an unbuilt pane). */
     public JComponent panel() {
+        return panel(true);
+    }
+
+    /**
+     * The inline placeholder, centred in its area when {@code centred}, or as a
+     * compact left-aligned block to drop into a page of other sections.
+     */
+    public JComponent panel(boolean centred) {
         JPanel body = content();
         body.add(Box.createVerticalStrut(14));
         body.add(buttonBar(body, null));
-        JPanel wrap = new JPanel(new GridBagLayout());
-        wrap.setOpaque(false);
-        wrap.setBorder(Ui.pad(24, 24, 24, 24));
         body.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Ui.GRID), Ui.pad(18, 20, 18, 20)));
         body.setMaximumSize(new Dimension(640, Integer.MAX_VALUE));
+        if (!centred) {
+            JPanel wrap = new JPanel(new BorderLayout());
+            wrap.setOpaque(false);
+            wrap.add(body, BorderLayout.WEST);
+            return wrap;
+        }
+        JPanel wrap = new JPanel(new GridBagLayout());
+        wrap.setOpaque(false);
+        wrap.setBorder(Ui.pad(24, 24, 24, 24));
         wrap.add(body, new GridBagConstraints());
         return wrap;
     }

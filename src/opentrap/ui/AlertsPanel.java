@@ -38,7 +38,7 @@ public class AlertsPanel extends JPanel {
     }
 
     private class Model extends AbstractTableModel {
-        private final String[] cols = {"time", "tool", "message"};
+        private final String[] cols = {"Time", "Tool", "Message"};
         @Override public int getRowCount() { return ctx.alerts().size(); }
         @Override public int getColumnCount() { return cols.length; }
         @Override public String getColumnName(int c) { return cols[c]; }

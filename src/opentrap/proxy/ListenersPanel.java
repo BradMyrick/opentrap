@@ -108,7 +108,7 @@ public class ListenersPanel extends JPanel {
     }
 
     private class Model extends AbstractTableModel {
-        private final String[] cols = {"running", "port", "loopback only", "invisible", "redirect"};
+        private final String[] cols = {"Running", "Port", "Loopback only", "Invisible", "Redirect"};
         @Override public int getRowCount() { return server.listeners().size(); }
         @Override public int getColumnCount() { return cols.length; }
         @Override public String getColumnName(int c) { return cols[c]; }

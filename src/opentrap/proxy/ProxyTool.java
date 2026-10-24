@@ -60,9 +60,16 @@ public class ProxyTool implements ToolModule {
             new Tab("Intercept", interceptPanel),
             new Tab("HTTP history", historyPanel),
             new Tab("WebSockets history", new opentrap.websocket.WebSocketsPanel(ctx)),
-            new Tab("Match and replace", new MatchReplacePanel(server)),
+            new Tab("Match and replace", topAligned(new MatchReplacePanel(server))),
             new Tab("Proxy settings", options)
         };
+    }
+
+    /** Hug a settings page to the top of its tab instead of stretching it to fill. */
+    private static JComponent topAligned(JComponent page) {
+        JPanel holder = new JPanel(new BorderLayout());
+        holder.add(page, BorderLayout.NORTH);
+        return Ui.scroll(holder);
     }
 
     // ---------------- intercept tab ----------------

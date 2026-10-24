@@ -19,8 +19,8 @@ import java.util.List;
  */
 public class DecoderTool implements ToolModule {
 
-    private static final int CONTROL_WIDTH = 170;
-    private static final int STAGE_HEIGHT = 120;
+    private static final int CONTROL_WIDTH = 150;
+    private static final int STAGE_HEIGHT = 110;
 
     private final JPanel root = new JPanel(new BorderLayout(0, 6));
     private final JPanel column = new JPanel();

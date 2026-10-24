@@ -51,6 +51,7 @@ public class MatchReplacePanel extends JPanel {
         rulesRow.add(Ui.buttonColumn(add, remove, up, down), BorderLayout.WEST);
         rulesRow.add(sp, BorderLayout.CENTER);
         rulesRow.setMaximumSize(new Dimension(760, 150));
+        rulesRow.setPreferredSize(new Dimension(760, 150));
         add(rulesRow);
         add(Box.createVerticalStrut(6));
 
@@ -75,15 +76,21 @@ public class MatchReplacePanel extends JPanel {
                 + "rule in place; rules apply top to bottom.");
         hint.setForeground(opentrap.ui.Theme.MUTED);
         hint.setAlignmentX(LEFT_ALIGNMENT);
-        add(Box.createVerticalStrut(4));
+        add(Box.createVerticalStrut(2));
         add(hint);
 
-        add(Box.createVerticalStrut(22));
+        add(Box.createVerticalStrut(18));
         JLabel wh = Ui.heading("WebSocket match and replace rules");
         wh.setAlignmentX(LEFT_ALIGNMENT);
         add(wh);
         add(Box.createVerticalStrut(4));
-        JComponent ws = opentrap.ui.Unbuilt.PROXY_WS_MATCH.panel();
+        JTextArea wsDesc = Ui.note("Use these settings to automatically replace parts of "
+                + "WebSocket messages passing through the Proxy.");
+        wsDesc.setAlignmentX(LEFT_ALIGNMENT);
+        wsDesc.setMaximumSize(new Dimension(760, 24));
+        add(wsDesc);
+        add(Box.createVerticalStrut(6));
+        JComponent ws = opentrap.ui.Unbuilt.PROXY_WS_MATCH.panel(false);
         ws.setAlignmentX(LEFT_ALIGNMENT);
         ws.setMaximumSize(new Dimension(760, ws.getPreferredSize().height));
         add(ws);
