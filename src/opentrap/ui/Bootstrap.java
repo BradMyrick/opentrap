@@ -24,6 +24,7 @@ public final class Bootstrap {
         frame.register(new opentrap.sequencer.SequencerTool());
         frame.register(new opentrap.decoder.DecoderTool());
         frame.register(new opentrap.comparer.ComparerTool());
+        frame.register(new opentrap.extensions.ExtensionsTool());
 
         registerEngagementActions(ctx);
     }
