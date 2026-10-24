@@ -275,9 +275,9 @@ public class SuiteFrame extends JFrame {
     private JComponent buildCenter() {
         final JPanel tools = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         tools.setOpaque(false);
-        tools.add(iconButton(ToolIcons.browser(), "Embedded browser", () -> Unbuilt.BROWSER.showDialog(this)));
+        tools.add(iconButton(ToolIcons.browser(), "Open browser", this::launchBrowser));
         tools.add(iconButton(ToolIcons.console(), "Console", () -> Unbuilt.CONSOLE.showDialog(this)));
-        tools.add(iconButton(ToolIcons.search(), "Global search", () -> Unbuilt.SEARCH.showDialog(this)));
+        tools.add(iconButton(ToolIcons.search(), "Search", () -> new SearchWindow(ctx).setVisible(true)));
         tools.add(iconButton(ToolIcons.gear(), "Settings", () -> SettingsDialog.open(this, ctx)));
 
         final JLayeredPane layer = new JLayeredPane();
@@ -296,6 +296,31 @@ public class SuiteFrame extends JFrame {
             }
         });
         return layer;
+    }
+
+    /**
+     * Launch the bundled browser routed through the proxy, with the CA already
+     * trusted: the same action as Open browser on the Proxy tab, reachable from
+     * the globe in the top bar.
+     */
+    private void launchBrowser() {
+        opentrap.proxy.ProxyServer server = null;
+        for (ToolModule m : modules) {
+            if (m instanceof opentrap.proxy.ProxyTool p) { server = p.server(); break; }
+        }
+        if (server == null) {
+            JOptionPane.showMessageDialog(this, "The proxy is not running, so the browser cannot be launched.",
+                    "Open browser", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        boolean relax = ctx.settings().getBool(opentrap.proxy.BrowserFlags.RELAX_KEY, true);
+        String err = opentrap.proxy.EmbeddedBrowser.launch(server, "http://opentrap/", relax);
+        if (err != null) {
+            JOptionPane.showMessageDialog(this, err, "Open browser", JOptionPane.WARNING_MESSAGE);
+        } else {
+            ctx.alert("proxy", "launched browser through the proxy, "
+                    + opentrap.proxy.BrowserFlags.describe(relax));
+        }
     }
 
     /** A flat, icon-only button for the top-right tool strip. */

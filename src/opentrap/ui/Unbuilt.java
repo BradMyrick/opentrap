@@ -71,10 +71,8 @@ public final class Unbuilt {
     public static final Unbuilt EXT_FILTERS          = of("OT-EXT-FILTERS",          "Extensions > Filters");
     public static final Unbuilt EXT_SETTINGS         = of("OT-EXT-SETTINGS",         "Extensions > Settings");
 
-    // Suite chrome
-    public static final Unbuilt BROWSER              = of("OT-BROWSER",              "Embedded browser");
+    // Suite chrome (the browser and search in the top bar are real features)
     public static final Unbuilt CONSOLE              = of("OT-CONSOLE",              "Console");
-    public static final Unbuilt SEARCH               = of("OT-SEARCH",               "Global search");
     public static final Unbuilt PROJECT              = of("OT-PROJECT",              "Project menu");
 
     // Settings dialog panes (the dialog shell itself is built; these are the panes)
