@@ -390,8 +390,8 @@ public class ProxyTool implements ToolModule {
             logoos.addActionListener(e -> server.logOutOfScope = logoos.isSelected());
             page.section("misc", http10, unpack, logoos);
 
-            // Upstream proxy chaining lives in settings, under Network.
-            page.addSection(new UpstreamProxyPanel(ctx));
+            // Upstream proxy chaining: a titled section like the others.
+            page.section("Upstream proxy servers", new UpstreamProxyPanel(ctx));
 
             add(page, BorderLayout.CENTER);
         }

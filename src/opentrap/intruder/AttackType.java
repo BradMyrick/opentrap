@@ -3,10 +3,10 @@ package opentrap.intruder;
 /** The four Intruder attack strategies and how they consume payload sets. */
 public enum AttackType {
 
-    SNIPER("sniper"),
-    BATTERING_RAM("battering ram"),
-    PITCHFORK("pitchfork"),
-    CLUSTER_BOMB("cluster bomb");
+    SNIPER("Sniper attack"),
+    BATTERING_RAM("Battering ram attack"),
+    PITCHFORK("Pitchfork attack"),
+    CLUSTER_BOMB("Cluster bomb attack");
 
     private final String label;
 
