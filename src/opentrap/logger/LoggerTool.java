@@ -112,7 +112,7 @@ public class LoggerTool implements ToolModule {
 
     private final class Model extends AbstractTableModel {
         private final String[] cols = {"#", "Time", "Tool", "Method", "Host", "Path",
-                "Query", "Status", "Length", "MIME type", "Title"};
+                "Query", "Status", "Length", "MIME type", "Title", "Params", "Response (ms)"};
         private final List<LogEntry> all = new ArrayList<>();
         private final List<LogEntry> shown = new ArrayList<>();
         private final DateFormat fmt = DateFormat.getTimeInstance(DateFormat.MEDIUM);
@@ -151,7 +151,10 @@ public class LoggerTool implements ToolModule {
                 case 7 -> e.status() == 0 ? "" : String.valueOf(e.status());
                 case 8 -> e.responseLen() == 0 ? "" : String.valueOf(e.responseLen());
                 case 9 -> e.mimeType();
-                default -> e.title();
+                case 10 -> e.title();
+                case 11 -> e.request() == null ? "" : String.valueOf(e.request().parameters().size());
+                case 12 -> e.durationMillis() < 0 ? "" : String.valueOf(e.durationMillis());
+                default -> "";
             };
         }
     }
