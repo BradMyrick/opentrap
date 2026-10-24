@@ -4,6 +4,7 @@ import opentrap.core.HttpService;
 import opentrap.core.SuiteContext;
 import opentrap.core.ToolModule;
 import opentrap.ui.Ui;
+import opentrap.ui.Unbuilt;
 
 import javax.swing.*;
 import java.util.ArrayList;
@@ -53,6 +54,7 @@ public class IntruderTool implements ToolModule {
         JTabbedPane right = new JTabbedPane();
         right.setFont(Ui.PLAIN);
         right.addTab("Payloads", payloads);
+        right.addTab("Resource pool", Unbuilt.INTRUDER_RESPOOL.panel());
         right.addTab("Settings", options);
         right.addTab("Target", target);
 
