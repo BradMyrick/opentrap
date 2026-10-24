@@ -188,7 +188,7 @@ public final class Unbuilt {
           + "Contributions are welcome: build it and open a pull request on the "
           + "main project, and we'll review and merge it with full credit as an "
           + "OpenTRAP contributor. To discuss it or ask for it to be prioritised, "
-          + "open an issue on the project.", 4, 72);
+          + "open an issue on the project.", 5, 56);
         note.setFont(Ui.PLAIN);
         note.setEditable(false);
         note.setOpaque(false);
