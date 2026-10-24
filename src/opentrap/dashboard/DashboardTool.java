@@ -145,6 +145,7 @@ public class DashboardTool implements ToolModule {
         ctx.store().addListener(new MessageStore.Listener() {
             @Override public void entryAdded(LogEntry e) {
                 if (isScanEntry(e)) { logAddQueue.add(e); logRefresh.request(); }
+                else countLiveRequest(e);
             }
             @Override public void entryUpdated(LogEntry e) {
                 if (isScanEntry(e)) { logHasUpdates = true; logRefresh.request(); }
@@ -164,6 +165,7 @@ public class DashboardTool implements ToolModule {
         // Scans the user starts add their own tasks on top of this.
         liveAudit = new ScanTask(ScanTask.Type.LIVE_PASSIVE,
                 "Live audit from Proxy (all traffic)", "Audit checks - passive");
+        liveAudit.log("Capturing in-scope traffic from the Proxy; the passive checks run on every exchange");
         ctx.addTask(liveAudit);
 
         // Live passive scanning: route in-scope proxy traffic through the engine
@@ -353,6 +355,23 @@ public class DashboardTool implements ToolModule {
     private static boolean isScanEntry(LogEntry e) {
         String t = e.tool();
         return "crawl".equals(t) || "audit".equals(t);
+    }
+
+    // Distinct method + URL pairs the live passive audit has seen: its "locations".
+    private final java.util.Set<String> liveLocations = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
+     * The live passive audit's figures: every in-scope exchange that reaches the
+     * engine while capture is on counts as a request, and each distinct method
+     * and URL as a discovered location.
+     */
+    private void countLiveRequest(LogEntry e) {
+        if (liveAudit == null || liveAudit.state() != ScanTask.State.RUNNING) return;
+        if (e.service() == null || e.request() == null || !ctx.scope().isInScope(e)) return;
+        liveAudit.addRequests(1);
+        liveLocations.add(e.request().method() + " " + e.url());
+        liveAudit.setDiscoveredLocations(liveLocations.size());
+        ctx.taskChanged(liveAudit);
     }
 
     private JComponent buildSummaryTab() {
@@ -1257,8 +1276,11 @@ public class DashboardTool implements ToolModule {
         private void toggleState() {
             task.setState(task.state() == ScanTask.State.RUNNING
                     ? ScanTask.State.PAUSED : ScanTask.State.RUNNING);
-            if (task == liveAudit && passiveScanner != null)
-                passiveScanner.setEnabled(task.state() == ScanTask.State.RUNNING);
+            if (task == liveAudit) {
+                boolean on = task.state() == ScanTask.State.RUNNING;
+                if (passiveScanner != null) passiveScanner.setEnabled(on);
+                task.log(on ? "Capture resumed" : "Capture paused");
+            }
             ctx.taskChanged(task);
         }
 
@@ -1617,9 +1639,12 @@ public class DashboardTool implements ToolModule {
         double frac = t.progress() < 0 ? 0 : t.progress();   // -1 for continuous tasks
         int completed = (int) Math.round(ruleTotal * frac);
         int active = running ? Math.max(0, ruleTotal - completed) : 0;
-        progTotalItems.setText(Integer.toString(ruleTotal));
-        progItemsActive.setText(Integer.toString(active));
-        progItemsDone.setText(Integer.toString(completed));
+        // The live passive audit has no fixed work list, so its audit-item
+        // figures do not apply; its requests and locations are what it has seen.
+        boolean passive = t.type() == ScanTask.Type.LIVE_PASSIVE;
+        progTotalItems.setText(passive ? "-" : Integer.toString(ruleTotal));
+        progItemsActive.setText(passive ? "-" : Integer.toString(active));
+        progItemsDone.setText(passive ? "-" : Integer.toString(completed));
         progDiscovered.setText(Integer.toString(t.discoveredLocations()));
         progRequests.setText(Integer.toString(t.requests()));
         long secs = Math.max(1, (System.currentTimeMillis() - t.startedAt()) / 1000);
