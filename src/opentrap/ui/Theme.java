@@ -131,7 +131,7 @@ public final class Theme {
         d.put("TabbedPaneUI", FlatTabbedPaneUI.class.getName());
         d.put("TabbedPane.foreground", muted);
         d.put("TabbedPane.selectedForeground", text);
-        d.put("TabbedPane.tabInsets", new Insets(7, 14, 7, 14));
+        d.put("TabbedPane.tabInsets", new Insets(7, 11, 7, 11));
         d.put("TabbedPane.tabAreaInsets", new Insets(0, 6, 0, 6));
         d.put("TabbedPane.contentBorderInsets", new Insets(1, 0, 0, 0));
         d.put("TabbedPane.selectedTabPadInsets", new Insets(0, 0, 0, 0));

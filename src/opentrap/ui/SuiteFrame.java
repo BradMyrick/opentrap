@@ -17,23 +17,26 @@ public class SuiteFrame extends JFrame {
 
     private final SuiteContext ctx;
     /** Width reserved at the right of the tab row for the tool icons. */
-    private static final int TAB_ROW_RESERVE = 150;
+    private static final int TAB_ROW_RESERVE = 124;
 
     /**
-     * The main tab strip. Its UI reserves space at the right end of the tab row
-     * so the top-right tool icons (browser, console, search, settings) can sit
-     * on that row, as in the reference, without tabs ever wrapping under them.
-     * The reserve is re-applied on updateUI so it survives a theme switch.
+     * The main tab strip. The right end of its tab row is kept clear for the
+     * top-right tool icons (browser, console, search, settings), as in the
+     * reference. The reserve is an empty right border, which is what the
+     * scrolling tab layout sizes its tab viewport and scroll buttons from; the
+     * content area is widened back by the same amount so pages still fill the
+     * window. Re-applied on updateUI so it survives a theme switch.
      */
     private final JTabbedPane tabs = new JTabbedPane() {
         @Override public void updateUI() {
             setUI(new opentrap.ui.theme.FlatTabbedPaneUI() {
                 @Override protected void installDefaults() {
                     super.installDefaults();
-                    tabAreaInsets = new Insets(tabAreaInsets.top, tabAreaInsets.left,
-                            tabAreaInsets.bottom, TAB_ROW_RESERVE);
+                    contentBorderInsets = new Insets(contentBorderInsets.top, contentBorderInsets.left,
+                            contentBorderInsets.bottom, -TAB_ROW_RESERVE);
                 }
             });
+            setBorder(BorderFactory.createEmptyBorder(0, 0, 0, TAB_ROW_RESERVE));
         }
     };
     private final JMenuBar menuBar = new JMenuBar();
@@ -52,6 +55,10 @@ public class SuiteFrame extends JFrame {
         setIconImages(AppIcon.images());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         tabs.setFont(Ui.PLAIN);
+        // One compact row, as in the reference: tabs keep their natural width and
+        // never wrap onto a second row (which would stretch them to fill the
+        // width). On a narrow window the row scrolls instead.
+        tabs.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         setLayout(new BorderLayout());
         add(buildCenter(), BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
