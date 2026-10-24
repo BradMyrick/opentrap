@@ -122,17 +122,22 @@ public final class Unbuilt {
         Window owner = near == null ? null : SwingUtilities.getWindowAncestor(near);
         final JDialog d = new JDialog(owner, "Not yet implemented", Dialog.ModalityType.APPLICATION_MODAL);
         JPanel content = content();
-        content.setBorder(Ui.pad(16, 18, 14, 18));
+        content.setBorder(Ui.pad(20, 24, 18, 24));
 
         JButton close = Ui.button("Close");
         close.addActionListener(e -> d.dispose());
         JPanel bar = buttonBar(near, close);
-        content.add(Box.createVerticalStrut(14));
+        content.add(Box.createVerticalStrut(16));
         content.add(bar);
 
         d.setContentPane(content);
         d.pack();
-        d.setMinimumSize(new Dimension(540, d.getPreferredSize().height));
+        // Roomy: wide enough that nothing wraps awkwardly, tall enough to show
+        // every line in full, and never smaller than its packed size.
+        Dimension packed = d.getSize();
+        d.setSize(Math.max(760, packed.width), packed.height + 24);
+        d.setMinimumSize(d.getSize());
+        d.setResizable(true);
         d.setLocationRelativeTo(near);
         d.setVisible(true);
     }
@@ -152,7 +157,7 @@ public final class Unbuilt {
         body.add(buttonBar(body, null));
         body.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Ui.GRID), Ui.pad(18, 20, 18, 20)));
-        body.setMaximumSize(new Dimension(640, Integer.MAX_VALUE));
+        body.setMaximumSize(new Dimension(720, Integer.MAX_VALUE));
         if (!centred) {
             JPanel wrap = new JPanel(new BorderLayout());
             wrap.setOpaque(false);
@@ -177,15 +182,24 @@ public final class Unbuilt {
         p.add(h);
         p.add(Box.createVerticalStrut(8));
 
-        JComponent note = Ui.note(
+        // Sized by rows and columns so its preferred height is honest: a wrapping
+        // text area otherwise reports a single line and gets clipped when packed.
+        JTextArea note = new JTextArea(
             "This feature is on the OpenTRAP roadmap and has not been implemented "
           + "yet. OpenTRAP is free and open source, built by its community. "
           + "Contributions are welcome: build it and open a pull request on the "
           + "main project, and we'll review and merge it with full credit as an "
           + "OpenTRAP contributor. To discuss it or ask for it to be prioritised, "
-          + "open an issue on the project.");
+          + "open an issue on the project.", 4, 72);
+        note.setFont(Ui.PLAIN);
+        note.setEditable(false);
+        note.setOpaque(false);
+        note.setLineWrap(true);
+        note.setWrapStyleWord(true);
+        note.setBorder(null);
+        note.setFocusable(false);
         note.setAlignmentX(Component.LEFT_ALIGNMENT);
-        note.setMaximumSize(new Dimension(580, 120));
+        note.setMaximumSize(new Dimension(Integer.MAX_VALUE, note.getPreferredSize().height));
         p.add(note);
         p.add(Box.createVerticalStrut(12));
 
