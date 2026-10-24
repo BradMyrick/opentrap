@@ -156,9 +156,9 @@ public class SuiteFrame extends JFrame {
             tabs.addTab(m.name(), comp);
         }
 
-        // Two suite-level tabs after the tools, matching the original's shape.
-        SuiteOptionsPanel opts = new SuiteOptionsPanel(ctx);
-        tabs.addTab("comms", opts);
+        // Suite-level tab after the tools. Settings used to live here as a "comms"
+        // tab; they now live in the Settings dialog (the gear in the top bar), so
+        // there is one home for them.
         alertsPanel = new AlertsPanel(ctx);
         tabs.addTab("alerts", alertsPanel);
 
@@ -180,6 +180,15 @@ public class SuiteFrame extends JFrame {
         suite.addSeparator();
         addItem(suite, "exit", e -> confirmExit());
         menuBar.add(suite);
+
+        // Project menu (not yet implemented - each item invites a contribution).
+        JMenu project = new JMenu("Project");
+        project.setFont(Ui.PLAIN);
+        for (String item : new String[]{"project settings", "rename project",
+                "save copy", "import project file"}) {
+            addItem(project, item, e -> Unbuilt.PROJECT.showDialog(this));
+        }
+        menuBar.add(project);
 
         for (ToolModule m : modules) {
             JMenu[] ms = m.menus();
@@ -226,6 +235,28 @@ public class SuiteFrame extends JFrame {
         addItem(help, "proxy setup instructions", e -> showProxyHelp());
         addItem(help, "about", e -> AboutDialog.show(this));
         menuBar.add(help);
+
+        // Top-bar tools on the right: browser / console / global search (each not
+        // yet implemented), and the Settings gear (opens the Settings dialog).
+        menuBar.add(Box.createHorizontalGlue());
+        menuBar.add(topBarButton("browser", "Embedded browser", () -> Unbuilt.BROWSER.showDialog(this)));
+        menuBar.add(topBarButton("console", "Console", () -> Unbuilt.CONSOLE.showDialog(this)));
+        menuBar.add(topBarButton("search", "Global search", () -> Unbuilt.SEARCH.showDialog(this)));
+        menuBar.add(topBarButton("settings", "Settings", () -> SettingsDialog.open(this, ctx)));
+    }
+
+    /** A flat clickable button for the top-bar tool strip on the right of the menu bar. */
+    private JButton topBarButton(String text, String tip, Runnable action) {
+        JButton b = new JButton(text);
+        b.setFont(Ui.PLAIN);
+        b.setToolTipText(tip);
+        b.setFocusable(false);
+        b.setContentAreaFilled(false);
+        b.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+        b.setForeground(Theme.MUTED);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.addActionListener(e -> action.run());
+        return b;
     }
 
     private void showProxyHelp() {
