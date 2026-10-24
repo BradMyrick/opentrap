@@ -129,6 +129,12 @@ scope, issues) is on `SuiteContext`.
 
 ## Good first areas
 
+- **Anything on the roadmap.** [ROADMAP.md](ROADMAP.md) lists every feature that
+  is laid out in the interface but not built yet, each with a reference code such
+  as `OT-INTRUDER-RESPOOL`; the Discover > Roadmap tab shows the same list in the
+  app. Quote the code in your pull request title. When you implement one, remove
+  its entry from the registry in `src/opentrap/ui/Unbuilt.java`, take the
+  placeholder out of the tool, and regenerate the file (see MAINTAINING.md).
 - **Deeper ZAP engine integration.** Surface more of the engine through the UI:
   the AJAX spider for single-page apps, active-rule and scan-policy configuration,
   and persisting rule settings across runs.

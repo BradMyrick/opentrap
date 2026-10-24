@@ -167,6 +167,22 @@ The fastest way to help it grow is to **star the repository and share it** (butt
 at the top), and to send that first change. See [CONTRIBUTING.md](CONTRIBUTING.md)
 to get started, then open an issue or a pull request.
 
+## Roadmap
+
+OpenTRAP is built in the open, and so is its to-do list. Every feature that is
+laid out in the interface but not implemented yet is in **[ROADMAP.md](ROADMAP.md)**,
+each with a stable reference code such as `OT-INTRUDER-RESPOOL`. Using one of those
+features in the app opens a dialog that names the same code, explains how to
+contribute it, and offers a one-click copy of a short build anchor. The
+**Discover > Roadmap** tab shows the same list inside the app.
+
+Pick an item, quote its code in your pull request, and it is merged with full
+credit. To discuss a feature or ask for it to be prioritised, open an issue.
+
+There are no AI features on the roadmap, by design. A security tool runs in
+environments where sending traffic to a third-party model is not acceptable, so
+OpenTRAP ships none and will not add any.
+
 ## Scanning and detection
 
 Point OpenTRAP at a target and it crawls the application, maps what it finds, and
@@ -190,8 +206,10 @@ exposing crawl depth, attack strength, the input points tested and more.
 - **One self-contained file** - every release is a single Linux AppImage with its own runtime and the scan engine built in; download it and run it.
 - **Open and hackable** - AGPL v3.0: read it, change it, extend it, with no gate on its core capabilities.
 - **Guided from the start** - open or create a project at launch, then drive crawl-and-audit scans through a step-by-step wizard.
-- **Scan configurations that fit the job** - pick a tier from Lightweight to Deep, or build a Custom scan with full control over crawl depth, attack strength and the inputs tested.
-- **Built to be improved** - shaped by the people who use it, with every contribution credited.
+- **Scan configurations that fit the job** - pick a tier from Lightweight to Deep, build a Custom scan with full control over crawl depth, attack strength and the inputs tested, and save it to the configuration library for next time.
+- **Projects that open in seconds** - a saved project with tens of thousands of requests loads in a few seconds without freezing the window.
+- **One Settings dialog** - every tool's settings in one place, reachable from the gear in the top bar or from the tool itself.
+- **Built to be improved** - shaped by the people who use it, with every contribution credited and a public [roadmap](ROADMAP.md).
 
 ## The toolset
 
@@ -199,7 +217,7 @@ exposing crawl depth, attack strength, the input points tested and more.
 |------|--------------|
 | **Dashboard** | Live tasks, issues and event log; start a scan from the guided wizard, choosing a configuration from Lightweight to Deep or a Custom one |
 | **Target** | Site map tree and the suite-wide scope that governs every tool |
-| **Proxy** | Intercept, HTTP history, WebSocket capture, per-host certificate authority |
+| **Proxy** | Intercept, HTTP history, WebSocket capture, HTTP and WebSocket match and replace, per-host certificate authority |
 | **Scanner** | Configure the engine's active and passive rules (enable, disable, threshold) |
 | **Logger** | A complete record of every request OpenTRAP and the engine make |
 | **Intruder** | Four attack types with payload sets and processing |
@@ -208,8 +226,12 @@ exposing crawl depth, attack strength, the input points tested and more.
 | **Organizer** | Stash and annotate interesting requests for later |
 | **Sequencer** | Token randomness analysis with entropy tests |
 | **Decoder / Comparer** | Chained encode/decode/hash transforms, and item diffs |
+| **Extensions** | Laid out and on the roadmap: loading, the catalogue and custom checks are open for contribution |
+| **Discover** | A getting-started guide and the live roadmap |
 
-Right-click any request or response to send it between tools.
+Right-click any request or response to send it between tools. Settings for every
+tool live in one Settings dialog (the gear in the top bar), including session
+handling rules, the testing browser and the scan configuration library.
 
 Open or create a project when OpenTRAP starts, kick off a crawl-and-audit scan
 through a step-by-step wizard, and let in-scope proxy traffic be passively

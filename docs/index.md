@@ -44,6 +44,7 @@ title: OpenTRAP
       <li><span class="ic">{% include check.html %}</span><span><b>Scan configurations that fit the job</b>Pick a tier from Lightweight to Deep, or build a Custom scan with full control over crawl depth, attack strength and which inputs are tested.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>One self-contained file</b>Every release is a single Linux AppImage with its own runtime and the scan engine built in. Download it, run it, scan.</span></li>
       <li><span class="ic">{% include check.html %}</span><span><b>Genuinely open</b>Licensed under the GNU AGPL v3.0, so it stays open and hackable, with no licence gate on its core capabilities.</span></li>
+      <li><span class="ic">{% include check.html %}</span><span><b>Built in the open</b>A <a href="https://github.com/opentrap/opentrap/blob/main/ROADMAP.md">public roadmap</a> with a reference code for every unbuilt feature, mirrored inside the app, and every contribution merged with full credit. No AI features, by design.</span></li>
     </ul>
   </div>
 </div></section>
@@ -91,5 +92,6 @@ title: OpenTRAP
     <div class="q"><b>How does OpenTRAP relate to OWASP ZAP?</b><span>It uses the OWASP ZAP engine for crawling and scanning and puts a familiar, recognisable interface on top: ZAP's detection in a proxy-first workspace.</span></div>
     <div class="q"><b>Which platforms does it run on?</b><span>A single self-contained Linux AppImage today, with the Java runtime and the scan engine inside the file.</span></div>
     <div class="q"><b>Is it really free?</b><span>Yes, released under the GNU AGPL v3.0, with every capability open and nothing reserved for a paid edition.</span></div>
+    <div class="q"><b>How do I contribute, and what is still to build?</b><span>The <a href="https://github.com/opentrap/opentrap/blob/main/ROADMAP.md">roadmap</a> lists every feature laid out in the interface but not implemented yet, each with a reference code. Pick one, open a pull request, and it is merged with full credit. See <a href="https://github.com/opentrap/opentrap/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</span></div>
   </div>
 </div></section>
