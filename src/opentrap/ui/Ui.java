@@ -197,8 +197,26 @@ public final class Ui {
         return c;
     }
 
+    /**
+     * A wrapping, read-only paragraph. A plain wrapping text area has no idea
+     * how wide it will be laid out, so it reports a one-line (or a one-column)
+     * preferred size and gets squashed or clipped. This one reports an honest
+     * size for its text: up to {@link #NOTE_COLUMNS} wide and as many rows as
+     * that needs. Laid out wider it just uses fewer lines.
+     */
     public static JTextArea note(String text) {
-        JTextArea a = new JTextArea(text);
+        JTextArea a = new JTextArea() {
+            @Override public Dimension getPreferredSize() {
+                Insets in = getInsets();
+                int w = getColumns() * getColumnWidth() + in.left + in.right;
+                int h = getRows() * getRowHeight() + in.top + in.bottom;
+                return new Dimension(w, h);
+            }
+            @Override public void setText(String t) {
+                super.setText(t);
+                sizeNote(this);
+            }
+        };
         a.setFont(PLAIN);
         a.setEditable(false);
         a.setOpaque(false);
@@ -206,7 +224,22 @@ public final class Ui {
         a.setWrapStyleWord(true);
         a.setBorder(null);
         a.setFocusable(false);
+        a.setText(text);
         return a;
+    }
+
+    /** The widest a note lays itself out before wrapping, in characters. */
+    public static final int NOTE_COLUMNS = 90;
+
+    /** Size a note's rows and columns to its text, and stop layouts stretching it. */
+    public static void sizeNote(JTextArea a) {
+        String t = a.getText();
+        int len = t == null ? 0 : t.length();
+        int cols = Math.max(24, Math.min(NOTE_COLUMNS, len));
+        a.setColumns(cols);
+        // Word wrap lands a little short of the column count, so allow for it.
+        a.setRows(Math.max(1, (int) Math.ceil(len / (cols * 0.9))));
+        a.setMaximumSize(new Dimension(Integer.MAX_VALUE, a.getPreferredSize().height));
     }
 
     public static Border pad(int t, int l, int b, int r) {

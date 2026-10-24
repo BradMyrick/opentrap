@@ -315,7 +315,7 @@ public class TargetTool implements ToolModule {
             + "your current work. This configuration affects the behaviour of tools throughout "
             + "the suite. Fields take regex strings; the easiest way to configure scope is to "
             + "browse to your target and use the site map's context menus.");
-        note.setMaximumSize(new Dimension(900, 40));
+        note.setMaximumSize(new Dimension(900, note.getPreferredSize().height));
         JPanel body = Ui.vbox(Ui.heading("Target scope"), Box.createVerticalStrut(4), note,
                 Box.createVerticalStrut(14), new ScopeEditor(ctx, ctx.scope()));
         body.setBorder(Ui.pad(10, 10, 10, 10));

@@ -53,7 +53,7 @@ public class ComparerTool implements ToolModule {
         JTextArea intro = Ui.note("This function lets you do a word- or byte-level comparison "
                 + "between different data. You can load, paste, or send data here from other "
                 + "tools and then select the comparison you want to perform.");
-        intro.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        intro.setMaximumSize(new Dimension(Integer.MAX_VALUE, intro.getPreferredSize().height));
         JPanel head = Ui.vbox(Ui.heading("Comparer"), Box.createVerticalStrut(4), intro,
                 Box.createVerticalStrut(10));
 

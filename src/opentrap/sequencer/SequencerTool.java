@@ -328,9 +328,9 @@ public class SequencerTool implements ToolModule {
         JTextArea selectNote = Ui.note("Send requests here from other tools to configure a live "
             + "capture. Select the request to use, configure the other options below, then click "
             + "\"Start live capture\".");
-        selectNote.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        selectNote.setMaximumSize(new Dimension(Integer.MAX_VALUE, selectNote.getPreferredSize().height));
         JTextArea tokenNote = Ui.note("Select the location in the response where the token appears.");
-        tokenNote.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        tokenNote.setMaximumSize(new Dimension(Integer.MAX_VALUE, tokenNote.getPreferredSize().height));
 
         JPanel body = Ui.vbox(
             Ui.heading("Select live capture request"),

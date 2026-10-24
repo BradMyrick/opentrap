@@ -43,7 +43,7 @@ public class DiscoverTool implements ToolModule {
         JComponent intro = Ui.note("OpenTRAP is a free, open-source web security "
                 + "testing suite. The usual workflow runs through these four steps.");
         intro.setAlignmentX(Component.LEFT_ALIGNMENT);
-        intro.setMaximumSize(new Dimension(900, 48));
+        intro.setMaximumSize(new Dimension(900, intro.getPreferredSize().height));
         head.add(h);
         head.add(Box.createVerticalStrut(4));
         head.add(intro);

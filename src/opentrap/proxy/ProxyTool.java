@@ -145,7 +145,7 @@ public class ProxyTool implements ToolModule {
             idleTitle.setFont(new Font("Dialog", Font.BOLD, 15));
             idleTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
             idleText.setAlignmentX(Component.CENTER_ALIGNMENT);
-            idleText.setMaximumSize(new Dimension(480, 60));
+            idleText.setMaximumSize(new Dimension(520, Integer.MAX_VALUE));
             idleListener.setForeground(Theme.MUTED);
             idleListener.setAlignmentX(Component.CENTER_ALIGNMENT);
             JButton idleBrowser = Ui.primaryButton("Open browser",

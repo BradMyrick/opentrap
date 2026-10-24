@@ -28,7 +28,7 @@ public class MatchReplacePanel extends JPanel {
         JTextArea desc = Ui.note("Use these settings to automatically replace parts of HTTP "
                 + "requests and responses passing through the Proxy.");
         desc.setAlignmentX(LEFT_ALIGNMENT);
-        desc.setMaximumSize(new Dimension(760, 24));
+        desc.setMaximumSize(new Dimension(760, desc.getPreferredSize().height));
         add(desc);
         add(Box.createVerticalStrut(8));
 
@@ -87,7 +87,7 @@ public class MatchReplacePanel extends JPanel {
         JTextArea wsDesc = Ui.note("Use these settings to automatically replace parts of "
                 + "WebSocket messages passing through the Proxy.");
         wsDesc.setAlignmentX(LEFT_ALIGNMENT);
-        wsDesc.setMaximumSize(new Dimension(760, 24));
+        wsDesc.setMaximumSize(new Dimension(760, wsDesc.getPreferredSize().height));
         add(wsDesc);
         add(Box.createVerticalStrut(6));
         JComponent ws = opentrap.ui.Unbuilt.PROXY_WS_MATCH.panel(false);
