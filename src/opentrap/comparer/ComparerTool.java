@@ -24,8 +24,6 @@ import java.util.List;
  */
 public class ComparerTool implements ToolModule {
 
-    private static final String PLACEHOLDER =
-            "load, paste, or send data here from other tools to perform a compare";
     private static final int PREVIEW_CHARS = 120;
 
     /** Text colour for the row the other list has already taken. */
@@ -40,8 +38,8 @@ public class ComparerTool implements ToolModule {
     private final JTable secondList = new JTable(model);
     private final JPanel firstCards = new JPanel(new CardLayout());
     private final JPanel secondCards = new JPanel(new CardLayout());
-    private final JButton words = compareButton("words");
-    private final JButton bytes = compareButton("bytes");
+    private final JButton words = compareButton("Words");
+    private final JButton bytes = compareButton("Bytes");
     private final JPanel root = new JPanel(new BorderLayout(8, 0));
 
     private SuiteContext ctx;
@@ -51,12 +49,21 @@ public class ComparerTool implements ToolModule {
         cards(firstCards, firstList);
         cards(secondCards, secondList);
 
+        // Heading and a one-line description, as in the reference.
+        JTextArea intro = Ui.note("This function lets you do a word- or byte-level comparison "
+                + "between different data. You can load, paste, or send data here from other "
+                + "tools and then select the comparison you want to perform.");
+        intro.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        JPanel head = Ui.vbox(Ui.heading("Comparer"), Box.createVerticalStrut(4), intro,
+                Box.createVerticalStrut(10));
+
         JPanel lists = new JPanel(new GridLayout(2, 1, 0, 10));
         lists.setOpaque(false);
-        lists.add(titled(" item 1", firstCards));
-        lists.add(titled(" item 2", secondCards));
+        lists.add(titled("Select item 1:", firstCards));
+        lists.add(titled("Select item 2:", secondCards));
 
         root.setBorder(Ui.pad(8, 8, 8, 8));
+        root.add(head, BorderLayout.NORTH);
         root.add(lists, BorderLayout.CENTER);
         root.add(buttons(), BorderLayout.EAST);
 
@@ -120,7 +127,7 @@ public class ComparerTool implements ToolModule {
         pin(table.getColumnModel().getColumn(1), 70);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        cards.add(placeholder(), "empty");
+        // The table is always shown, with its headers, even while empty.
         cards.add(Ui.scroll(table), "items");
     }
 
@@ -148,29 +155,20 @@ public class ComparerTool implements ToolModule {
         }
     }
 
-    private static JComponent placeholder() {
-        JLabel l = Ui.label(PLACEHOLDER);
-        l.setHorizontalAlignment(SwingConstants.CENTER);
-        JPanel p = new JPanel(new GridBagLayout());
-        p.setBackground(Color.WHITE);
-        p.setBorder(BorderFactory.createLineBorder(Ui.GRID));
-        p.add(l);
-        return p;
-    }
-
     private static JPanel titled(String title, JComponent body) {
         JPanel p = new JPanel(new BorderLayout(0, 3));
         p.setOpaque(false);
-        p.add(Ui.bold(title), BorderLayout.NORTH);
+        p.add(Ui.label(title), BorderLayout.NORTH);
         p.add(body, BorderLayout.CENTER);
         return p;
     }
 
+    /** The right-hand column: item actions at the top, the compare choice at the bottom. */
     private JComponent buttons() {
-        JButton paste = Ui.button("paste", "add the clipboard contents as an item");
-        JButton load = Ui.button("load", "add the contents of a file as an item");
-        JButton remove = Ui.button("remove", "remove the selected items");
-        JButton clear = Ui.button("clear", "remove every item");
+        JButton paste = Ui.button("Paste", "add the clipboard contents as an item");
+        JButton load = Ui.button("Load", "add the contents of a file as an item");
+        JButton remove = Ui.button("Remove", "remove the selected items");
+        JButton clear = Ui.button("Clear", "remove every item");
         paste.addActionListener(e -> paste());
         load.addActionListener(e -> load());
         remove.addActionListener(e -> remove());
@@ -189,12 +187,13 @@ public class ComparerTool implements ToolModule {
         compares.setOpaque(false);
         compares.add(words);
         compares.add(bytes);
+        JPanel compareBox = Ui.vbox(Ui.label("Compare ..."), Box.createVerticalStrut(2), compares);
 
-        JPanel p = Ui.vbox(actions, Box.createVerticalStrut(16), Ui.bold("  compare ..."), compares);
         JPanel holder = new JPanel(new BorderLayout());
         holder.setOpaque(false);
-        holder.setBorder(Ui.pad(18, 2, 0, 0));
-        holder.add(p, BorderLayout.NORTH);
+        holder.setBorder(Ui.pad(58, 2, 0, 0));
+        holder.add(actions, BorderLayout.NORTH);
+        holder.add(compareBox, BorderLayout.SOUTH);
         return holder;
     }
 

@@ -36,7 +36,17 @@ public class ExtensionsTool implements ToolModule {
         root.setBorder(Ui.pad(10, 12, 10, 12));
         root.setOpaque(false);
 
-        // Header: heading + description + a search box on the right.
+        // Header, as in the reference: the system-impact line with its meter at
+        // the top, then the heading and description with a search box on the right.
+        JPanel impactRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        impactRow.setOpaque(false);
+        impactRow.add(Ui.label("Total estimated system impact:"));
+        impactRow.add(Ui.bold("None"));
+        JProgressBar meter = new JProgressBar(0, 100);
+        meter.setValue(0);
+        meter.setPreferredSize(new Dimension(260, 8));
+        impactRow.add(meter);
+
         JPanel head = new JPanel(new BorderLayout(10, 0));
         head.setOpaque(false);
         JPanel titleCol = new JPanel();
@@ -44,20 +54,20 @@ public class ExtensionsTool implements ToolModule {
         titleCol.setOpaque(false);
         JLabel heading = Ui.heading("Extensions");
         heading.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel impact = Ui.label("Total estimated system impact: none");
-        impact.setForeground(opentrap.ui.Theme.MUTED);
-        impact.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel desc = Ui.label("Extensions let you customise OpenTRAP's behaviour using your own or third-party code.");
+        desc.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleCol.add(heading);
         titleCol.add(Box.createVerticalStrut(2));
-        titleCol.add(impact);
+        titleCol.add(desc);
         head.add(titleCol, BorderLayout.WEST);
         JTextField search = Ui.field("", 18);
         JPanel searchWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         searchWrap.setOpaque(false);
         searchWrap.add(Ui.label("Search "));
         searchWrap.add(search);
-        head.add(searchWrap, BorderLayout.EAST);
-        root.add(head, BorderLayout.NORTH);
+        head.add(searchWrap, BorderLayout.SOUTH);
+        JPanel top = Ui.vbox(impactRow, Box.createVerticalStrut(10), head);
+        root.add(top, BorderLayout.NORTH);
 
         // Centre: left button column + extensions table.
         JPanel centre = new JPanel(new BorderLayout(8, 0));

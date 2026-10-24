@@ -28,11 +28,11 @@ class SimpleListGenerator extends AbstractGenerator {
         JScrollPane sp = Ui.scroll(table);
         sp.setPreferredSize(new Dimension(360, 150));
 
-        JButton add    = Ui.button("add");
-        JButton load   = Ui.button("load ...", "load payloads from a file");
-        JButton paste  = Ui.button("paste");
-        JButton delete = Ui.button("delete");
-        JButton clear  = Ui.button("clear");
+        JButton add    = Ui.button("Add");
+        JButton load   = Ui.button("Load ...", "load payloads from a file");
+        JButton paste  = Ui.button("Paste");
+        JButton delete = Ui.button("Remove");
+        JButton clear  = Ui.button("Clear");
 
         add.addActionListener(e -> addEntry());
         entry.addActionListener(e -> addEntry());
@@ -41,17 +41,19 @@ class SimpleListGenerator extends AbstractGenerator {
         delete.addActionListener(e -> deleteSelected());
         clear.addActionListener(e -> { model.setRowCount(0); changed(); });
 
-        JPanel buttons = Ui.buttonColumn(add, load, paste, delete, clear);
+        // As in the reference: the button column to the left of the list, and
+        // the entry field with its Add button beneath.
+        JPanel buttons = Ui.buttonColumn(paste, load, delete, clear);
         JPanel addRow = Ui.row(entry, add);
 
         panel = new JPanel(new BorderLayout(8, 4));
         panel.setOpaque(false);
-        JPanel west = new JPanel(new BorderLayout());
-        west.setOpaque(false);
-        west.add(sp, BorderLayout.CENTER);
-        west.add(addRow, BorderLayout.SOUTH);
-        panel.add(west, BorderLayout.CENTER);
-        panel.add(buttons, BorderLayout.EAST);
+        JPanel list = new JPanel(new BorderLayout());
+        list.setOpaque(false);
+        list.add(sp, BorderLayout.CENTER);
+        list.add(addRow, BorderLayout.SOUTH);
+        panel.add(list, BorderLayout.CENTER);
+        panel.add(buttons, BorderLayout.WEST);
         panel.add(countLabel, BorderLayout.NORTH);
     }
 

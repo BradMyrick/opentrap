@@ -34,9 +34,19 @@ public class PositionsPanel extends JPanel {
     private final JComboBox<AttackType> attackCombo = Ui.combo(AttackType.ordered());
     private final JLabel posLabel = Ui.label("0 positions");
     private final JLabel lenLabel = Ui.label("length: 0");
-    private final JButton start = Ui.primaryButton("start attack", "launch the attack with the current configuration");
+    private final JButton start = Ui.primaryButton("Start attack", "launch the attack with the current configuration");
+    /** Holds the target row supplied by the tool, under the attack type. */
+    private final JPanel targetSlot = new JPanel(new BorderLayout());
 
     private Runnable onChange;
+
+    /** Place the target row (host, port, TLS) under the attack type, as in the reference. */
+    public void setTargetRow(JComponent target) {
+        targetSlot.removeAll();
+        targetSlot.add(target, BorderLayout.CENTER);
+        targetSlot.revalidate();
+        targetSlot.repaint();
+    }
 
     public PositionsPanel() {
         super(new BorderLayout());
@@ -52,33 +62,38 @@ public class PositionsPanel extends JPanel {
             public void changedUpdate(DocumentEvent e) { counts(); }
         });
 
-        // Center-North: attack type selector.
-        JPanel north = Ui.row(Ui.label("attack type"), attackCombo, start);
+        // Header, as in the reference: the attack type across the top with Start
+        // attack at the right, the target row beneath it, then the Positions row
+        // with its marker buttons directly above the request editor.
         attackCombo.setToolTipText("the attack type determines the way in which payloads are "
                 + "assigned to payload positions");
         attackCombo.addActionListener(e -> fire());
+        JPanel attackRow = new JPanel(new BorderLayout(10, 0));
+        attackRow.setOpaque(false);
+        attackRow.add(attackCombo, BorderLayout.CENTER);
+        attackRow.add(start, BorderLayout.EAST);
 
-        // East: the marker buttons.
-        JButton addMark   = Ui.button("add §", "insert a payload marker");
-        JButton clearMark = Ui.button("clear §", "clear all payload markers");
-        JButton autoMark  = Ui.button("auto §", "automatically set a payload at each URL, "
+        JButton addMark   = Ui.button("Add §", "insert a payload marker");
+        JButton clearMark = Ui.button("Clear §", "clear all payload markers");
+        JButton autoMark  = Ui.button("Auto §", "automatically set a payload at each URL, "
                 + "cookie and body parameter");
-        JButton clear     = Ui.button("clear", "clear all text and payload markers");
         addMark.addActionListener(e -> addMarker());
         clearMark.addActionListener(e -> clearMarkers());
         autoMark.addActionListener(e -> autoPlace());
-        clear.addActionListener(e -> { area.setText(""); counts(); });
-        JPanel east = Ui.buttonColumn(addMark, clearMark, autoMark, clear);
+        JPanel posRow = Ui.row(Ui.bold("Positions"), addMark, clearMark, autoMark);
 
-        // Center-South: position count and length.
+        targetSlot.setOpaque(false);
+        JPanel header = Ui.vbox(attackRow, Box.createVerticalStrut(6), targetSlot,
+                Box.createVerticalStrut(2), posRow, Box.createVerticalStrut(4));
+
+        // South: position count and length.
         JPanel south = new JPanel(new BorderLayout());
         south.setOpaque(false);
         south.add(posLabel, BorderLayout.WEST);
         south.add(lenLabel, BorderLayout.EAST);
 
-        add(north, BorderLayout.NORTH);
+        add(header, BorderLayout.NORTH);
         add(Ui.scroll(area), BorderLayout.CENTER);
-        add(east, BorderLayout.EAST);
         add(south, BorderLayout.SOUTH);
 
         counts();

@@ -57,6 +57,9 @@ public final class Unbuilt {
     public static final Unbuilt SCAN_CONFIG_LIBRARY  = of("OT-SCAN-CONFIG-LIBRARY",  "New scan > Save and load configurations");
     public static final Unbuilt SCAN_LOGIN           = of("OT-SCAN-LOGIN",           "New scan > Application login");
 
+    // Proxy
+    public static final Unbuilt PROXY_WS_MATCH       = of("OT-PROXY-WS-MATCH-REPLACE", "Proxy > WebSocket match and replace");
+
     // Intruder
     public static final Unbuilt INTRUDER_RESPOOL     = of("OT-INTRUDER-RESPOOL",     "Intruder > Resource pool");
 
@@ -180,23 +183,28 @@ public final class Unbuilt {
         p.add(refs);
         p.add(Box.createVerticalStrut(10));
 
-        JLabel copyHint = Ui.label("Copy this to an AI to help build it:");
+        JLabel copyHint = Ui.label("\"Copy for AI\" puts exactly this on the clipboard:");
         copyHint.setForeground(Theme.MUTED);
         copyHint.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(copyHint);
         p.add(Box.createVerticalStrut(4));
 
-        JTextArea prompt = new JTextArea(prompt());
+        // Shown in full, never scrolled or clipped, so what the user sees is
+        // precisely what gets copied.
+        String text = prompt();
+        JTextArea prompt = new JTextArea(text, text.split("\n").length, 1);
         prompt.setFont(Ui.MONO);
         prompt.setEditable(false);
-        prompt.setLineWrap(true);
-        prompt.setWrapStyleWord(true);
-        JScrollPane ps = new JScrollPane(prompt);
-        ps.setBorder(BorderFactory.createLineBorder(Ui.GRID));
-        ps.setAlignmentX(Component.LEFT_ALIGNMENT);
-        ps.setPreferredSize(new Dimension(540, 64));
-        ps.setMaximumSize(new Dimension(640, 64));
-        p.add(ps);
+        prompt.setLineWrap(false);
+        prompt.setOpaque(true);
+        prompt.setBackground(Theme.SURFACE);
+        prompt.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Ui.GRID), Ui.pad(8, 10, 8, 10)));
+        prompt.setAlignmentX(Component.LEFT_ALIGNMENT);
+        Dimension pd = prompt.getPreferredSize();
+        prompt.setPreferredSize(new Dimension(Math.max(540, pd.width), pd.height));
+        prompt.setMaximumSize(new Dimension(Integer.MAX_VALUE, pd.height));
+        p.add(prompt);
         return p;
     }
 

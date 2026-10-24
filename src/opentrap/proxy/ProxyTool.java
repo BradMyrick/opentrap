@@ -67,12 +67,24 @@ public class ProxyTool implements ToolModule {
 
     // ---------------- intercept tab ----------------
 
+    /**
+     * The Intercept tab, laid out like the reference: a toolbar with the
+     * intercept toggle, Forward, Drop and Action on the left and Open browser on
+     * the right; below it either a centred idle card (intercept state, what it
+     * does, the listener status and an Open browser button) or, while a message
+     * is held, the message editor.
+     */
     static class InterceptPanel extends JPanel implements InterceptQueue.Presenter {
         private final ProxyServer server;
         private final MessageEditor editor;
         private final JToggleButton toggle;
         private final JButton forward, drop, action;
         private final JLabel status = Ui.label(" ");
+        private final CardLayout cards = new CardLayout();
+        private final JPanel body = new JPanel(cards);
+        private final JLabel idleTitle = Ui.heading("Intercept is off");
+        private final JTextArea idleText = Ui.note("");
+        private final JLabel idleListener = Ui.label(" ");
         private InterceptQueue.Pending current;
 
         InterceptPanel(SuiteContext ctx, ProxyServer server) {
@@ -80,47 +92,85 @@ public class ProxyTool implements ToolModule {
             this.server = server;
             this.editor = new MessageEditor(ctx, MessageEditor.REQUEST | MessageEditor.RESPONSE, true);
 
-            JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
-            forward = Ui.button("forward", "forward the displayed message");
-            drop = Ui.button("drop", "drop the displayed message");
-            toggle = new JToggleButton("intercept is off", false);
-            toggle.setFont(Ui.PLAIN);
-            toggle.setToolTipText("toggle message interception");
-            action = Ui.button("action", "perform additional actions");
-            forward.setEnabled(false); drop.setEnabled(false); action.setEnabled(false);
-            bar.add(forward); bar.add(drop); bar.add(toggle); bar.add(action);
-
-            bar.add(javax.swing.Box.createHorizontalStrut(16));
-            JButton openBrowser = Ui.primaryButton("open browser",
-                    "launch a browser routed through the proxy, with the CA already trusted");
-            openBrowser.addActionListener(ev -> {
+            Runnable launchBrowser = () -> {
                 boolean relax = ctx.settings().getBool(BrowserFlags.RELAX_KEY, true);
                 String err = EmbeddedBrowser.launch(server, "http://opentrap/", relax);
                 if (err != null) {
-                    JOptionPane.showMessageDialog(this, err, "open browser",
+                    JOptionPane.showMessageDialog(this, err, "Open browser",
                             JOptionPane.WARNING_MESSAGE);
                 } else {
                     ctx.alert("proxy", "launched browser through the proxy, "
                             + BrowserFlags.describe(relax));
                 }
-            });
-            bar.add(openBrowser);
+            };
 
-            JPanel north = new JPanel(new BorderLayout());
-            north.add(status, BorderLayout.NORTH);
-            north.add(bar, BorderLayout.CENTER);
-            status.setBorder(Ui.pad(5, 5, 0, 5));
+            // Toolbar.
+            toggle = new JToggleButton("Intercept off", false);
+            toggle.setFont(Ui.PLAIN);
+            toggle.setToolTipText("toggle message interception");
+            forward = Ui.button("Forward", "forward the displayed message");
+            drop = Ui.button("Drop", "drop the displayed message");
+            action = Ui.button("Action", "perform additional actions");
+            forward.setEnabled(false); drop.setEnabled(false); action.setEnabled(false);
+            status.setForeground(Theme.MUTED);
 
-            add(north, BorderLayout.NORTH);
-            add(editor, BorderLayout.CENTER);
+            JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            left.setOpaque(false);
+            left.add(toggle); left.add(forward); left.add(drop); left.add(action);
+            left.add(Box.createHorizontalStrut(8));
+            left.add(status);
+            JButton openBrowser = Ui.button("Open browser",
+                    "launch a browser routed through the proxy, with the CA already trusted");
+            openBrowser.addActionListener(ev -> launchBrowser.run());
+            JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            right.setOpaque(false);
+            right.add(openBrowser);
+            JPanel bar = new JPanel(new BorderLayout());
+            bar.setOpaque(false);
+            bar.setBorder(Ui.pad(6, 8, 6, 8));
+            bar.add(left, BorderLayout.WEST);
+            bar.add(right, BorderLayout.EAST);
+
+            // Idle card: centred column.
+            JPanel column = new JPanel();
+            column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+            column.setOpaque(false);
+            idleTitle.setFont(new Font("Dialog", Font.BOLD, 15));
+            idleTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+            idleText.setAlignmentX(Component.CENTER_ALIGNMENT);
+            idleText.setMaximumSize(new Dimension(480, 60));
+            idleListener.setForeground(Theme.MUTED);
+            idleListener.setAlignmentX(Component.CENTER_ALIGNMENT);
+            JButton idleBrowser = Ui.primaryButton("Open browser",
+                    "launch a browser routed through the proxy, with the CA already trusted");
+            idleBrowser.addActionListener(ev -> launchBrowser.run());
+            idleBrowser.setAlignmentX(Component.CENTER_ALIGNMENT);
+            column.add(idleTitle);
+            column.add(Box.createVerticalStrut(12));
+            column.add(idleText);
+            column.add(Box.createVerticalStrut(8));
+            column.add(idleListener);
+            column.add(Box.createVerticalStrut(16));
+            column.add(idleBrowser);
+            JPanel idle = new JPanel(new GridBagLayout());
+            idle.setOpaque(false);
+            idle.add(column, new GridBagConstraints());
+
+            body.setOpaque(false);
+            body.add(idle, "idle");
+            body.add(editor, "message");
+
+            add(bar, BorderLayout.NORTH);
+            add(body, BorderLayout.CENTER);
 
             forward.addActionListener(e -> resolve(InterceptQueue.Action.FORWARD));
             drop.addActionListener(e -> resolve(InterceptQueue.Action.DROP));
             toggle.addActionListener(e -> {
                 boolean on = toggle.isSelected();
-                toggle.setText(on ? "intercept is on" : "intercept is off");
+                toggle.setText(on ? "Intercept on" : "Intercept off");
                 server.interceptingEnabled = on;
-                if (!on) { server.interceptQueue().releaseAll(); showIdle(); }
+                if (!on) server.interceptQueue().releaseAll();
+                if (!on || current == null) showIdle();
             });
             action.addActionListener(e -> editor.buildMenu().show(action, 0, action.getHeight()));
 
@@ -129,37 +179,43 @@ public class ProxyTool implements ToolModule {
                 public void exchangeLogged(LogEntry entry) {}
                 public void statusChanged(String text) {}
             });
-            // Keep the port on screen: refresh the idle line whenever a listener
+            // Keep the port on screen: refresh the idle card whenever a listener
             // starts or stops, unless an intercepted message is being shown.
-            server.onListenersChanged(() -> { if (current == null) status.setText(server.listeningSummary()); });
+            server.onListenersChanged(() -> { if (current == null) showIdle(); });
             showIdle();
         }
 
         private void showIdle() {
             SwingUtilities.invokeLater(() -> {
                 current = null;
-                status.setText(server.listeningSummary());
+                boolean on = toggle.isSelected();
+                idleTitle.setText(on ? "Intercept is on" : "Intercept is off");
+                idleText.setText(on
+                        ? "Waiting for a message. Requests and responses passing through the "
+                          + "proxy will be held here for you to review, edit, forward or drop."
+                        : "If you turn Intercept on, messages between your browser and your "
+                          + "target servers are held here. This lets you analyse and modify "
+                          + "them before you forward them.");
+                idleListener.setText(server.listeningSummary());
+                status.setText(" ");
                 editor.setMessage(null, new HttpMessage(new byte[0]));
                 forward.setEnabled(false); drop.setEnabled(false); action.setEnabled(false);
+                cards.show(body, "idle");
             });
         }
 
         @Override public void present(InterceptQueue.Pending p) {
             SwingUtilities.invokeLater(() -> {
                 current = p;
-                status.setText((p.isRequest ? "request to " : "response from ") + p.service.url());
+                status.setText((p.isRequest ? "Request to " : "Response from ") + p.service.url());
                 editor.setMessage(p.service, p.message, p.relatedRequest);
                 forward.setEnabled(true); drop.setEnabled(true); action.setEnabled(true);
+                cards.show(body, "message");
             });
         }
 
         @Override public void cleared(InterceptQueue.Pending p) {
-            SwingUtilities.invokeLater(() -> {
-                current = null;
-                status.setText(server.listeningSummary());
-                editor.setMessage(null, new HttpMessage(new byte[0]));
-                forward.setEnabled(false); drop.setEnabled(false); action.setEnabled(false);
-            });
+            showIdle();
         }
 
         private void resolve(InterceptQueue.Action a) {

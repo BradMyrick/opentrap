@@ -50,10 +50,13 @@ public class PayloadsPanel extends JPanel {
             }
         });
 
+        // As in the reference: payload position (set), then the counts, in one
+        // aligned form. Start attack lives in the attack header on the left.
         JPanel top = Ui.vbox(
-                Ui.row(Ui.label("number of payloads:"), payloadCount),
-                Ui.row(Ui.label("number of requests:"), requestCount),
-                Ui.row(Ui.label("payload set"), setCombo, start));
+                Ui.form("Payload position:", setCombo,
+                        "Payload count:", payloadCount,
+                        "Request count:", requestCount),
+                Box.createVerticalStrut(8));
 
         add(top, BorderLayout.NORTH);
         add(cards, BorderLayout.CENTER);

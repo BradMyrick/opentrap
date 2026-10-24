@@ -37,6 +37,7 @@ public class CollaboratorTool implements ToolModule {
     private JLabel statusLabel;
     private JTextField payloadField;
     private JTabbedPane detailTabs;
+    private javax.swing.table.TableRowSorter<InteractionTableModel> sorter;
 
     @Override public String name() { return "collaborator"; }
 
@@ -68,7 +69,9 @@ public class CollaboratorTool implements ToolModule {
         model = new InteractionTableModel();
         table = new JTable(model);
         Ui.styleTable(table);
-        Ui.distributeWidths(table, 50, 70, 140, 150, 400);
+        sorter = new javax.swing.table.TableRowSorter<>(model);
+        table.setRowSorter(sorter);
+        Ui.distributeWidths(table, 40, 150, 70, 380, 160);
         table.getSelectionModel().addListSelectionListener(e -> showSelected());
 
         // Detail area as tabs, rebuilt per interaction so the set matches the
@@ -90,74 +93,158 @@ public class CollaboratorTool implements ToolModule {
             }
         });
 
-        // Top bar: status and session controls.
-        statusLabel = Ui.bold("not started");
-        JButton start = Ui.button("start", "register with the collaborator server and begin polling");
-        JButton stop  = Ui.button("stop", "stop polling (start again gives a fresh session)");
-        JButton newPayload = Ui.primaryButton("new payload",
-                "generate a fresh payload hostname, show it below, and copy it to the clipboard");
-        JButton copy  = Ui.button("copy", "copy the payload shown below to the clipboard");
-        JButton clear = Ui.button("clear", "remove the collected interactions");
+        // Toolbar, as in the reference: how many payloads to generate and a copy
+        // button, then polling controls and the session status.
+        statusLabel = Ui.label("not started");
+        JSpinner count = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+        count.setFont(Ui.PLAIN);
+        count.setPreferredSize(new Dimension(64, count.getPreferredSize().height));
+        JButton copy = Ui.primaryButton("Copy to clipboard",
+                "generate that many fresh payload hostnames and copy them to the clipboard");
+        JButton pollNow = Ui.button("Poll now", "check the server for new interactions now");
+        JCheckBox auto = Ui.check("Polling automatically", false);
+        auto.setToolTipText("register with the collaborator server and keep polling it");
 
         payloadField = new JTextField("", 52);
         payloadField.setEditable(false);
         payloadField.setFont(Ui.MONO);
 
-        start.addActionListener(e -> {
-            String err = collab.start();
-            if (err != null) {
-                JOptionPane.showMessageDialog(ctx.frame(),
-                        "Could not register with " + collab.serverUrl() + ":\n" + err,
-                        "collaborator", JOptionPane.WARNING_MESSAGE);
+        copy.addActionListener(e -> {
+            if (!collab.isRunning()) {
+                String err = collab.start();
+                if (err != null) {
+                    JOptionPane.showMessageDialog(ctx.frame(),
+                            "Could not register with " + collab.serverUrl() + ":\n" + err,
+                            "Collaborator", JOptionPane.WARNING_MESSAGE);
+                    refreshStatus();
+                    return;
+                }
+                auto.setSelected(true);
+            }
+            int n = (Integer) count.getValue();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < n; i++) {
+                String h = collab.payloadHost();
+                if (h == null) break;
+                if (sb.length() > 0) sb.append('\n');
+                sb.append(h);
+            }
+            if (sb.length() == 0) {
+                JOptionPane.showMessageDialog(ctx.frame(), "Could not generate a payload.",
+                        "Collaborator", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            payloadField.setText(sb.toString().replace('\n', ' '));
+            payloadField.setCaretPosition(0);
+            Toolkit.getDefaultToolkit().getSystemClipboard()
+                    .setContents(new StringSelection(sb.toString()), null);
+            ctx.alert("collaborator", "copied " + n + " collaborator payload" + (n == 1 ? "" : "s"));
+            refreshStatus();
+        });
+        pollNow.addActionListener(e -> {
+            if (collab.isRunning()) collab.pollNow();
+            else JOptionPane.showMessageDialog(ctx.frame(),
+                    "Turn on \"Polling automatically\" or copy a payload first.",
+                    "Collaborator", JOptionPane.INFORMATION_MESSAGE);
+        });
+        auto.addActionListener(e -> {
+            if (auto.isSelected()) {
+                String err = collab.start();
+                if (err != null) {
+                    auto.setSelected(false);
+                    JOptionPane.showMessageDialog(ctx.frame(),
+                            "Could not register with " + collab.serverUrl() + ":\n" + err,
+                            "Collaborator", JOptionPane.WARNING_MESSAGE);
+                }
             } else {
-                generatePayload();   // always show a current payload after starting
+                collab.stop();
             }
             refreshStatus();
         });
-        stop.addActionListener(e -> { collab.stop(); refreshStatus(); });
-        newPayload.addActionListener(e -> {
-            if (!generatePayload()) {
-                JOptionPane.showMessageDialog(ctx.frame(),
-                        "Start the collaborator first.", "collaborator",
-                        JOptionPane.INFORMATION_MESSAGE);
-            }
-        });
-        copy.addActionListener(e -> {
-            if (!payloadField.getText().isBlank()) {
-                Toolkit.getDefaultToolkit().getSystemClipboard()
-                        .setContents(new StringSelection(payloadField.getText()), null);
-                ctx.alert("collaborator", "copied collaborator payload " + payloadField.getText());
-            }
-        });
-        clear.addActionListener(e -> {
-            collab.clear(); model.clearAll(); detailTabs.removeAll();
-        });
 
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
         bar.setOpaque(false);
-        bar.add(start); bar.add(stop); bar.add(newPayload); bar.add(copy); bar.add(clear);
-        bar.add(Box.createHorizontalStrut(10));
-        bar.add(Ui.label("status:")); bar.add(statusLabel);
+        bar.add(Ui.label("Payloads to generate:"));
+        bar.add(count);
+        bar.add(copy);
+        bar.add(Box.createHorizontalStrut(12));
+        bar.add(pollNow);
+        bar.add(auto);
+        bar.add(Box.createHorizontalStrut(12));
+        bar.add(statusLabel);
 
         // The payload row stretches the field to the full width so the whole
         // hostname is always visible, never clipped.
         JPanel payloadRow = new JPanel(new BorderLayout(6, 0));
         payloadRow.setOpaque(false);
-        payloadRow.setBorder(Ui.pad(0, 2, 2, 8));
-        payloadRow.add(Ui.label("payload:"), BorderLayout.WEST);
+        payloadRow.setBorder(Ui.pad(0, 8, 4, 8));
+        payloadRow.add(Ui.label("Payload:"), BorderLayout.WEST);
         payloadRow.add(payloadField, BorderLayout.CENTER);
 
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
-        top.setBorder(Ui.pad(4, 6, 2, 6));
-        top.add(bar, BorderLayout.NORTH);
-        top.add(payloadRow, BorderLayout.SOUTH);
+        // Filter row, as in the reference: protocol toggles and a search box.
+        JToggleButton fHttp = filterToggle("HTTP"), fDns = filterToggle("DNS"), fSmtp = filterToggle("SMTP");
+        JTextField search = Ui.field("", 18);
+        search.setToolTipText("show only interactions containing this text");
+        Runnable applyFilter = () -> {
+            final String q = search.getText().trim().toLowerCase();
+            final boolean http = fHttp.isSelected(), dns = fDns.isSelected(), smtp = fSmtp.isSelected();
+            sorter.setRowFilter(new RowFilter<InteractionTableModel, Integer>() {
+                @Override public boolean include(Entry<? extends InteractionTableModel, ? extends Integer> en) {
+                    String type = en.getStringValue(2);
+                    boolean typeOk = ("HTTP".equals(type) && http) || ("DNS".equals(type) && dns)
+                            || ("SMTP".equals(type) && smtp)
+                            || !("HTTP".equals(type) || "DNS".equals(type) || "SMTP".equals(type));
+                    if (!typeOk) return false;
+                    if (q.isEmpty()) return true;
+                    for (int c = 0; c < en.getValueCount(); c++) {
+                        if (en.getStringValue(c).toLowerCase().contains(q)) return true;
+                    }
+                    return false;
+                }
+            });
+        };
+        for (JToggleButton t : new JToggleButton[]{fHttp, fDns, fSmtp}) t.addActionListener(e -> applyFilter.run());
+        search.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e)  { applyFilter.run(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e)  { applyFilter.run(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter.run(); }
+        });
+        JButton clear = Ui.button("Clear", "remove the collected interactions");
+        clear.addActionListener(e -> { collab.clear(); model.clearAll(); detailTabs.removeAll(); });
+
+        JPanel filterLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        filterLeft.setOpaque(false);
+        filterLeft.add(Ui.label("Filter"));
+        filterLeft.add(fHttp); filterLeft.add(fDns); filterLeft.add(fSmtp);
+        JPanel filterRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
+        filterRight.setOpaque(false);
+        filterRight.add(Ui.label("Search"));
+        filterRight.add(search);
+        filterRight.add(clear);
+        JPanel filterRow = new JPanel(new BorderLayout());
+        filterRow.setOpaque(false);
+        filterRow.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, Ui.GRID), Ui.pad(2, 4, 2, 4)));
+        filterRow.add(filterLeft, BorderLayout.WEST);
+        filterRow.add(filterRight, BorderLayout.EAST);
+
+        JPanel top = Ui.vbox(bar, payloadRow, filterRow);
+        top.setBorder(Ui.pad(2, 2, 0, 2));
 
         JPanel root = new JPanel(new BorderLayout());
         root.add(top, BorderLayout.NORTH);
         root.add(split, BorderLayout.CENTER);
         refreshStatus();
         return root;
+    }
+
+    /** A small on/off chip for the protocol filter, on by default. */
+    private static JToggleButton filterToggle(String text) {
+        JToggleButton t = new JToggleButton(text, true);
+        t.setFont(Ui.BOLD);
+        t.setFocusable(false);
+        t.setMargin(new Insets(1, 8, 1, 8));
+        return t;
     }
 
     private static JComponent textTab(String content, boolean wrap) {
@@ -236,7 +323,7 @@ public class CollaboratorTool implements ToolModule {
     private void refreshStatus() {
         if (statusLabel == null) return;
         statusLabel.setText(collab.status());
-        statusLabel.setForeground(collab.isRunning() ? new Color(0x1E, 0x7A, 0x33) : Ui.ERROR_RED);
+        statusLabel.setForeground(collab.isRunning() ? new Color(0x1E, 0x7A, 0x33) : opentrap.ui.Theme.MUTED);
     }
 
     // ------------------------------------------------------------- options tab
@@ -284,7 +371,7 @@ public class CollaboratorTool implements ToolModule {
     // ------------------------------------------------------------ table model
 
     private final class InteractionTableModel extends AbstractTableModel {
-        private final String[] cols = {"#", "Type", "Source", "Host"};
+        private final String[] cols = {"#", "Time", "Type", "Payload", "Source IP address"};
         private final List<Interaction> rows = new ArrayList<>();
         private final SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
 
@@ -302,14 +389,16 @@ public class CollaboratorTool implements ToolModule {
         @Override public int getRowCount()    { return rows.size(); }
         @Override public int getColumnCount() { return cols.length; }
         @Override public String getColumnName(int c) { return cols[c]; }
+        @Override public Class<?> getColumnClass(int c) { return c == 0 ? Integer.class : String.class; }
 
         @Override public Object getValueAt(int r, int c) {
             Interaction i = rows.get(r);
             return switch (c) {
                 case 0 -> r + 1;
-                case 1 -> i.protocol().toUpperCase();
-                case 2 -> i.remoteAddress();
+                case 1 -> i.receivedAt() > 0 ? fmt.format(new Date(i.receivedAt())) : i.timestamp();
+                case 2 -> i.protocol().toUpperCase();
                 case 3 -> i.fullId();
+                case 4 -> i.remoteAddress();
                 default -> "";
             };
         }

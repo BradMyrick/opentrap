@@ -40,7 +40,7 @@ public class DecoderTool implements ToolModule {
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(25);
 
-        JButton clear = Ui.button("clear", "discard every stage and start again");
+        JButton clear = Ui.button("Clear", "discard every stage and start again");
         clear.addActionListener(e -> setData(new byte[0]));
         JPanel north = new JPanel(new BorderLayout());
         north.setOpaque(false);
@@ -202,12 +202,12 @@ public class DecoderTool implements ToolModule {
         String opName;
 
         final JTextArea area = new JTextArea();
-        final JRadioButton text = Ui.radio("text", true);
-        final JRadioButton hex = Ui.radio("hex", false);
+        final JRadioButton text = Ui.radio("Text", true);
+        final JRadioButton hex = Ui.radio("Hex", false);
         final JComboBox<String> decode = Ui.combo(Transforms.decodeItems());
         final JComboBox<String> encode = Ui.combo(Transforms.encodeItems());
         final JComboBox<String> hash = Ui.combo(Transforms.hashItems());
-        final JButton smart = Ui.button("smart decode", "guess the encoding and decode one layer");
+        final JButton smart = Ui.button("Smart decode", "guess the encoding and decode one layer");
         final JLabel error = Ui.label(" ");
         final JPanel panel = new JPanel(new BorderLayout(6, 0));
 

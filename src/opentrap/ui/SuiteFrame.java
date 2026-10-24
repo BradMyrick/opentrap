@@ -16,7 +16,26 @@ import java.util.List;
 public class SuiteFrame extends JFrame {
 
     private final SuiteContext ctx;
-    private final JTabbedPane tabs = new JTabbedPane();
+    /** Width reserved at the right of the tab row for the tool icons. */
+    private static final int TAB_ROW_RESERVE = 150;
+
+    /**
+     * The main tab strip. Its UI reserves space at the right end of the tab row
+     * so the top-right tool icons (browser, console, search, settings) can sit
+     * on that row, as in the reference, without tabs ever wrapping under them.
+     * The reserve is re-applied on updateUI so it survives a theme switch.
+     */
+    private final JTabbedPane tabs = new JTabbedPane() {
+        @Override public void updateUI() {
+            setUI(new opentrap.ui.theme.FlatTabbedPaneUI() {
+                @Override protected void installDefaults() {
+                    super.installDefaults();
+                    tabAreaInsets = new Insets(tabAreaInsets.top, tabAreaInsets.left,
+                            tabAreaInsets.bottom, TAB_ROW_RESERVE);
+                }
+            });
+        }
+    };
     private final JMenuBar menuBar = new JMenuBar();
     private final List<ToolModule> modules = new ArrayList<>();
     private final JLabel statusLabel = new JLabel(" ");
@@ -34,7 +53,7 @@ public class SuiteFrame extends JFrame {
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         tabs.setFont(Ui.PLAIN);
         setLayout(new BorderLayout());
-        add(tabs, BorderLayout.CENTER);
+        add(buildCenter(), BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
         setJMenuBar(menuBar);
 
@@ -237,17 +256,39 @@ public class SuiteFrame extends JFrame {
         addItem(help, "proxy setup instructions", e -> showProxyHelp());
         addItem(help, "about", e -> AboutDialog.show(this));
         menuBar.add(help);
+    }
 
-        // Top-right tool icons, as in the reference: a globe (browser), a console,
-        // a magnifier (search) and a gear (settings). Placed at the right of the
-        // menu bar - OpenTRAP's tab row wraps to several rows, so the icons cannot
-        // share it cleanly. Browser/console/search are not yet implemented; the
-        // gear opens the Settings dialog.
-        menuBar.add(Box.createHorizontalGlue());
-        menuBar.add(iconButton(ToolIcons.browser(), "Embedded browser", () -> Unbuilt.BROWSER.showDialog(this)));
-        menuBar.add(iconButton(ToolIcons.console(), "Console", () -> Unbuilt.CONSOLE.showDialog(this)));
-        menuBar.add(iconButton(ToolIcons.search(), "Global search", () -> Unbuilt.SEARCH.showDialog(this)));
-        menuBar.add(iconButton(ToolIcons.gear(), "Settings", () -> SettingsDialog.open(this, ctx)));
+    /**
+     * The tab strip with the top-right tool icons on its tab row, as in the
+     * reference: a globe (browser), a console, a magnifier (search) and a gear
+     * (settings). The tab UI reserves the right end of the row for them, so the
+     * tabs wrap before that point and never sit under the icons. The browser,
+     * console and search are not yet implemented; the gear opens Settings.
+     */
+    private JComponent buildCenter() {
+        final JPanel tools = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        tools.setOpaque(false);
+        tools.add(iconButton(ToolIcons.browser(), "Embedded browser", () -> Unbuilt.BROWSER.showDialog(this)));
+        tools.add(iconButton(ToolIcons.console(), "Console", () -> Unbuilt.CONSOLE.showDialog(this)));
+        tools.add(iconButton(ToolIcons.search(), "Global search", () -> Unbuilt.SEARCH.showDialog(this)));
+        tools.add(iconButton(ToolIcons.gear(), "Settings", () -> SettingsDialog.open(this, ctx)));
+
+        final JLayeredPane layer = new JLayeredPane();
+        layer.setLayout(null);
+        layer.add(tabs, JLayeredPane.DEFAULT_LAYER);
+        layer.add(tools, JLayeredPane.PALETTE_LAYER);
+        layer.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                int w = layer.getWidth(), h = layer.getHeight();
+                tabs.setBounds(0, 0, w, h);
+                tabs.doLayout();
+                Dimension ts = tools.getPreferredSize();
+                int rowH = tabs.getTabCount() > 0
+                        ? tabs.getUI().getTabBounds(tabs, 0).height : ts.height;
+                tools.setBounds(w - ts.width - 10, Math.max(0, (rowH - ts.height) / 2), ts.width, ts.height);
+            }
+        });
+        return layer;
     }
 
     /** A flat, icon-only button for the top-right tool strip. */

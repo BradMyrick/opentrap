@@ -73,9 +73,9 @@ final class Transforms {
         NAMED_ENTITIES.put("ouml", 246);  NAMED_ENTITIES.put("auml", 228);  NAMED_ENTITIES.put("euml", 235);
     }
 
-    static String[] decodeItems() { return items(" decode as ..."); }
+    static String[] decodeItems() { return items(" Decode as ..."); }
 
-    static String[] encodeItems() { return items(" encode as ..."); }
+    static String[] encodeItems() { return items(" Encode as ..."); }
 
     private static String[] items(String first) {
         String[] out = new String[NAMES.length + 1];
@@ -89,7 +89,7 @@ final class Transforms {
         List<String> names = new ArrayList<>();
         for (String a : Security.getAlgorithms("MessageDigest")) names.add(" " + a);
         names.sort(null);
-        names.add(0, " hash ...");
+        names.add(0, " Hash ...");
         return names.toArray(new String[0]);
     }
 

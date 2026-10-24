@@ -20,13 +20,13 @@ public class ScopeEditor extends JPanel {
         this.scope = scope;
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(false);
-        JLabel inc = Ui.bold("include in scope");
+        JLabel inc = Ui.bold("Include in scope");
         inc.setAlignmentX(LEFT_ALIGNMENT);
         add(inc);
         add(Box.createVerticalStrut(6));
         add(new RulePanel(scope.include()));
         add(Box.createVerticalStrut(16));
-        JLabel exc = Ui.bold("exclude from scope");
+        JLabel exc = Ui.bold("Exclude from scope");
         exc.setAlignmentX(LEFT_ALIGNMENT);
         add(exc);
         add(Box.createVerticalStrut(6));
@@ -41,7 +41,7 @@ public class ScopeEditor extends JPanel {
         private final JTextField host = Ui.field("", 18);
         private final JTextField port = Ui.field("", 5);
         private final JTextField file = Ui.field("", 24);
-        private final JButton addBtn = Ui.button("add", "add the item");
+        private final JButton addBtn = Ui.button("Add", "add the item");
         private int editingRow = -1;
 
         RulePanel(List<Scope.Rule> rules) {
@@ -59,17 +59,50 @@ public class ScopeEditor extends JPanel {
             sp.setPreferredSize(new Dimension(560, 110));
             add(sp, BorderLayout.CENTER);
 
-            JPanel buttons = new JPanel(new GridLayout(3, 1, 0, 4));
+            // The button column sits to the left of the table, as in the reference.
+            JPanel buttons = new JPanel(new GridLayout(5, 1, 0, 4));
             buttons.setOpaque(false);
-            JButton edit = Ui.button("edit", "edit the selected item");
-            JButton remove = Ui.button("remove", "remove the selected item");
+            JButton edit = Ui.button("Edit", "edit the selected item");
+            JButton remove = Ui.button("Remove", "remove the selected item");
+            JButton pasteUrl = Ui.button("Paste URL", "add the URL on the clipboard as an item");
+            JButton load = Ui.button("Load ...", "add every URL listed in a file, one per line");
             buttons.add(addBtn);
             buttons.add(edit);
             buttons.add(remove);
+            buttons.add(pasteUrl);
+            buttons.add(load);
             JPanel bwrap = new JPanel(new BorderLayout());
             bwrap.setOpaque(false);
             bwrap.add(buttons, BorderLayout.NORTH);
-            add(bwrap, BorderLayout.EAST);
+            add(bwrap, BorderLayout.WEST);
+            pasteUrl.addActionListener(e -> {
+                String text;
+                try {
+                    text = String.valueOf(java.awt.Toolkit.getDefaultToolkit().getSystemClipboard()
+                            .getData(java.awt.datatransfer.DataFlavor.stringFlavor));
+                } catch (Exception ex) { text = ""; }
+                if (!addUrl(text)) {
+                    JOptionPane.showMessageDialog(this, "The clipboard does not hold a URL.",
+                            "Paste URL", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+            load.addActionListener(e -> {
+                JFileChooser fc = new JFileChooser();
+                fc.setDialogTitle("Load URLs");
+                if (fc.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+                int n = 0;
+                try {
+                    for (String line : java.nio.file.Files.readAllLines(fc.getSelectedFile().toPath())) {
+                        if (addUrl(line)) n++;
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Could not read the file: " + ex.getMessage(),
+                            "Load URLs", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (n == 0) JOptionPane.showMessageDialog(this, "No URLs were found in the file.",
+                        "Load URLs", JOptionPane.INFORMATION_MESSAGE);
+            });
 
             protocol.setToolTipText("choose the protocol to match");
             host.setToolTipText("hostname regex or IP range to match (leave blank to match any)");
@@ -87,7 +120,29 @@ public class ScopeEditor extends JPanel {
             addBtn.addActionListener(e -> commit());
             edit.addActionListener(e -> beginEdit());
             remove.addActionListener(e -> removeSelected());
-            setMaximumSize(new Dimension(760, 190));
+            setMaximumSize(new Dimension(760, 210));
+        }
+
+        /** Turn a URL into a rule (its scheme, host, port and path prefix) and add it. */
+        private boolean addUrl(String text) {
+            if (text == null) return false;
+            String s = text.trim();
+            if (s.isEmpty()) return false;
+            try {
+                java.net.URI u = new java.net.URI(s.contains("://") ? s : "https://" + s);
+                if (u.getHost() == null || u.getHost().isEmpty()) return false;
+                String scheme = u.getScheme() == null ? "any" : u.getScheme().toLowerCase();
+                protocol.setSelectedItem(scheme.equals("http") || scheme.equals("https") ? scheme : "any");
+                host.setText(u.getHost());
+                port.setText(u.getPort() > 0 ? String.valueOf(u.getPort()) : "");
+                String path = u.getRawPath();
+                file.setText(path == null || path.isEmpty() || path.equals("/")
+                        ? "" : "^" + java.util.regex.Pattern.quote(path) + ".*");
+                commit();
+                return true;
+            } catch (Exception ex) {
+                return false;
+            }
         }
 
         private void commit() {
@@ -103,7 +158,7 @@ public class ScopeEditor extends JPanel {
             r.file = keptOrTyped(file.getText().trim(), r.file, editingRow >= 0);
             if (editingRow < 0) { r.enabled = true; rules.add(r); }
             editingRow = -1;
-            addBtn.setText("add");
+            addBtn.setText("Add");
             host.setText(""); port.setText(""); file.setText("");
             model.fireTableDataChanged();
             ctx.scopeChanged();
@@ -137,7 +192,7 @@ public class ScopeEditor extends JPanel {
         }
 
         private class Model extends AbstractTableModel {
-            private final String[] cols = {"", "protocol", "host / IP range", "port", "file"};
+            private final String[] cols = {"Enabled", "Protocol", "Host / IP range", "Port", "File"};
             @Override public int getRowCount() { return rules.size(); }
             @Override public int getColumnCount() { return cols.length; }
             @Override public String getColumnName(int c) { return cols[c]; }

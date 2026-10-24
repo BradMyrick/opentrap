@@ -7,6 +7,7 @@ import opentrap.ui.Ui;
 import opentrap.ui.Unbuilt;
 
 import javax.swing.*;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,14 +50,39 @@ public class IntruderTool implements ToolModule {
     }
 
     @Override public Tab[] tabs() {
-        // Single-view layout: positions/request on the left, the Payloads
-        // configuration (and Settings/Target) as panels on the right.
-        JTabbedPane right = new JTabbedPane();
-        right.setFont(Ui.PLAIN);
-        right.addTab("Payloads", payloads);
-        right.addTab("Resource pool", Unbuilt.INTRUDER_RESPOOL.panel());
-        right.addTab("Settings", options);
-        right.addTab("Target", target);
+        // Single-view layout, as in the reference: the attack header, target row
+        // and positions editor on the left; on the right the Payloads, Resource
+        // pool and Settings panes, switched by a vertical tab strip on the edge.
+        positions.setTargetRow(target);
+
+        final CardLayout cards = new CardLayout();
+        final JPanel panes = new JPanel(cards);
+        panes.setOpaque(false);
+        JPanel strip = new JPanel();
+        strip.setLayout(new BoxLayout(strip, BoxLayout.Y_AXIS));
+        strip.setOpaque(false);
+        strip.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, Ui.GRID));
+        ButtonGroup group = new ButtonGroup();
+        Object[][] items = {
+            {"Payloads", payloads},
+            {"Resource pool", Unbuilt.INTRUDER_RESPOOL.panel()},
+            {"Settings", options},
+        };
+        for (Object[] it : items) {
+            final String name = (String) it[0];
+            panes.add((Component) it[1], name);
+            opentrap.ui.VerticalTab t = new opentrap.ui.VerticalTab(name);
+            t.addActionListener(e -> cards.show(panes, name));
+            group.add(t);
+            strip.add(t);
+            strip.add(Box.createVerticalStrut(6));
+        }
+        ((AbstractButton) strip.getComponent(0)).setSelected(true);
+        strip.add(Box.createVerticalGlue());
+
+        JPanel right = new JPanel(new BorderLayout());
+        right.add(panes, BorderLayout.CENTER);
+        right.add(strip, BorderLayout.EAST);
 
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, positions, right);
         split.setDividerSize(5);
