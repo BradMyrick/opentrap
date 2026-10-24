@@ -37,9 +37,9 @@ wget https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_
 
 <div align="center">
 
-<a href="docs/images/dashboard.png"><img src="docs/images/dashboard.png" width="100%" alt="OpenTRAP dashboard with a crawl finished, an active audit running, and the live table of the most serious vulnerabilities found"></a>
+<a href="docs/images/dashboard.png"><img src="docs/images/dashboard.png" width="100%" alt="OpenTRAP dashboard with a crawl and an audit finished, their cards showing locations found and issues by severity, and the live table of the most serious vulnerabilities found"></a>
 
-<p><sub>A live audit on the Dashboard: crawl complete, active scan running, high-severity findings arriving as they are confirmed.</sub></p>
+<p><sub>The Dashboard after a scan: the crawl's locations and requests, the audit's findings by severity, and the most serious vulnerabilities as they were confirmed.</sub></p>
 
 </div>
 
@@ -98,16 +98,6 @@ licence.
 <table>
 <tr>
 <td width="50%" valign="top">
-<a href="docs/images/scan-config.png"><img src="docs/images/scan-config.png" alt="New scan wizard on the scan-configuration step, showing the Lightweight, Fast, Balanced, Deep and Custom tiers with one selected"></a>
-<br><sub><b>Scan configurations</b><br>Pick a tier from Lightweight to Deep, each covering the same ground and differing only in how far it crawls and how hard it probes.</sub>
-</td>
-<td width="50%" valign="top">
-<a href="docs/images/custom-config.png"><img src="docs/images/custom-config.png" alt="Custom scan configuration screen with a left category list for Crawl, Audit and Injection points and the settings for each"></a>
-<br><sub><b>Custom configuration</b><br>Its own screen for full control: crawl depth, AJAX budget, attack strength, alert threshold and which inputs are tested.</sub>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
 <a href="docs/images/target.png"><img src="docs/images/target.png" alt="Target tab: site map tree, request list, and the issues found with a full advisory for a reflected cross-site scripting finding"></a>
 <br><sub><b>Target</b><br>Site map, scope and every issue found, with the advisory, request and response beside it.</sub>
 </td>
@@ -122,28 +112,18 @@ licence.
 <br><sub><b>Collaborator</b><br>Out-of-band DNS and HTTP interactions captured for blind vulnerabilities, with every callback request on record.</sub>
 </td>
 <td width="50%" valign="top">
-<a href="docs/images/intruder.png"><img src="docs/images/intruder.png" alt="Intruder tab running a sniper attack, with the live attack table of payloads, status, length and timing"></a>
-<br><sub><b>Intruder</b><br>Four attack types with payload sets and processing; the live attack table shows status, length and timing per request.</sub>
+<a href="docs/images/intruder.png"><img src="docs/images/intruder.png" alt="Intruder tab with a sniper attack finished, and the attack window listing payloads, status, length and timing"></a>
+<br><sub><b>Intruder</b><br>Four attack types with payload sets and processing; the attack window shows status, length and timing per request.</sub>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<a href="docs/images/repeater.png"><img src="docs/images/repeater.png" alt="Repeater tab with a request and its response in numbered tabs for editing and reissuing"></a>
-<br><sub><b>Repeater</b><br>Edit and reissue a request, one numbered tab at a time, with the full response beside it.</sub>
-</td>
-<td width="50%" valign="top">
-<a href="docs/images/logger.png"><img src="docs/images/logger.png" alt="Logger tab with a filterable table of every request made by the audit, with request and response viewers below"></a>
+<a href="docs/images/logger.png"><img src="docs/images/logger.png" alt="Logger tab with a filterable table of every request made by the crawl, with request and response viewers below"></a>
 <br><sub><b>Logger</b><br>A complete, filterable record of every request OpenTRAP and the scan engine make.</sub>
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
-<a href="docs/images/decoder.png"><img src="docs/images/decoder.png" alt="Decoder tab with a URL-encoded path-traversal string decoded to plain text through a transform pipeline"></a>
+<a href="docs/images/decoder.png"><img src="docs/images/decoder.png" alt="Decoder tab with a URL-encoded path-traversal string decoded to plain text"></a>
 <br><sub><b>Decoder</b><br>Chain URL, Base64, hex and hash transforms on any value, or let smart decode work it out for you.</sub>
-</td>
-<td width="50%" valign="top">
-<a href="docs/images/about.png"><img src="docs/images/about.png" alt="About OpenTRAP dialog showing the build, the scan engine in use and where it comes from, the runtime, the licence and project links"></a>
-<br><sub><b>About</b><br>The build, the scan engine in use and where it comes from, the runtime and the licence, stated plainly.</sub>
 </td>
 </tr>
 </table>

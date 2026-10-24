@@ -14,7 +14,7 @@ title: OpenTRAP
     </div>
   </div>
   <div class="hshot">
-    <a class="shot" href="images/dashboard.png"><img src="images/dashboard.png" alt="OpenTRAP dashboard with a crawl finished, an active audit running, and the live table of the most serious vulnerabilities found"></a>
+    <a class="shot" href="images/dashboard.png"><img src="images/dashboard.png" alt="OpenTRAP dashboard with a crawl and an audit finished and the live table of the most serious vulnerabilities found"></a>
   </div>
 </div></section>
 
@@ -55,16 +55,12 @@ title: OpenTRAP
     <p>Every tool lives in one window. Click any screenshot for the full-size image.</p>
   </div>
   <div class="gallery">
-    <a class="card" href="images/scan-config.png"><img src="images/scan-config.png" alt="New scan wizard showing the Lightweight, Fast, Balanced, Deep and Custom scan tiers"><div class="cap"><b>Scan configurations</b><span>Pick a tier from Lightweight to Deep. Each covers the same ground and differs only in how far it crawls and how hard it probes, or build a Custom one.</span></div></a>
-    <a class="card" href="images/custom-config.png"><img src="images/custom-config.png" alt="Custom scan configuration screen with Crawl, Audit and Injection point settings"><div class="cap"><b>Custom configuration</b><span>Its own screen for full control: crawl depth, AJAX budget, attack strength, alert threshold and which inputs are tested.</span></div></a>
     <a class="card" href="images/target.png"><img src="images/target.png" alt="Target tab: site map, request list and issues with a full advisory"><div class="cap"><b>Target</b><span>Site map and scope on the left, every request in the middle, every issue on the right with its advisory, request and response beside it.</span></div></a>
     <a class="card" href="images/proxy.png"><img src="images/proxy.png" alt="Proxy tab with interception and the built-in browser"><div class="cap"><b>Proxy &amp; built-in browser</b><span>One click opens a bundled Chromium, already routed through the proxy and trusting its certificate authority. No certificate to install.</span></div></a>
     <a class="card" href="images/collaborator.png"><img src="images/collaborator.png" alt="Collaborator tab with captured out-of-band interactions"><div class="cap"><b>Collaborator</b><span>Generate a payload and watch the out-of-band DNS and HTTP callbacks arrive, each on record, so blind vulnerabilities are proven, not guessed.</span></div></a>
-    <a class="card" href="images/intruder.png"><img src="images/intruder.png" alt="Intruder tab running a sniper attack with the live results table"><div class="cap"><b>Intruder</b><span>Mark positions, pick an attack type, drive a payload set through them. The live table shows status, length and timing per request.</span></div></a>
-    <a class="card" href="images/repeater.png"><img src="images/repeater.png" alt="Repeater tab with request and response in numbered tabs"><div class="cap"><b>Repeater</b><span>Edit and reissue a request, one numbered tab at a time, with the full response beside it. The quickest way to probe an endpoint by hand.</span></div></a>
+    <a class="card" href="images/intruder.png"><img src="images/intruder.png" alt="Intruder tab with a finished sniper attack and its results window"><div class="cap"><b>Intruder</b><span>Mark positions, pick an attack type, drive a payload set through them. The attack window shows status, length and timing per request.</span></div></a>
     <a class="card" href="images/logger.png"><img src="images/logger.png" alt="Logger tab with a filterable table of every request"><div class="cap"><b>Logger</b><span>A complete, filterable record of every request OpenTRAP and the scan engine make, tagged by the tool that sent it. Nothing happens behind your back.</span></div></a>
-    <a class="card" href="images/decoder.png"><img src="images/decoder.png" alt="Decoder tab with a transform pipeline"><div class="cap"><b>Decoder</b><span>Build a pipeline of URL, Base64, hex and hash transforms in either direction, or let smart decode work out the encoding for you.</span></div></a>
-    <a class="card" href="images/about.png"><img src="images/about.png" alt="About OpenTRAP dialog"><div class="cap"><b>About</b><span>The build, the scan engine in use and where it comes from, the runtime and the licence, stated plainly. OpenTRAP is open about what is inside it.</span></div></a>
+    <a class="card" href="images/decoder.png"><img src="images/decoder.png" alt="Decoder tab decoding a URL-encoded value"><div class="cap"><b>Decoder</b><span>URL, Base64, hex and hash transforms in either direction, or let smart decode work out the encoding for you.</span></div></a>
   </div>
 </div></section>
 
