@@ -26,6 +26,7 @@ public class ExtensionsTool implements ToolModule {
                 new Tab("API", Unbuilt.EXT_API.panel()),
                 new Tab("Custom checks", Unbuilt.EXT_CUSTOM_CHECKS.panel()),
                 new Tab("Filters", Unbuilt.EXT_FILTERS.panel()),
+                new Tab("Settings", Unbuilt.EXT_SETTINGS.panel()),
         };
     }
 
