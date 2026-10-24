@@ -46,6 +46,18 @@ public class SuiteContext {
     public interface TaskListener { void taskChanged(ScanTask t); }
 
     private final MessageStore store = new MessageStore();
+
+    // Bumped on every change worth saving, so the autosave can skip a write
+    // when nothing has happened since the last one.
+    private final java.util.concurrent.atomic.AtomicLong changes = new java.util.concurrent.atomic.AtomicLong();
+    { store.addListener(new MessageStore.Listener() {
+        @Override public void entryAdded(LogEntry e)   { changes.incrementAndGet(); }
+        @Override public void entryUpdated(LogEntry e) { changes.incrementAndGet(); }
+    }); }
+
+    /** A counter that moves whenever the session changes in a way a project file records. */
+    public long changeStamp() { return changes.get(); }
+    public void touch() { changes.incrementAndGet(); }
     private final WebSocketStore wsStore = new WebSocketStore();
     private final Scope scope = new Scope();
     private final Settings settings = new Settings();
@@ -161,6 +173,7 @@ public class SuiteContext {
     public boolean addIssue(Issue i) {
         if (i == null || issueByKey.putIfAbsent(i.dedupeKey(), i) != null) return false;
         synchronized (issues) { issues.add(i); }
+        touch();
         for (IssueListener l : issueListeners) l.issueAdded(i);
         return true;
     }
@@ -238,6 +251,7 @@ public class SuiteContext {
     }
 
     public void taskChanged(ScanTask t) {
+        touch();
         for (TaskListener l : taskListeners) l.taskChanged(t);
     }
 
@@ -265,6 +279,6 @@ public class SuiteContext {
 
     // ---- scope ----
 
-    public void scopeChanged() { for (ScopeListener l : scopeListeners) l.scopeChanged(); }
+    public void scopeChanged() { touch(); for (ScopeListener l : scopeListeners) l.scopeChanged(); }
     public void addScopeListener(ScopeListener l) { scopeListeners.add(l); }
 }

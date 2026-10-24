@@ -63,6 +63,9 @@ public class DashboardTool implements ToolModule {
     private final Map<ScanTask, Runnable> rerun = new IdentityHashMap<>();
     // The engine settings each scan ran with, for "View configuration".
     private final Map<ScanTask, opentrap.engine.ScanConfig> taskConfigs = new IdentityHashMap<>();
+    // Tasks whose finish has already triggered a project save.
+    private final java.util.Set<ScanTask> savedOnFinish =
+            java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
     private ScanTask selected;
     /** Drives the sliding progress-bar animation while a crawl is running. */
     private javax.swing.Timer cardAnimTimer;
@@ -138,7 +141,15 @@ public class DashboardTool implements ToolModule {
             @Override public void issueAdded(Issue i) { issuesRefresh.request(); }
             @Override public void issuesReloaded()    { issuesRefresh.request(); }
         });
-        ctx.addTaskListener(t -> tasksRefresh.request());
+        ctx.addTaskListener(t -> {
+            tasksRefresh.request();
+            // A scan that has just finished is worth keeping: write the project
+            // now rather than waiting for the next autosave or for exit.
+            if (t.type() != ScanTask.Type.LIVE_PASSIVE && t.state() == ScanTask.State.FINISHED
+                    && savedOnFinish.add(t)) {
+                opentrap.ui.StateIO.autosave(ctx);
+            }
+        });
 
         // Feed the crawl window's live Logger from the shared store: every crawl
         // or audit request/response the engine records shows up there as it runs.

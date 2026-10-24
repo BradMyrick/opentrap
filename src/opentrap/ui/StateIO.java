@@ -66,7 +66,61 @@ public final class StateIO {
         });
     }
 
+    // One writer at a time: the autosave timer, a finished scan and an explicit
+    // save can all ask for a write, and none may interleave with another.
+    private static final Object SAVE_LOCK = new Object();
+    private static volatile boolean autosaving;
+    private static volatile long savedStamp = -1;   // the session change stamp the file holds
+
+    /**
+     * Save the session to the project file it is bound to, in the background,
+     * if anything has changed since the file was last written. Does nothing for
+     * a temporary session or while another autosave runs. A failure is reported
+     * once in the event log; a success is silent.
+     */
+    public static void autosave(SuiteContext ctx) {
+        File f = ctx.projectFile();
+        if (f == null || autosaving) return;
+        final long stamp = ctx.changeStamp();
+        if (stamp == savedStamp) return;
+        autosaving = true;
+        Thread t = new Thread(() -> {
+            try {
+                save(ctx, f);
+                savedStamp = stamp;
+            } catch (Exception e) {
+                ctx.alert("suite", "Could not save the project to " + f.getName() + ": " + e.getMessage());
+            } finally {
+                autosaving = false;
+            }
+        }, "project-autosave");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /**
+     * Write the session to {@code file}. The file is written beside its final
+     * name and moved into place at the end, so a crash or a full disk part-way
+     * through never leaves a truncated project behind.
+     */
     public static void save(SuiteContext ctx, File file) throws IOException {
+        synchronized (SAVE_LOCK) {
+            File tmp = new File(file.getParentFile(), file.getName() + ".saving");
+            writeTo(ctx, tmp);
+            try {
+                java.nio.file.Files.move(tmp.toPath(), file.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                java.nio.file.Files.move(tmp.toPath(), file.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } finally {
+                tmp.delete();
+            }
+        }
+    }
+
+    private static void writeTo(SuiteContext ctx, File file) throws IOException {
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
             zos.putNextEntry(new ZipEntry("opentrap"));
             ObjectOutputStream oos = new ObjectOutputStream(zos);

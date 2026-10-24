@@ -81,6 +81,14 @@ public class SuiteFrame extends JFrame {
             @Override public void windowClosing(WindowEvent e) { confirmExit(); }
         });
 
+        // A session bound to a project file is written back every 30 seconds
+        // when something changed (in the background, atomically), so a crash
+        // costs half a minute at most. Writing on every request is not an
+        // option: each save rewrites the whole file.
+        Timer autosave = new Timer(30_000, e -> StateIO.autosave(ctx));
+        autosave.setRepeats(true);
+        autosave.start();
+
         Timer t = new Timer(2000, e -> updateMemory());
         t.start();
         updateMemory();
@@ -464,6 +472,21 @@ public class SuiteFrame extends JFrame {
                 "This will close all opentrap windows - are you sure you want to exit?",
                 "confirm", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null);
         if (r == JOptionPane.YES_OPTION) {
+            // A session bound to a project file is written to it on the way out,
+            // so nothing done since the last autosave is lost.
+            java.io.File project = ctx.projectFile();
+            if (project != null) {
+                setStatus("Saving project " + project.getName() + "...");
+                try {
+                    StateIO.save(ctx, project);
+                } catch (Exception e) {
+                    int again = JOptionPane.showConfirmDialog(this,
+                            "Could not save the project to " + project.getName() + ":\n" + e.getMessage()
+                            + "\n\nExit anyway and lose the unsaved work?",
+                            "Save project", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                    if (again != JOptionPane.YES_OPTION) { setStatus(" "); return; }
+                }
+            }
             for (ToolModule m : modules) {
                 try { m.shutdown(); } catch (Exception ignored) {}
             }
