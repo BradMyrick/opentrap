@@ -368,34 +368,22 @@ public class SequencerTool implements ToolModule {
         formCombo   = Ui.combo(new String[0]);
         cookieCombo.setEnabled(false);
         formCombo.setEnabled(false);
-        cookieCombo.setPreferredSize(new Dimension(320, cookieCombo.getPreferredSize().height));
-        formCombo.setPreferredSize(new Dimension(320, formCombo.getPreferredSize().height));
-
         startDelim = Ui.field("", 14);
         endDelim   = Ui.field("", 14);
         startDelim.setToolTipText("the token starts after this expression");
         endDelim.setToolTipText("the token ends at this delimiter");
         JPanel custom = Ui.row(Ui.label("starts after"), startDelim, Ui.label("ends at"), endDelim);
 
-        // Three aligned rows, as in the reference: a radio on the left and its
-        // chooser on the right.
-        JPanel grid = new JPanel(new GridBagLayout());
-        grid.setOpaque(false);
-        GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(2, 0, 2, 10);
-        c.anchor = GridBagConstraints.LINE_START;
-        Component[][] rows = {{rCookie, cookieCombo}, {rForm, formCombo}, {rManual, custom}};
-        for (int r = 0; r < rows.length; r++) {
-            c.gridy = r;
-            c.gridx = 0; c.weightx = 0; c.fill = GridBagConstraints.NONE;
-            grid.add(rows[r][0], c);
-            c.gridx = 1; c.weightx = 1; c.fill = GridBagConstraints.NONE;
-            grid.add(rows[r][1], c);
-        }
+        // The two choosers are as wide as the custom-location row, so the three
+        // controls share one right edge as well as one left edge.
+        int w = custom.getPreferredSize().width;
+        cookieCombo.setPreferredSize(new Dimension(w, cookieCombo.getPreferredSize().height));
+        formCombo.setPreferredSize(new Dimension(w, formCombo.getPreferredSize().height));
+        JPanel form = Ui.form(rCookie, cookieCombo, rForm, formCombo, rManual, custom);
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
         panel.setBorder(Ui.pad(0, 16, 0, 0));
-        panel.add(grid, BorderLayout.WEST);
+        panel.add(form, BorderLayout.WEST);
         return panel;
     }
 
@@ -403,10 +391,9 @@ public class SequencerTool implements ToolModule {
         threadsField  = Ui.field("5", 6);
         throttleField = Ui.field("0", 6);
 
-        JPanel body = Ui.vbox(
-            Ui.row(Ui.label("Number of threads:"), threadsField),
-            Ui.row(Ui.label("Throttle between requests (milliseconds):"), throttleField)
-        );
+        JPanel body = Ui.form(
+            "Number of threads:", threadsField,
+            "Throttle between requests (milliseconds):", throttleField);
         body.setBorder(Ui.pad(0, 16, 0, 0));
 
         JPanel panel = new JPanel(new BorderLayout());

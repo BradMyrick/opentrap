@@ -111,6 +111,7 @@ public class ScopeEditor extends JPanel {
 
             JPanel entry = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
             entry.setOpaque(false);
+            entry.add(Ui.label("New rule:"));
             entry.add(protocol);
             entry.add(host);
             entry.add(port);

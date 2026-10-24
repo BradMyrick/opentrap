@@ -27,8 +27,7 @@ class BruteForcerGenerator extends AbstractGenerator {
         max.getDocument().addDocumentListener(dl);
 
         panel = Ui.vbox(
-                Ui.row(Ui.label("character set:"), charset),
-                Ui.row(Ui.label("min length:"), min, Ui.label("max length:"), max));
+                Ui.form("Character set:", charset, "Min length:", min, "Max length:", max));
     }
 
     private int min() { try { return Math.max(0, Integer.parseInt(min.getText().trim())); } catch (Exception e) { return 1; } }

@@ -22,7 +22,7 @@ class RuntimeFileGenerator extends AbstractGenerator {
         pathField.setEditable(false);
         JButton choose = Ui.button("select file ...");
         choose.addActionListener(e -> choose());
-        panel = Ui.vbox(Ui.row(Ui.label("file:"), pathField, choose), countLabel);
+        panel = Ui.vbox(Ui.form("File:", Ui.row(pathField, choose)), countLabel);
     }
 
     private void choose() {

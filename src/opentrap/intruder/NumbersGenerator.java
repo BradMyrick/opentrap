@@ -38,7 +38,7 @@ class NumbersGenerator extends AbstractGenerator {
         step.getDocument().addDocumentListener(dl);
 
         panel = Ui.vbox(
-                Ui.row(Ui.label("from:"), from, Ui.label("to:"), to, Ui.label("step:"), step),
+                Ui.form("From:", from, "To:", to, "Step:", step),
                 Ui.row(sequential, random),
                 Ui.row(decimal, hex));
     }

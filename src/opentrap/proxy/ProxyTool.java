@@ -328,7 +328,7 @@ public class ProxyTool implements ToolModule {
             super(new BorderLayout());
             OptionsPage page = new OptionsPage();
 
-            page.addSection(new ListenersPanel(ctx, server));
+            page.section("Proxy listeners", new ListenersPanel(ctx, server));
 
             JCheckBox interceptReq = Ui.check("intercept client requests", server.interceptRequests);
             JCheckBox interceptResp = Ui.check("intercept server responses", server.interceptResponses);

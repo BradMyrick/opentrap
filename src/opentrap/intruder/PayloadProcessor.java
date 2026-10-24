@@ -92,7 +92,7 @@ public class PayloadProcessor extends JPanel {
         add(left(enc2));
 
         add(Box.createVerticalStrut(10));
-        add(left(Ui.row(Ui.label("skip payload if it matches regex:"), skipField)));
+        add(left(Ui.form("Skip payload if it matches regex:", skipField)));
     }
 
     private JComponent left(JComponent c) { c.setAlignmentX(LEFT_ALIGNMENT); return c; }

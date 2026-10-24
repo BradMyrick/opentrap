@@ -443,20 +443,36 @@ public final class Ui {
         JPanel p = new JPanel(new GridBagLayout());
         p.setOpaque(false);
         GridBagConstraints c = new GridBagConstraints();
-        for (int i = 0; i + 1 < labelThenComponent.length; i += 2) {
-            c.gridy = i / 2;
-            c.insets = new Insets(2, 0, 2, 8);
+        int rows = 0;
+        for (int i = 0; i + 1 < labelThenComponent.length; i += 2, rows++) {
+            Object l = labelThenComponent[i];
+            c.gridy = rows;
+            c.insets = new Insets(3, 0, 3, 10);
             c.gridx = 0; c.weightx = 0;
-            c.anchor = GridBagConstraints.LINE_END;
             c.fill = GridBagConstraints.NONE;
-            p.add(label(String.valueOf(labelThenComponent[i])), c);
+            if (l instanceof Component lc) {
+                // A control standing in for the label (a radio button, say)
+                // keeps its own text left-aligned, as a row of options reads.
+                c.anchor = GridBagConstraints.LINE_START;
+                p.add(lc, c);
+            } else {
+                c.anchor = GridBagConstraints.LINE_END;
+                p.add(label(String.valueOf(l)), c);
+            }
 
-            c.insets = new Insets(2, 0, 2, 0);
-            c.gridx = 1; c.weightx = 1;
+            // The field keeps its natural width and starts at the shared edge.
+            c.insets = new Insets(3, 0, 3, 0);
+            c.gridx = 1; c.weightx = 0;
             c.anchor = GridBagConstraints.LINE_START;
-            c.fill = GridBagConstraints.HORIZONTAL;
+            c.fill = GridBagConstraints.NONE;
             p.add((Component) labelThenComponent[i + 1], c);
         }
+        // Spare width goes to a trailing column, so the two columns stay packed
+        // to the left instead of drifting towards the centre of a wide panel.
+        c.gridx = 2; c.gridy = 0; c.gridheight = Math.max(1, rows);
+        c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(0, 0, 0, 0);
+        p.add(Box.createHorizontalGlue(), c);
         return p;
     }
 
