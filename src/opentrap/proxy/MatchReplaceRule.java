@@ -18,6 +18,12 @@ public class MatchReplaceRule implements Serializable {
     public static final String RESP_BODY   = "response body";
     public static final String[] TYPES = { REQ_HEADER, REQ_BODY, RESP_HEADER, RESP_BODY };
 
+    // WebSocket rules: which direction a text message must be travelling in.
+    public static final String WS_TO_SERVER = "to server";
+    public static final String WS_TO_CLIENT = "to client";
+    public static final String WS_BOTH      = "both directions";
+    public static final String[] WS_TYPES = { WS_BOTH, WS_TO_SERVER, WS_TO_CLIENT };
+
     public boolean enabled = true;
     public String type = REQ_HEADER;
     public String match = "";
@@ -41,6 +47,18 @@ public class MatchReplaceRule implements Serializable {
             if (r.appliesToRequest() != isRequest) continue;
             r.apply(m);
         }
+    }
+
+    /** Run the WebSocket rules over one text message; returns the (possibly unchanged) text. */
+    public static String applyAllWs(List<MatchReplaceRule> rules, String text, boolean toServer) {
+        String out = text;
+        for (MatchReplaceRule r : rules) {
+            if (!r.enabled || r.match == null || r.match.isBlank()) continue;
+            if (WS_TO_SERVER.equals(r.type) && !toServer) continue;
+            if (WS_TO_CLIENT.equals(r.type) && toServer) continue;
+            out = regexReplace(out, r.match, r.replace == null ? "" : r.replace, false);
+        }
+        return out;
     }
 
     private void apply(HttpMessage m) {

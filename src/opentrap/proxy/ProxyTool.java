@@ -55,13 +55,20 @@ public class ProxyTool implements ToolModule {
         }
         interceptPanel = new InterceptPanel(ctx, server);
         historyPanel = new HistoryPanel(ctx, server);
+        // The proxy and browser settings live in the suite Settings dialog, so
+        // each setting has one home; the tab here opens the dialog at Proxy.
         OptionsPanel options = new OptionsPanel(ctx, server);
+        SettingsDialog.register("Proxy", () -> options);
+        SettingsDialog.register("Browser", () -> new BrowserSettingsPanel(ctx));
         return new Tab[]{
             new Tab("Intercept", interceptPanel),
             new Tab("HTTP history", historyPanel),
             new Tab("WebSockets history", new opentrap.websocket.WebSocketsPanel(ctx)),
             new Tab("Match and replace", topAligned(new MatchReplacePanel(server))),
-            new Tab("Proxy settings", options)
+            new Tab("Proxy settings", SettingsDialog.launcher(ctx, "Proxy", "Proxy settings",
+                    "Listeners, interception, response modification and the upstream proxy "
+                    + "are set under Settings > Proxy. The testing browser has its own "
+                    + "Settings > Browser pane."))
         };
     }
 
@@ -367,29 +374,12 @@ public class ProxyTool implements ToolModule {
                           + "audits the server's original response"
                         : "no longer stripping response security headers");
             });
-            page.section("response modification", unhide, enable, limits, jsval, alljs, objs, stripSec);
             JTextArea stripNote = Ui.note(
                 "Stripping security headers lets an injected payload actually run in the browser, so "
                 + "you can build and show a working proof of concept. It affects only what the "
                 + "browser receives; the scanner always audits the server's original response, so a "
                 + "stripped header is never mistaken for a missing one.");
-            page.addSection(opentrap.ui.OptionsPage.indent(stripNote, 2));
-
-            boolean relaxNow = ctx.settings().getBool(BrowserFlags.RELAX_KEY, true);
-            JCheckBox relax = Ui.check("relax browser security while testing", relaxNow);
-            relax.addActionListener(e ->
-                    ctx.settings().setBool(BrowserFlags.RELAX_KEY, relax.isSelected()));
-            JTextArea relaxNote = Ui.note(
-                "Applies to the bundled browser and the crawler, both of which run in their own "
-                + "isolated profile and never touch your ordinary browsing. Allows cross-origin "
-                + "reads, mixed content, private network requests and pop-ups, so that requests "
-                + "the browser would otherwise refuse to send still reach the proxy and get "
-                + "scanned. This widens how much of the application is reached. It does not change "
-                + "what the scanner reports about a page it has already seen, because every "
-                + "passive check reads the HTTP exchange at the proxy rather than relying on the "
-                + "browser to enforce anything. Takes effect the next time the browser is "
-                + "launched.");
-            page.section("testing browser", relax, relaxNote);
+            page.section("response modification", unhide, enable, limits, jsval, alljs, objs, stripSec, stripNote);
 
             JCheckBox http10 = Ui.check("talk HTTP/1.0 to the server", server.http10);
             JCheckBox unpack = Ui.check("unpack gzip / deflate", server.unpackGzip);

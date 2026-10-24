@@ -231,6 +231,19 @@ public final class Ui {
     /** The widest a note lays itself out before wrapping, in characters. */
     public static final int NOTE_COLUMNS = 90;
 
+    /**
+     * Size a note to exactly the height its text needs at {@code width}, so a
+     * page that knows how wide its notes will be gets no estimate at all.
+     */
+    public static void sizeNote(JTextArea a, int width) {
+        a.setSize(width, Short.MAX_VALUE);
+        int real = a.getUI().getPreferredSize(a).height;   // the true wrapped height
+        FontMetrics fm = a.getFontMetrics(a.getFont());     // the same units JTextArea sizes columns and rows in
+        a.setColumns(Math.max(1, width / Math.max(1, fm.charWidth('m'))));
+        a.setRows(Math.max(1, (int) Math.ceil(real / (double) Math.max(1, fm.getHeight()))));
+        a.setMaximumSize(new Dimension(width, a.getPreferredSize().height));
+    }
+
     /** Size a note's rows and columns to its text, and stop layouts stretching it. */
     public static void sizeNote(JTextArea a) {
         String t = a.getText();

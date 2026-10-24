@@ -75,9 +75,10 @@ public class SessionPanel extends JPanel {
             if (i >= 0) { sm.rules().remove(i); ruleModel.fireTableDataChanged(); }
         });
 
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
-        bar.add(add); bar.add(edit); bar.add(del);
-        bar.add(Ui.note("Rules apply the cookie jar to matching traffic and re-run a macro when a session expires."));
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        buttons.add(add); buttons.add(edit); buttons.add(del);
+        JPanel bar = withNote(buttons,
+                "Rules apply the cookie jar to matching traffic and re-run a macro when a session expires.");
 
         JPanel root = new JPanel(new BorderLayout());
         root.add(bar, BorderLayout.NORTH);
@@ -231,9 +232,10 @@ public class SessionPanel extends JPanel {
                         && editExtraction(m.extractions.get(i))) extractionModel.fireTableDataChanged();
             }
         });
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
-        bar.add(add); bar.add(del);
-        bar.add(Ui.note("Values pulled from the macro's responses, for re-use (double-click to edit)."));
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
+        buttons.add(add); buttons.add(del);
+        JPanel bar = withNote(buttons,
+                "Values pulled from the macro's responses, for re-use (double-click to edit).");
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(Ui.bold(" extractions"), BorderLayout.NORTH);
         panel.add(Ui.scroll(table), BorderLayout.CENTER);
@@ -334,9 +336,10 @@ public class SessionPanel extends JPanel {
         clear.addActionListener(e -> { sm.jar().clear(); cookieModel.refresh(); });
         refresh.addActionListener(e -> cookieModel.refresh());
 
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
-        bar.add(add); bar.add(del); bar.add(clear); bar.add(refresh);
-        bar.add(Ui.note("Cookies seen by any tool land here and are offered back to matching requests."));
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        buttons.add(add); buttons.add(del); buttons.add(clear); buttons.add(refresh);
+        JPanel bar = withNote(buttons,
+                "Cookies seen by any tool land here and are offered back to matching requests.");
 
         JPanel root = new JPanel(new BorderLayout());
         root.add(bar, BorderLayout.NORTH);
@@ -364,6 +367,19 @@ public class SessionPanel extends JPanel {
     }
 
     // ---------------- table models ----------------
+
+    /**
+     * A button row with its explanatory note on the line beneath, so the note
+     * wraps to the width available instead of being cut off at the row's end.
+     */
+    private static JPanel withNote(JPanel buttons, String note) {
+        JTextArea n = Ui.note(note);
+        n.setBorder(Ui.pad(0, 8, 6, 8));
+        JPanel bar = new JPanel(new BorderLayout());
+        bar.add(buttons, BorderLayout.NORTH);
+        bar.add(n, BorderLayout.SOUTH);
+        return bar;
+    }
 
     private final class RuleModel extends AbstractTableModel {
         private final String[] cols = {"enabled", "name", "host", "tools", "macro", "trigger"};

@@ -104,6 +104,13 @@ public class OptionsPanel extends OptionsPage {
 
     // ---------------- accessors ----------------
 
+    /** Start from the suite-wide defaults kept under Settings > Intruder. */
+    public void applyDefaults(opentrap.core.Settings s) {
+        threads.setText(String.valueOf(s.getInt(IntruderSettingsPanel.THREADS_KEY, 5)));
+        throttle.setText(String.valueOf(s.getInt(IntruderSettingsPanel.THROTTLE_KEY, 0)));
+        followRedirects.setSelected(s.getBool(IntruderSettingsPanel.REDIRECTS_KEY, false));
+    }
+
     public int threads() {
         try { return Math.max(1, Integer.parseInt(threads.getText().trim())); }
         catch (Exception e) { return 5; }

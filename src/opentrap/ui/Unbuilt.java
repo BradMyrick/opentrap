@@ -50,15 +50,10 @@ public final class Unbuilt {
     // Dashboard
     public static final Unbuilt DASHBOARD_LIVE_TASK  = of("OT-DASHBOARD-LIVE-TASK",  "Dashboard > New live task");
     public static final Unbuilt DASHBOARD_LIVE_CRAWL = of("OT-DASHBOARD-LIVE-CRAWL", "Dashboard > Live crawl view");
-    public static final Unbuilt DASHBOARD_TASK_SETTINGS = of("OT-DASHBOARD-TASK-SETTINGS", "Dashboard > Task settings");
 
     // New scan wizard
     public static final Unbuilt SCAN_TYPE_API        = of("OT-SCAN-TYPE-API",        "New scan > API-only scan");
-    public static final Unbuilt SCAN_CONFIG_LIBRARY  = of("OT-SCAN-CONFIG-LIBRARY",  "New scan > Save and load configurations");
     public static final Unbuilt SCAN_LOGIN           = of("OT-SCAN-LOGIN",           "New scan > Application login");
-
-    // Proxy
-    public static final Unbuilt PROXY_WS_MATCH       = of("OT-PROXY-WS-MATCH-REPLACE", "Proxy > WebSocket match and replace");
 
     // Intruder
     public static final Unbuilt INTRUDER_RESPOOL     = of("OT-INTRUDER-RESPOOL",     "Intruder > Resource pool");
@@ -73,20 +68,13 @@ public final class Unbuilt {
 
     // Suite chrome (the browser and search in the top bar are real features)
     public static final Unbuilt CONSOLE              = of("OT-CONSOLE",              "Console");
-    public static final Unbuilt PROJECT              = of("OT-PROJECT",              "Project menu");
 
-    // Settings dialog panes (the dialog shell itself is built; these are the panes)
-    public static final Unbuilt SETTINGS_PROXY          = of("OT-SETTINGS-PROXY",          "Settings > Proxy");
-    public static final Unbuilt SETTINGS_INTRUDER       = of("OT-SETTINGS-INTRUDER",       "Settings > Intruder");
-    public static final Unbuilt SETTINGS_REPEATER       = of("OT-SETTINGS-REPEATER",       "Settings > Repeater");
-    public static final Unbuilt SETTINGS_SEQUENCER      = of("OT-SETTINGS-SEQUENCER",      "Settings > Sequencer");
+    // Settings dialog panes (the dialog and the Proxy, Browser, Intruder, Repeater,
+    // Sequencer, Sessions and Configuration library panes are built; these are not)
     public static final Unbuilt SETTINGS_COMPARER       = of("OT-SETTINGS-COMPARER",       "Settings > Comparer");
-    public static final Unbuilt SETTINGS_BROWSER        = of("OT-SETTINGS-BROWSER",        "Settings > Browser");
     public static final Unbuilt SETTINGS_PROJECT        = of("OT-SETTINGS-PROJECT",        "Settings > Project");
-    public static final Unbuilt SETTINGS_SESSIONS       = of("OT-SETTINGS-SESSIONS",       "Settings > Sessions");
     public static final Unbuilt SETTINGS_SUITE          = of("OT-SETTINGS-SUITE",          "Settings > Suite");
     public static final Unbuilt SETTINGS_EXTENSIONS     = of("OT-SETTINGS-EXTENSIONS",     "Settings > Extensions");
-    public static final Unbuilt SETTINGS_CONFIG_LIBRARY = of("OT-SETTINGS-CONFIG-LIBRARY", "Settings > Configuration library");
 
     public String code()     { return code; }
     public String location() { return location; }
@@ -100,6 +88,50 @@ public final class Unbuilt {
     /** The whole registry, in declaration order: the roadmap. */
     public static List<Unbuilt> all() {
         return java.util.Collections.unmodifiableList(ALL);
+    }
+
+    /** The feature name without its tool prefix, as the roadmap shows it. */
+    public String feature() {
+        int i = location.indexOf(" > ");
+        return i < 0 ? location : location.substring(i + 3);
+    }
+
+    /**
+     * The roadmap as Markdown, grouped by tool in registry order. ROADMAP.md in
+     * the repository is this text; regenerate it with
+     * {@code java -cp build opentrap.ui.Unbuilt ROADMAP.md} after changing the
+     * registry, so the file and the interface never disagree.
+     */
+    public static String markdown() {
+        StringBuilder b = new StringBuilder();
+        b.append("# Roadmap\n\n");
+        b.append("OpenTRAP is built in the open. Every feature below is laid out in the interface ")
+         .append("but not implemented yet; using it in the app opens a dialog that names the same ")
+         .append("reference code. Pick one and open a pull request on ")
+         .append("[the main project](").append(PROJECT_URL).append(") to build it. Accepted work is ")
+         .append("merged with full credit. To discuss a feature or ask for it to be prioritised, ")
+         .append("[open an issue](").append(PROJECT_URL).append("/issues).\n\n");
+        b.append("Reference codes are stable: quote one in an issue or pull request title. ")
+         .append("Large features are split so that each entry can be finished on its own.\n\n");
+        b.append("This file is generated from the registry in `src/opentrap/ui/Unbuilt.java`, ")
+         .append("which also drives the Roadmap tab under Discover; do not edit it by hand.\n");
+        String group = null;
+        for (Unbuilt u : ALL) {
+            String g = u.location.contains(" > ") ? u.group() : "Suite";
+            if (!g.equals(group)) {
+                group = g;
+                b.append("\n## ").append(g).append("\n\n| Feature | Reference |\n|---|---|\n");
+            }
+            b.append("| ").append(u.feature()).append(" | `").append(u.code).append("` |\n");
+        }
+        b.append("\n").append(ALL.size()).append(" open items.\n");
+        return b.toString();
+    }
+
+    /** Write the roadmap to the file named on the command line (or print it). */
+    public static void main(String[] args) throws java.io.IOException {
+        if (args.length == 0) { System.out.print(markdown()); return; }
+        java.nio.file.Files.writeString(java.nio.file.Path.of(args[0]), markdown());
     }
 
     /** The clipboard payload: only lines that help an AI build the feature. */

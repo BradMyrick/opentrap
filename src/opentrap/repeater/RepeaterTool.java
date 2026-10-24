@@ -24,6 +24,7 @@ public class RepeaterTool implements ToolModule {
         this.ctx = ctx;
         ctx.registerSink("repeater", (svc, req, resp, cap) ->
             SwingUtilities.invokeLater(() -> newTab(svc, req, cap)));
+        SettingsDialog.register("Repeater", this::settingsPane);
     }
 
     @Override public Tab[] tabs() {
@@ -85,16 +86,29 @@ public class RepeaterTool implements ToolModule {
             String name = JOptionPane.showInputDialog(ctx.frame(), "enter the new tab name", tabs.getTitleAt(i));
             if (name != null && !name.isBlank()) tabs.setTitleAt(i, name);
         });
-        JCheckBoxMenuItem ucl = new JCheckBoxMenuItem("update Content-Length", updateContentLength);
-        ucl.addActionListener(e -> updateContentLength = ucl.isSelected());
-        JCheckBoxMenuItem fr = new JCheckBoxMenuItem("follow redirects", followRedirects);
-        fr.addActionListener(e -> followRedirects = fr.isSelected());
-        for (JMenuItem m : new JMenuItem[]{nt, dt, rt}) m.setFont(Ui.PLAIN);
-        ucl.setFont(Ui.PLAIN); fr.setFont(Ui.PLAIN);
+        JMenuItem st = new JMenuItem("repeater settings");
+        st.addActionListener(e -> SettingsDialog.open(
+                ctx.frame() instanceof Window w ? w : null, ctx, "Repeater"));
+        for (JMenuItem m : new JMenuItem[]{nt, dt, rt, st}) m.setFont(Ui.PLAIN);
         menu.add(nt); menu.add(dt); menu.add(rt);
         menu.addSeparator();
-        menu.add(ucl); menu.add(fr);
+        menu.add(st);
         return new JMenu[]{ menu };
+    }
+
+    /** Settings > Repeater: how a reissued request is prepared and followed. */
+    private JComponent settingsPane() {
+        OptionsPage page = new OptionsPage();
+        JCheckBox ucl = Ui.check("update Content-Length", updateContentLength);
+        ucl.addActionListener(e -> updateContentLength = ucl.isSelected());
+        JCheckBox fr = Ui.check("follow redirects", followRedirects);
+        fr.addActionListener(e -> followRedirects = fr.isSelected());
+        page.section("Request handling",
+                Ui.note("Applies to every Repeater tab. Content-Length is recomputed from the "
+                        + "edited body before the request is sent; redirects are followed to "
+                        + "their final response when enabled."),
+                ucl, fr);
+        return page;
     }
 
     private void newTab(HttpService svc, HttpMessage req, String caption) {

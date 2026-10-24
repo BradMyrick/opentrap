@@ -41,6 +41,7 @@ public class UpstreamProxyPanel extends JPanel {
         JTextArea note = Ui.note("Matching destinations are routed through the proxy; the first "
                 + "matching rule wins. HTTP CONNECT supports Basic auth.");
         note.setBorder(Ui.pad(0, 0, 6, 0));
+        Ui.sizeNote(note, 720);   // as wide as the row beneath it, not the whole page
         JScrollPane sp = Ui.scroll(table);
         sp.setPreferredSize(new Dimension(640, 120));
         JPanel row = new JPanel(new BorderLayout(8, 0));

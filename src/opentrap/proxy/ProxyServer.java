@@ -50,6 +50,7 @@ public class ProxyServer {
     public final List<ProxyRule> requestRules = new ArrayList<>();
     public final List<ProxyRule> responseRules = new ArrayList<>();
     public final List<MatchReplaceRule> matchReplace = new ArrayList<>(MatchReplaceRule.defaults());
+    public final List<MatchReplaceRule> wsMatchReplace = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     // Response modification toggles.
     public volatile boolean unhideHiddenFields = false;
@@ -564,7 +565,7 @@ public class ProxyServer {
 
             if (resp.statusCode() != 101) return; // server declined the upgrade
             ctx.alert("proxy", "WebSocket connected to " + svc.host());
-            new WebSocketConnection(ctx, svc, clientOut, upOut).run(clientIn, upIn);
+            new WebSocketConnection(ctx, svc, clientOut, upOut, wsMatchReplace).run(clientIn, upIn);
         } catch (Exception e) {
             ctx.alert("proxy", "WebSocket relay error: " + e.getMessage());
         } finally {

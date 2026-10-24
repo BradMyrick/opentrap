@@ -79,12 +79,15 @@ public class SequencerTool implements ToolModule {
         return new Tab[] {
             new Tab("live capture", liveTab),
             new Tab("manual load", manualTab),
-            new Tab("options", optionsTab),
+            new Tab("options", opentrap.ui.SettingsDialog.launcher(ctx, "Sequencer", "Sequencer settings",
+                    "Which randomness tests run on a captured token set is chosen under "
+                    + "Settings > Sequencer.")),
         };
     }
 
     @Override public void init(SuiteContext ctx) {
         this.ctx = ctx;
+        opentrap.ui.SettingsDialog.register("Sequencer", () -> optionsTab);
         ctx.registerSink("sequencer", (svc, req, resp, cap) ->
             SwingUtilities.invokeLater(() -> receive(svc, req, resp)));
     }

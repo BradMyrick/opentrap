@@ -40,14 +40,17 @@ public final class WebSocketConnection {
     private final SuiteContext ctx;
     private final OutputStream clientOut; // to the browser (frames unmasked)
     private final OutputStream serverOut; // to the upstream server (frames masked)
+    private final List<MatchReplaceRule> rules; // WebSocket match and replace, shared with the proxy
     private volatile boolean open = true;
 
     public WebSocketConnection(SuiteContext ctx, opentrap.core.HttpService service,
-                               OutputStream clientOut, OutputStream serverOut) {
+                               OutputStream clientOut, OutputStream serverOut,
+                               List<MatchReplaceRule> rules) {
         this.ctx = ctx;
         this.service = service;
         this.clientOut = clientOut;
         this.serverOut = serverOut;
+        this.rules = rules;
     }
 
     @Override public String toString() { return "#" + id + " " + (service == null ? "" : service.host()); }
@@ -74,6 +77,17 @@ public final class WebSocketConnection {
                 Op op = WebSocketMessage.opFrom(f.opcode);
                 byte[] payload = f.payload;
                 boolean edited = false;
+
+                // Match and replace runs on whole text messages only (a single
+                // unfragmented frame), before interception sees them.
+                if (f.fin && op == Op.TEXT && rules != null && !rules.isEmpty()) {
+                    String text = new String(payload, StandardCharsets.UTF_8);
+                    String replaced = MatchReplaceRule.applyAllWs(rules, text, dir == Direction.C2S);
+                    if (!replaced.equals(text)) {
+                        payload = replaced.getBytes(StandardCharsets.UTF_8);
+                        edited = true;
+                    }
+                }
 
                 if (intercepting && interceptor != null && (op == Op.TEXT || op == Op.BINARY)) {
                     WebSocketMessage probe = new WebSocketMessage(id, host(), dir, op, payload, false);

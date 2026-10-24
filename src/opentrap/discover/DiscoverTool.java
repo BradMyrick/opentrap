@@ -100,7 +100,7 @@ public class DiscoverTool implements ToolModule {
                 + "accepted work is merged with full credit. To discuss a feature or "
                 + "ask for it to be prioritised, open an issue on the project.");
         intro.setAlignmentX(Component.LEFT_ALIGNMENT);
-        intro.setMaximumSize(new Dimension(900, 80));
+        intro.setMaximumSize(new Dimension(900, intro.getPreferredSize().height));
         JButton gh = Ui.primaryButton("Open project on GitHub", "open the OpenTRAP project page");
         gh.addActionListener(e -> Unbuilt.openProject(root));
         JPanel ghRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -119,11 +119,8 @@ public class DiscoverTool implements ToolModule {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         for (Unbuilt u : Unbuilt.all()) {
-            boolean nested = u.location().contains(" > ");
-            String area = nested ? u.group() : "Suite";
-            String feature = nested
-                    ? u.location().substring(u.group().length() + 3) : u.location();
-            model.addRow(new Object[]{area, feature, u.code()});
+            String area = u.location().contains(" > ") ? u.group() : "Suite";
+            model.addRow(new Object[]{area, u.feature(), u.code()});
         }
         JTable table = new JTable(model);
         Ui.styleTable(table);

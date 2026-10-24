@@ -61,6 +61,8 @@ public class DashboardTool implements ToolModule {
     private final Map<ScanTask, TaskCard> cards = new IdentityHashMap<>();
     /** Re-run action per task, so "Scan again" relaunches the original scan. */
     private final Map<ScanTask, Runnable> rerun = new IdentityHashMap<>();
+    // The engine settings each scan ran with, for "View configuration".
+    private final Map<ScanTask, opentrap.engine.ScanConfig> taskConfigs = new IdentityHashMap<>();
     private ScanTask selected;
     /** Drives the sliding progress-bar animation while a crawl is running. */
     private javax.swing.Timer cardAnimTimer;
@@ -271,8 +273,8 @@ public class DashboardTool implements ToolModule {
                 if (ctx != null) ctx.taskChanged(selected);
             }
         }));
-        headerControls.add(new HeaderIconButton("gear", "Task settings",
-                () -> opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.showDialog(rightHeader)));
+        headerControls.add(new HeaderIconButton("gear", "View the selected task's configuration",
+                () -> showTaskConfig(selected, rightHeader)));
         headerControls.add(new HeaderIconButton("help", "Getting started",
                 () -> { if (ctx != null && ctx.frame() instanceof opentrap.ui.SuiteFrame sf) sf.selectTool("discover"); }));
 
@@ -389,7 +391,7 @@ public class DashboardTool implements ToolModule {
         top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
         addLeft(top, sectionHeader("Task configuration", sectionIcon("pencil"),
                 "View configuration",
-                () -> opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.showDialog(top)));
+                () -> showTaskConfig(selected, top)));
         top.add(Box.createVerticalStrut(10));
         addLeft(top, configGrid());
         top.add(Box.createVerticalStrut(16));
@@ -502,6 +504,80 @@ public class DashboardTool implements ToolModule {
     }
 
     /** Task configuration: label/value rows aligned in two columns. */
+    /**
+     * A read-only view of the engine settings a task ran with. Settings cannot
+     * change once a scan is under way, so this shows them rather than editing them.
+     */
+    private void showTaskConfig(ScanTask task, Component near) {
+        if (task == null) {
+            JOptionPane.showMessageDialog(near, "Select a task first.", "Task configuration",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        opentrap.engine.ScanConfig c = taskConfigs.get(task);
+        JPanel g = new JPanel(new GridBagLayout());
+        g.setOpaque(false);
+        int row = 0;
+        addKv(g, row++, "Task:", Ui.label(task.title()));
+        addKv(g, row++, "Type:", Ui.label(task.configuration()));
+        addKv(g, row++, "Scope:", Ui.label(task.scope()));
+        if (c == null) {
+            addKv(g, row, "Configuration:", Ui.label("not recorded for this task"));
+        } else {
+            addKv(g, row++, "Configuration:", Ui.label(c.name()));
+            addKv(g, row++, "Crawl depth:", Ui.label(c.crawlDepth() == 0 ? "unlimited" : String.valueOf(c.crawlDepth())));
+            addKv(g, row++, "Crawl time limit:", Ui.label(minutes(c.crawlDurationMin())));
+            addKv(g, row++, "Submit forms:", Ui.label(c.submitForms() ? "yes" : "no"));
+            addKv(g, row++, "AJAX crawl:", Ui.label(c.ajaxSpider() ? "on" : "off"));
+            if (c.ajaxSpider()) {
+                addKv(g, row++, "AJAX time limit:", Ui.label(minutes(c.ajaxMaxDurationMin())));
+                addKv(g, row++, "AJAX depth:", Ui.label(c.ajaxMaxDepth() == 0 ? "unlimited" : String.valueOf(c.ajaxMaxDepth())));
+                addKv(g, row++, "AJAX states:", Ui.label(c.ajaxMaxStates() == 0 ? "unlimited" : String.valueOf(c.ajaxMaxStates())));
+            }
+            addKv(g, row++, "Attack strength:", Ui.label(c.attackStrength()));
+            addKv(g, row++, "Alert threshold:", Ui.label(c.alertThreshold()));
+            addKv(g, row++, "Injection points:", Ui.label(mask(c.injectableMask(),
+                    new int[]{opentrap.engine.ScanConfig.INJECT_QUERY, opentrap.engine.ScanConfig.INJECT_BODY,
+                            opentrap.engine.ScanConfig.INJECT_PATH, opentrap.engine.ScanConfig.INJECT_HEADERS,
+                            opentrap.engine.ScanConfig.INJECT_COOKIE},
+                    new String[]{"query string", "body", "path", "headers", "cookies"})));
+            addKv(g, row++, "Body types:", Ui.label(mask(c.rpcMask(),
+                    new int[]{opentrap.engine.ScanConfig.RPC_MULTIPART, opentrap.engine.ScanConfig.RPC_XML,
+                            opentrap.engine.ScanConfig.RPC_JSON, opentrap.engine.ScanConfig.RPC_GWT,
+                            opentrap.engine.ScanConfig.RPC_ODATA},
+                    new String[]{"multipart", "XML", "JSON", "GWT", "OData"})));
+            addKv(g, row++, "Request delay:", Ui.label(c.delayMs() == 0 ? "none" : c.delayMs() + " ms"));
+            addKv(g, row, "Audit time limit:", Ui.label(minutes(c.scanDurationMin())));
+        }
+        JPanel body = new JPanel(new BorderLayout());
+        body.setBorder(Ui.pad(16, 20, 12, 20));
+        body.add(g, BorderLayout.NORTH);
+        Window owner = near == null ? null : SwingUtilities.getWindowAncestor(near);
+        JDialog d = new JDialog(owner, "Task configuration", Dialog.ModalityType.APPLICATION_MODAL);
+        JButton close = Ui.button("Close");
+        close.addActionListener(e -> d.dispose());
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 6));
+        bar.add(close);
+        body.add(bar, BorderLayout.SOUTH);
+        d.setContentPane(body);
+        d.pack();
+        d.setSize(Math.max(460, d.getWidth()), d.getHeight());
+        d.setLocationRelativeTo(near);
+        d.setVisible(true);
+    }
+
+    private static String minutes(int m) { return m == 0 ? "none" : m + " min"; }
+
+    private static String mask(int value, int[] bits, String[] names) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < bits.length; i++) {
+            if ((value & bits[i]) == 0) continue;
+            if (b.length() > 0) b.append(", ");
+            b.append(names[i]);
+        }
+        return b.length() == 0 ? "none" : b.toString();
+    }
+
     private JPanel configGrid() {
         JPanel g = new JPanel(new GridBagLayout());
         g.setOpaque(false);
@@ -1264,9 +1340,7 @@ public class DashboardTool implements ToolModule {
                     Runnable r = rerun.get(task);
                     if (r != null) r.run();
                 }));
-                JMenuItem settings = new JMenuItem("Settings");
-                opentrap.ui.Unbuilt.DASHBOARD_TASK_SETTINGS.attach(settings);
-                m.add(settings);
+                m.add(mi("View configuration", () -> showTaskConfig(task, TaskCard.this)));
                 m.addSeparator();
                 m.add(mi("Delete", () -> deleteTask(task)));
                 m.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
@@ -1676,6 +1750,7 @@ public class DashboardTool implements ToolModule {
                 thenAudit ? "Crawl then audit, within scope" : "Crawl within scope");
         task.setScope(seeds.size() == 1 ? seeds.get(0).service().url() : seeds.size() + " targets");
         ctx.addTask(task);
+        taskConfigs.put(task, cfg);
         // Remember how to run this exact scan again, for the task's "Scan again".
         final java.util.List<String> againUrls = new ArrayList<>(urls);
         final boolean againAudit = thenAudit;

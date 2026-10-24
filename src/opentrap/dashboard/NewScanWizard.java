@@ -389,13 +389,13 @@ public class NewScanWizard extends JDialog {
         listWrap.add(list, BorderLayout.NORTH);
         body.add(listWrap, BorderLayout.NORTH);
 
-        // Save / Load named configurations is not implemented yet: the controls
-        // stay enabled and open the "not yet implemented" dialog to invite a
-        // contribution, rather than being dead disabled buttons.
-        JButton save = Ui.button("Save");
-        JButton load = Ui.button("Load");
-        opentrap.ui.Unbuilt.SCAN_CONFIG_LIBRARY.attach(save);
-        opentrap.ui.Unbuilt.SCAN_CONFIG_LIBRARY.attach(load);
+        // Named configurations live in the configuration library (Settings >
+        // Configuration library); Save adds the current one, Load adopts one as
+        // the Custom tier.
+        JButton save = Ui.button("Save", "save the current configuration under a name");
+        JButton load = Ui.button("Load", "load a saved configuration");
+        save.addActionListener(e -> saveConfig());
+        load.addActionListener(e -> loadConfig());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         actions.setOpaque(false);
         actions.add(save); actions.add(load);
@@ -461,6 +461,71 @@ public class NewScanWizard extends JDialog {
         }
         configPreset = name;
         highlightConfig(name);
+    }
+
+    private void saveConfig() {
+        String suggested = "Custom".equals(configPreset) ? "" : configPreset + " (copy)";
+        String name = JOptionPane.showInputDialog(this, "Name for this configuration:", suggested);
+        if (name == null || name.isBlank()) return;
+        name = name.trim();
+        if (opentrap.engine.ScanConfigStore.exists(name)
+                && JOptionPane.showConfirmDialog(this, "\"" + name + "\" already exists. Replace it?",
+                "Save configuration", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+        try {
+            opentrap.engine.ScanConfigStore.save(name, config());
+        } catch (java.io.IOException e) {
+            JOptionPane.showMessageDialog(this, "Could not save the configuration: " + e.getMessage(),
+                    "Save configuration", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void loadConfig() {
+        java.util.List<String> names = opentrap.engine.ScanConfigStore.names();
+        if (names.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No saved configurations yet. Set one up and click Save to add it to the library.",
+                    "Load configuration", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        Object pick = JOptionPane.showInputDialog(this, "Saved configuration:", "Load configuration",
+                JOptionPane.PLAIN_MESSAGE, null, names.toArray(), names.get(0));
+        if (pick == null) return;
+        try {
+            applyCustom(opentrap.engine.ScanConfigStore.load(pick.toString()));
+            configPreset = "Custom";
+            highlightConfig(configPreset);
+        } catch (java.io.IOException e) {
+            JOptionPane.showMessageDialog(this, "Could not load the configuration: " + e.getMessage(),
+                    "Load configuration", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /** Put a configuration's values into the Custom controls (the inverse of config()). */
+    private void applyCustom(opentrap.engine.ScanConfig c) {
+        cCrawlDepth.setValue(c.crawlDepth());
+        cCrawlDuration.setValue(c.crawlDurationMin());
+        cSubmitForms.setSelected(c.submitForms());
+        cAjax.setSelected(c.ajaxSpider());
+        cAjaxDuration.setValue(c.ajaxMaxDurationMin());
+        cAjaxDepth.setValue(c.ajaxMaxDepth());
+        cAjaxStates.setValue(c.ajaxMaxStates());
+        cStrength.setSelectedItem(c.attackStrength());
+        cThreshold.setSelectedItem(c.alertThreshold());
+        int inject = c.injectableMask();
+        vQuery.setSelected((inject & opentrap.engine.ScanConfig.INJECT_QUERY) != 0);
+        vBody.setSelected((inject & opentrap.engine.ScanConfig.INJECT_BODY) != 0);
+        vPath.setSelected((inject & opentrap.engine.ScanConfig.INJECT_PATH) != 0);
+        vHeaders.setSelected((inject & opentrap.engine.ScanConfig.INJECT_HEADERS) != 0);
+        vCookie.setSelected((inject & opentrap.engine.ScanConfig.INJECT_COOKIE) != 0);
+        int rpc = c.rpcMask();
+        rMultipart.setSelected((rpc & opentrap.engine.ScanConfig.RPC_MULTIPART) != 0);
+        rXml.setSelected((rpc & opentrap.engine.ScanConfig.RPC_XML) != 0);
+        rJson.setSelected((rpc & opentrap.engine.ScanConfig.RPC_JSON) != 0);
+        rGwt.setSelected((rpc & opentrap.engine.ScanConfig.RPC_GWT) != 0);
+        rOdata.setSelected((rpc & opentrap.engine.ScanConfig.RPC_ODATA) != 0);
+        cDelay.setValue(c.delayMs());
+        cScanDuration.setValue(c.scanDurationMin());
+        syncAjaxEnabled();
     }
 
     private void highlightConfig(String name) {

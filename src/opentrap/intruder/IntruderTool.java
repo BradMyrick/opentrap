@@ -41,6 +41,10 @@ public class IntruderTool implements ToolModule {
     @Override public boolean alwaysTabbed() { return false; }
 
     @Override public void init(SuiteContext ctx) {
+        // Settings > Intruder holds the defaults a new attack starts with; the
+        // per-attack values stay on this tab's Settings pane.
+        options.applyDefaults(ctx.settings());
+        opentrap.ui.SettingsDialog.register("Intruder", () -> new IntruderSettingsPanel(ctx.settings()));
         ctx.registerSink("intruder", (svc, req, resp, cap) ->
                 SwingUtilities.invokeLater(() -> {
                     target.set(svc);

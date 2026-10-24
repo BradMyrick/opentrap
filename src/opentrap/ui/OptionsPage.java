@@ -70,13 +70,10 @@ public class OptionsPage extends JPanel {
         }
         for (Component c : parts) {
             if (c instanceof JTextArea ta && ta.getLineWrap()) {
-                // Bound wrapping notes to the page width and let height follow.
-                int w = 600;
-                ta.setSize(w, Short.MAX_VALUE);
-                int h = Math.max(ta.getPreferredSize().height, 20);
+                // Bound wrapping notes to the page width and let height follow,
+                // so a page never grows wider than its viewport for a paragraph.
+                Ui.sizeNote(ta, 600);
                 ta.setAlignmentX(Component.LEFT_ALIGNMENT);
-                ta.setMaximumSize(new Dimension(w, h));
-                ta.setPreferredSize(new Dimension(w, h));
             } else if (c instanceof JComponent jc) {
                 jc.setAlignmentX(Component.LEFT_ALIGNMENT);
                 Dimension pref = jc.getPreferredSize();

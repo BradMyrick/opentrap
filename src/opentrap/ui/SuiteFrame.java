@@ -47,11 +47,24 @@ public class SuiteFrame extends JFrame {
     private final JButton eventLogLabel = new JButton("Event log (0)");
     private final JButton issuesLabel = new JButton("All issues (0)");
     private AlertsPanel alertsPanel;
+    private opentrap.session.SessionPanel sessionPanel;   // Settings > Sessions, built on first use
+    private ConfigLibraryPanel configLibrary;             // Settings > Configuration library
 
     public SuiteFrame(SuiteContext ctx, String title) {
         super(title);
         this.ctx = ctx;
         ctx.setFrame(this);
+        // Suite-level settings panes. Tools register their own in init().
+        SettingsDialog.register("Sessions", () -> {
+            if (sessionPanel == null) sessionPanel = new opentrap.session.SessionPanel(ctx);
+            sessionPanel.refreshAll();
+            return sessionPanel;
+        });
+        SettingsDialog.register("Configuration library", () -> {
+            if (configLibrary == null) configLibrary = new ConfigLibraryPanel();
+            configLibrary.reload();
+            return configLibrary;
+        });
         setIconImages(AppIcon.images());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         tabs.setFont(Ui.PLAIN);
@@ -204,18 +217,17 @@ public class SuiteFrame extends JFrame {
         addItem(suite, "save state", e -> StateIO.saveDialog(ctx, this));
         addItem(suite, "restore state", e -> StateIO.restoreDialog(ctx, this));
         suite.addSeparator();
-        addItem(suite, "session handling...", e -> opentrap.session.SessionWindow.open(ctx));
+        addItem(suite, "session handling...", e -> SettingsDialog.open(this, ctx, "Sessions"));
         suite.addSeparator();
         addItem(suite, "exit", e -> confirmExit());
         menuBar.add(suite);
 
-        // Project menu (not yet implemented - each item invites a contribution).
         JMenu project = new JMenu("Project");
         project.setFont(Ui.PLAIN);
-        for (String item : new String[]{"project settings", "rename project",
-                "save copy", "import project file"}) {
-            addItem(project, item, e -> Unbuilt.PROJECT.showDialog(this));
-        }
+        addItem(project, "project settings", e -> SettingsDialog.open(this, ctx, "Project"));
+        addItem(project, "rename project", e -> renameProject());
+        addItem(project, "save copy", e -> saveProjectCopy());
+        addItem(project, "import project file", e -> StateIO.restoreDialog(ctx, this));
         menuBar.add(project);
 
         for (ToolModule m : modules) {
@@ -261,8 +273,62 @@ public class SuiteFrame extends JFrame {
         JMenu help = new JMenu("Help");
         help.setFont(Ui.PLAIN);
         addItem(help, "proxy setup instructions", e -> showProxyHelp());
+        addItem(help, "roadmap", e -> selectTool("discover"));
         addItem(help, "about", e -> AboutDialog.show(this));
         menuBar.add(help);
+    }
+
+    /** Rename the project file this session is bound to, keeping its contents. */
+    private void renameProject() {
+        java.io.File current = ctx.projectFile();
+        if (current == null) {
+            JOptionPane.showMessageDialog(this,
+                    "This session is not saved as a project yet. Use OpenTRAP > save state "
+                    + "to give it a file, then rename it.", "Rename project", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        String name = JOptionPane.showInputDialog(this, "New project name:", RecentProjects.baseName(current));
+        if (name == null || name.isBlank()) return;
+        name = name.trim();
+        if (!name.toLowerCase().endsWith(StateIO.EXT)) name += StateIO.EXT;
+        java.io.File target = new java.io.File(current.getParentFile(), name);
+        if (target.equals(current)) return;
+        if (target.exists()) {
+            JOptionPane.showMessageDialog(this, "A project called " + target.getName() + " already exists.",
+                    "Rename project", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            if (current.exists()) java.nio.file.Files.move(current.toPath(), target.toPath());
+            ctx.setProjectFile(target);
+            RecentProjects.record(RecentProjects.baseName(target), target);
+            ctx.alert("suite", "Project renamed to " + target.getName());
+        } catch (java.io.IOException e) {
+            JOptionPane.showMessageDialog(this, "Could not rename the project: " + e.getMessage(),
+                    "Rename project", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /** Write the current state to another file without rebinding the session to it. */
+    private void saveProjectCopy() {
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("save copy");
+        java.io.File current = ctx.projectFile();
+        fc.setSelectedFile(current != null
+                ? new java.io.File(current.getParentFile(), RecentProjects.baseName(current) + "-copy" + StateIO.EXT)
+                : new java.io.File(StateIO.defaultProjectFileName()));
+        if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
+        java.io.File f = fc.getSelectedFile();
+        if (!f.getName().toLowerCase().endsWith(StateIO.EXT)) f = new java.io.File(f.getParentFile(), f.getName() + StateIO.EXT);
+        if (f.exists() && JOptionPane.showConfirmDialog(this, "This file already exists. Overwrite it?",
+                "save copy", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+        try {
+            StateIO.save(ctx, f);
+            ctx.alert("suite", "Copy saved to " + f.getName());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Could not save the copy: " + e.getMessage(),
+                    "save copy", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**
