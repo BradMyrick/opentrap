@@ -71,6 +71,7 @@ public class CollaboratorTool implements ToolModule {
         Ui.styleTable(table);
         sorter = new javax.swing.table.TableRowSorter<>(model);
         table.setRowSorter(sorter);
+        Ui.newestFirst(table, 0);
         Ui.distributeWidths(table, 40, 150, 70, 380, 160);
         table.getSelectionModel().addListSelectionListener(e -> showSelected());
 

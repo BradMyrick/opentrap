@@ -30,10 +30,10 @@ public class AlertsPanel extends JPanel {
         south.add(clear);
         add(south, BorderLayout.SOUTH);
 
+        // Newest first, like every other history: the latest alert is the top row.
         ctx.addAlertListener(a -> SwingUtilities.invokeLater(() -> {
             model.fireTableDataChanged();
-            int n = model.getRowCount();
-            if (n > 0) table.scrollRectToVisible(table.getCellRect(n - 1, 0, true));
+            if (model.getRowCount() > 0) table.scrollRectToVisible(table.getCellRect(0, 0, true));
         }));
     }
 
@@ -45,7 +45,7 @@ public class AlertsPanel extends JPanel {
         @Override public Object getValueAt(int r, int c) {
             List<Alert> list = ctx.alerts();
             if (r >= list.size()) return "";
-            Alert a = list.get(r);
+            Alert a = list.get(list.size() - 1 - r);   // newest first
             return switch (c) {
                 case 0 -> fmt.format(a.time);
                 case 1 -> a.tool;

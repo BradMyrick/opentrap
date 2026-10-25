@@ -64,6 +64,7 @@ public class ResultsWindow extends JFrame {
         table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         table.setColumnSelectionAllowed(false);
         table.setAutoCreateRowSorter(true);
+        Ui.newestFirst(table, 0);
         table.getTableHeader().setToolTipText(
                 "click column to sort ascending (SHIFT-click = descending)");
         table.getSelectionModel().addListSelectionListener(e -> {

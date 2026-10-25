@@ -296,10 +296,24 @@ public class NewScanWizard extends JDialog {
     private JComponent buildScanDetails(SuiteContext ctx) {
         urls.setFont(Ui.MONO);
         StringBuilder sb = new StringBuilder();
+        // Start from what is in scope: one URL per enabled include rule. A
+        // prefix rule is the URL itself; a host-only rule and an advanced rule
+        // with a literal host are offered over https.
         try {
             for (var r : ctx.scope().include()) {
-                String host = opentrap.core.Scope.display(r.host);
-                if (!host.isBlank()) sb.append("https://").append(host).append("/\n");
+                if (!r.enabled) continue;
+                if (r.isPrefix()) {
+                    String p = r.prefix;
+                    if (!p.contains("://")) p = "https://" + p;
+                    if (!p.substring(p.indexOf("://") + 3).contains("/")) p = p + "/";
+                    sb.append(p).append('\n');
+                } else {
+                    String host = opentrap.core.Scope.display(r.host);
+                    if (!host.isBlank() && host.matches("[A-Za-z0-9.-]+")) {
+                        sb.append("https".equalsIgnoreCase(r.protocol) || "any".equalsIgnoreCase(r.protocol) ? "https://" : "http://")
+                          .append(host).append("/\n");
+                    }
+                }
             }
         } catch (Exception ignored) {}
         urls.setText(sb.toString());
@@ -840,39 +854,63 @@ public class NewScanWizard extends JDialog {
 
     // ---- icons ----
 
+    /**
+     * The rail's step icons: clean 22-pixel outlines with rounded strokes,
+     * drawn in the rail's text colour so they read the same selected or not.
+     */
     private static Icon railIcon(String kind, Color col) {
-        int s = 20;
+        int s = 22;
         BufferedImage img = new BufferedImage(s, s, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
         g.setColor(col);
-        g.setStroke(new BasicStroke(1.5f));
+        g.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         switch (kind) {
             case "type" -> {
-                // Target / crosshair.
-                g.drawOval(4, 4, 12, 12);
-                g.drawOval(8, 8, 4, 4);
-                g.drawLine(10, 1, 10, 4);
-                g.drawLine(10, 16, 10, 19);
-                g.drawLine(1, 10, 4, 10);
-                g.drawLine(16, 10, 19, 10);
+                // A horn with two sound arcs: the kind of scan being announced.
+                java.awt.geom.Path2D.Float horn = new java.awt.geom.Path2D.Float();
+                horn.moveTo(3, 8.5); horn.lineTo(7, 8.5); horn.lineTo(12, 4.5); horn.lineTo(12, 17.5);
+                horn.lineTo(7, 13.5); horn.lineTo(3, 13.5); horn.closePath();
+                g.draw(horn);
+                g.draw(new java.awt.geom.Arc2D.Float(10f, 6.5f, 8f, 9f, -50, 100, java.awt.geom.Arc2D.OPEN));
+                g.draw(new java.awt.geom.Arc2D.Float(10f, 3.5f, 13f, 15f, -50, 100, java.awt.geom.Arc2D.OPEN));
             }
-            case "details" -> { g.drawLine(5, 3, 5, 17); g.drawPolygon(new int[]{5, 15, 5}, new int[]{4, 8, 12}, 3); }
+            case "details" -> {
+                // A kite-shaped badge with a tick: the target, confirmed.
+                java.awt.geom.Path2D.Float kite = new java.awt.geom.Path2D.Float();
+                kite.moveTo(11, 2.5); kite.lineTo(19, 9); kite.lineTo(11, 19.5); kite.lineTo(3, 9); kite.closePath();
+                g.draw(kite);
+                g.drawLine(8, 10, 10, 12);
+                g.drawLine(10, 12, 14, 8);
+            }
             case "config" -> {
-                g.drawOval(7, 7, 6, 6);
-                for (int a = 0; a < 360; a += 45) {
-                    double r = Math.toRadians(a);
-                    g.drawLine((int) (10 + 4 * Math.cos(r)), (int) (10 + 4 * Math.sin(r)),
-                               (int) (10 + 6.5 * Math.cos(r)), (int) (10 + 6.5 * Math.sin(r)));
+                // A gear: eight rounded teeth around a ring.
+                java.awt.geom.Path2D.Float gear = new java.awt.geom.Path2D.Float();
+                double cx = 11, cy = 11, ro = 8.2, ri = 6.2;
+                int teeth = 8;
+                for (int i = 0; i < teeth * 2; i++) {
+                    double a = Math.PI * i / teeth - Math.PI / (teeth * 2);
+                    double r = (i % 2 == 0) ? ro : ri;
+                    double x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+                    if (i == 0) gear.moveTo(x, y); else gear.lineTo(x, y);
                 }
+                gear.closePath();
+                g.draw(gear);
+                g.drawOval(8, 8, 6, 6);
             }
             case "login" -> {
-                g.drawRect(10, 4, 6, 12);
-                g.drawLine(3, 10, 11, 10);
-                g.drawLine(8, 7, 11, 10);
-                g.drawLine(8, 13, 11, 10);
+                // An arrow entering a bracket: signing in.
+                g.drawLine(3, 11, 13, 11);
+                g.drawLine(9, 7, 13, 11);
+                g.drawLine(9, 15, 13, 11);
+                g.drawLine(13, 3, 18, 3); g.drawLine(18, 3, 18, 19); g.drawLine(18, 19, 13, 19);
             }
-            case "pool" -> { g.drawOval(4, 4, 12, 12); g.drawLine(10, 10, 10, 4); g.drawLine(10, 10, 16, 11); }
+            case "pool" -> {
+                // A pie chart with one slice lifted out.
+                g.draw(new java.awt.geom.Arc2D.Float(3f, 4f, 15f, 15f, 90, 270, java.awt.geom.Arc2D.PIE));
+                g.draw(new java.awt.geom.Arc2D.Float(6f, 1f, 15f, 15f, 0, 90, java.awt.geom.Arc2D.PIE));
+            }
         }
         g.dispose();
         return new ImageIcon(img);

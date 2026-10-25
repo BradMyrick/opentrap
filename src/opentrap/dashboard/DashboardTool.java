@@ -327,6 +327,7 @@ public class DashboardTool implements ToolModule {
         Ui.distributeWidths(scanLogTable, 48, 95, 60, 70, 170, 200, 150, 60, 70);
         lightHeader(scanLogTable);
         scanLogTable.setRowSorter(new javax.swing.table.TableRowSorter<>(scanLogModel));
+        Ui.newestFirst(scanLogTable, 0);
         scanReq  = new MessageEditor(ctx, MessageEditor.REQUEST, false);
         scanResp = new MessageEditor(ctx, MessageEditor.RESPONSE, false);
         scanLogTable.getSelectionModel().addListSelectionListener(e -> showScanSelected());
@@ -832,6 +833,7 @@ public class DashboardTool implements ToolModule {
         javax.swing.table.TableRowSorter<AuditLogModel> sorter =
                 new javax.swing.table.TableRowSorter<>(auditLogModel);
         auditLogTable.setRowSorter(sorter);
+        Ui.newestFirst(auditLogTable, 0);
 
         // Filter state shared by the Filter popup and the Search box.
         final java.util.Set<Issue.Severity> enabled = java.util.EnumSet.allOf(Issue.Severity.class);
@@ -1825,12 +1827,15 @@ public class DashboardTool implements ToolModule {
         }
         if (seeds.isEmpty()) return;
 
+        // The card reads like the reference: what the job is, of what, and the
+        // configuration it runs with, e.g. "Crawl and audit of host" over
+        // "Crawl and audit - Lightweight".
         String first = seeds.get(0).service().host();
-        String title = seeds.size() == 1 ? "Crawl of " + first
-                : "Crawl of " + first + " +" + (seeds.size() - 1) + " more";
+        String what = thenAudit ? "Crawl and audit" : "Crawl";
+        String title = seeds.size() == 1 ? what + " of " + first
+                : what + " of " + first + " +" + (seeds.size() - 1) + " more";
         opentrap.core.ScanTask task = new opentrap.core.ScanTask(
-                opentrap.core.ScanTask.Type.LIVE_ACTIVE, title,
-                thenAudit ? "Crawl then audit, within scope" : "Crawl within scope");
+                opentrap.core.ScanTask.Type.LIVE_ACTIVE, title, what + " - " + cfg.name());
         task.setScope(seeds.size() == 1 ? seeds.get(0).service().url() : seeds.size() + " targets");
         ctx.addTask(task);
         taskConfigs.put(task, cfg);
@@ -1935,6 +1940,7 @@ public class DashboardTool implements ToolModule {
                 "Host", "Path", "Insertion point", "Severity", "Confidence"};
         private List<Issue> rows = new ArrayList<>();
         private final java.text.DateFormat fmt = new java.text.SimpleDateFormat("HH:mm:ss dd MMM yyyy");
+        @Override public Class<?> getColumnClass(int c) { return c == 0 ? Integer.class : String.class; }
 
         void setIssues(List<Issue> issues) {
             List<Issue> copy = new ArrayList<>(issues);

@@ -369,6 +369,22 @@ public final class Ui {
     }
 
     /** Retained for call sites; tables are left-aligned throughout now. */
+    /**
+     * Sort a history table newest first by its number column, so the latest
+     * entry is always at the top as more arrive. A sorter is created when the
+     * table has none; an existing one keeps its filter. The user can still
+     * click a header to sort another way.
+     */
+    public static void newestFirst(JTable t, int numberColumn) {
+        javax.swing.RowSorter<? extends javax.swing.table.TableModel> rs = t.getRowSorter();
+        if (rs == null) {
+            rs = new javax.swing.table.TableRowSorter<>(t.getModel());
+            t.setRowSorter(rs);
+        }
+        rs.setSortKeys(java.util.List.of(
+                new javax.swing.RowSorter.SortKey(numberColumn, javax.swing.SortOrder.DESCENDING)));
+    }
+
     public static void centerCells(JTable t) {
         leftAlign(t);
     }

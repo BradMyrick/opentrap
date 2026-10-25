@@ -58,6 +58,7 @@ public class TargetTool implements ToolModule {
         // re-filters the tree and the table.
         ctx.addScopeListener(() -> SwingUtilities.invokeLater(() -> {
             if (itemsFilter.inScopeOnly) applyItemsFilter();
+            else if (tree != null) tree.repaint();   // in-scope and muted icons
         }));
     }
 
@@ -172,7 +173,30 @@ public class TargetTool implements ToolModule {
         tree.setRootVisible(false);
         tree.setShowsRootHandles(true);
         tree.setFont(Ui.PLAIN);
-        tree.setRowHeight(18);
+        tree.setRowHeight(20);
+        // Hosts carry a padlock (closed for https, open and red for http) and
+        // are labelled by host and port, the scheme being what the padlock
+        // says; folders and requests get flat icons. Out-of-scope nodes are
+        // muted when a scope is set, so the target stands out.
+        tree.setCellRenderer(new DefaultTreeCellRenderer() {
+            @Override public Component getTreeCellRendererComponent(JTree t, Object value,
+                    boolean sel, boolean exp, boolean leaf, int row, boolean focus) {
+                super.getTreeCellRendererComponent(t, value, sel, exp, leaf, row, focus);
+                if (value instanceof DefaultMutableTreeNode tn && tn.getUserObject() instanceof SiteMap.Node n) {
+                    boolean muted = !ctx.scope().isEmpty() && n.service != null
+                            && !ctx.scope().isInScope(n.service, n.isHost ? "/" : n.path);
+                    if (n.isHost && n.service != null) {
+                        setText(n.service.host() + (n.service.defaultPort() ? "" : ":" + n.service.port()));
+                        setIcon(SiteIcons.host(n.service.secure(), muted));
+                    } else {
+                        setIcon(n.children.isEmpty() ? SiteIcons.page(muted) : SiteIcons.folder(muted));
+                    }
+                    if (!sel) setForeground(muted ? Theme.MUTED : Theme.TEXT);
+                }
+                setBackgroundNonSelectionColor(t.getBackground());
+                return this;
+            }
+        });
 
         itemsModel = new ItemsModel();
         itemsTable = new JTable(itemsModel);
@@ -384,8 +408,8 @@ public class TargetTool implements ToolModule {
         Object last = path.getLastPathComponent();
         if (!(last instanceof DefaultMutableTreeNode tn)) return null;
         Object o = tn.getUserObject();
-        if (o instanceof Issue i) return "issue " + i.dedupeKey();
-        if (o instanceof IssueType t) return "type " + t.title();
+        if (o instanceof Issue i) return "issue\0" + i.dedupeKey();
+        if (o instanceof IssueType t) return "type\0" + t.title();
         return null;
     }
 

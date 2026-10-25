@@ -35,22 +35,28 @@ public final class RecentProjects {
                 if (f.length < 3) continue;
                 try {
                     File file = new File(f[1]);
-                    // Skip projects whose file has been deleted or moved.
+                    // Skip projects whose file has been deleted or moved. The
+                    // name shown is always the file's own name, whatever an
+                    // older entry recorded.
                     if (!file.isFile()) continue;
-                    out.add(new Entry(f[0], file, Long.parseLong(f[2])));
+                    out.add(new Entry(file.getName(), file, Long.parseLong(f[2])));
                 } catch (NumberFormatException ignored) {}
             }
         } catch (Exception ignored) {}
         return out;
     }
 
-    /** Record a project as the most recently used, de-duplicating by file path. */
+    /**
+     * Record a project as the most recently used, de-duplicating by file path.
+     * A project's name is its file name: the two are never allowed to drift,
+     * so the name passed in is only a fallback for a file with no name.
+     */
     public static void record(String name, File file) {
         if (file == null) return;
         List<Entry> list = load();
         list.removeIf(e -> e.file().getAbsolutePath().equals(file.getAbsolutePath()));
-        list.add(0, new Entry(name == null || name.isBlank() ? baseName(file) : name,
-                file, System.currentTimeMillis()));
+        String shown = file.getName().isBlank() ? (name == null ? "" : name) : file.getName();
+        list.add(0, new Entry(shown, file, System.currentTimeMillis()));
         while (list.size() > MAX) list.remove(list.size() - 1);
         try {
             Path p = store();

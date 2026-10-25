@@ -177,6 +177,11 @@ public final class EmbeddedBrowser {
         // requests. Minimise the disk cache and clear any stale entries below.
         cmd.add("--disk-cache-size=1");
         cmd.addAll(BrowserFlags.forTesting(relaxSecurity));
+        // Its own window class, which the desktop maps to OpenTRAP's own icon
+        // through the entry installed below, so the testing browser is never
+        // mistaken for the user's everyday one in the taskbar.
+        cmd.add("--class=" + BrowserDesktopEntry.WM_CLASS);
+        BrowserDesktopEntry.install();
         cmd.add("--new-window");
         cmd.add(startUrl == null || startUrl.isBlank() ? "http://opentrap/" : startUrl);
 

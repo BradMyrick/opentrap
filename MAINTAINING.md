@@ -125,7 +125,11 @@ the product `browser/` folder (populated by `fetch-browser.sh`, or by the option
 in-app download) or one already on the system `PATH`. It launches with an isolated
 profile under `~/.opentrap/browser`, pointed at the proxy
 (`--proxy-server=http://127.0.0.1:<port>`) and trusting the proxy CA, so TLS
-interception works with nothing to configure.
+interception works with nothing to configure. It is launched with its own window
+class (`--class=opentrap-browser`), and `opentrap.proxy.BrowserDesktopEntry`
+installs a hidden desktop entry plus an icon set under `~/.local/share` that the
+desktop maps to that class, so the taskbar shows OpenTRAP's own orange globe
+rather than the browser vendor's logo.
 
 **HiDPI scaling works by relaunching the JVM.** Java fixes `sun.java2d.uiScale` at
 startup, so the UI scales uniformly only if the factor is set before any window is

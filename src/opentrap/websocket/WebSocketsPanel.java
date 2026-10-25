@@ -57,6 +57,7 @@ public class WebSocketsPanel extends JPanel implements WsInterceptor {
     private JComponent buildHistory() {
         table = new JTable(model);
         Ui.styleTable(table);
+        Ui.newestFirst(table, 0);
         Ui.distributeWidths(table, 50, 60, 70, 70, 70, 360);
         table.getSelectionModel().addListSelectionListener(e -> showSelected());
 

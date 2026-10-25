@@ -341,6 +341,7 @@ public class ProxyTool implements ToolModule {
             Ui.distributeWidths(table, 40, 170, 55, 300, 55, 55, 60, 70, 90, 75, 150, 45, 110, 120);
             Ui.centerCells(table);
             table.setRowSorter(new TableRowSorter<>(model));
+            Ui.newestFirst(table, 0);
 
             JPanel top = new JPanel(new BorderLayout());
             top.add(new OutOfScopeBanner(ctx), BorderLayout.NORTH);

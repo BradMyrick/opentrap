@@ -48,6 +48,7 @@ public class LoggerTool implements ToolModule {
         Ui.distributeWidths(table, 45, 95, 70, 55, 160, 240, 160, 80, 75, 70, 120, 150);
         Ui.centerCells(table);
         table.setRowSorter(new TableRowSorter<>(model));
+        Ui.newestFirst(table, 0);
 
         reqView = new MessageEditor(ctx, MessageEditor.REQUEST, false);
         respView = new MessageEditor(ctx, MessageEditor.RESPONSE, false);

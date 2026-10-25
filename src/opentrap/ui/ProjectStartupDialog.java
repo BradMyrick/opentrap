@@ -43,11 +43,18 @@ public final class ProjectStartupDialog extends JDialog {
             r.setFont(Ui.BOLD); r.setOpaque(false); r.setFocusable(false);
         }
 
-        // When the Name changes, keep the chosen file's name in step with it.
+        // The Name and the file name are one thing: edit either and the other
+        // follows, so a project can never be shown under a name its file does
+        // not carry.
         newName.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e)  { syncFileToName(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e)  { syncFileToName(); }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { syncFileToName(); }
+        });
+        newFile.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e)  { syncNameToFile(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e)  { syncNameToFile(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { syncNameToFile(); }
         });
 
         // Only fill in a default name once "New project on disk" is actually
@@ -296,12 +303,34 @@ public final class ProjectStartupDialog extends JDialog {
         return n.replaceAll("[^A-Za-z0-9._-]", "_");
     }
 
+    // Set while one field is being written from the other, so the two document
+    // listeners do not feed each other.
+    private boolean syncing;
+
     /** Keep the chosen file in step with the Name: edit the name, the file follows. */
     private void syncFileToName() {
+        if (syncing) return;
         String path = newFile.getText().trim();
         if (path.isEmpty()) return;
         File parent = new File(path).getParentFile();
-        if (parent != null) newFile.setText(new File(parent, projectFileName()).getAbsolutePath());
+        if (parent == null) return;
+        String want = new File(parent, projectFileName()).getAbsolutePath();
+        if (want.equals(path)) return;
+        syncing = true;
+        try { SwingUtilities.invokeLater(() -> { newFile.setText(want); syncing = false; }); }
+        catch (RuntimeException e) { syncing = false; throw e; }
+    }
+
+    /** Keep the Name in step with the chosen file: edit the file, the name follows. */
+    private void syncNameToFile() {
+        if (syncing) return;
+        String path = newFile.getText().trim();
+        if (path.isEmpty()) return;
+        String want = new File(path).getName();
+        if (want.isEmpty() || want.equals(newName.getText().trim())) return;
+        syncing = true;
+        try { SwingUtilities.invokeLater(() -> { newName.setText(want); syncing = false; }); }
+        catch (RuntimeException e) { syncing = false; throw e; }
     }
 
     /** A small grey question-mark glyph, matching the welcome header. */
@@ -366,11 +395,11 @@ public final class ProjectStartupDialog extends JDialog {
         return t.isEmpty() ? null : new File(t);
     }
 
-    /** The name the user gave a new project, else the file's base name. */
+    /** The project's name, which is its file name. */
     public String projectName() {
-        String n = newName.getText().trim();
         File f = file();
-        return !n.isEmpty() ? n : (f == null ? "" : RecentProjects.baseName(f));
+        if (f != null && !f.getName().isBlank()) return f.getName();
+        return newName.getText().trim();
     }
 
     /** Whether to open without automatically starting scanning tasks. */
