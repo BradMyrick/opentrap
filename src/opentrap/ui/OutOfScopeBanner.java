@@ -49,11 +49,13 @@ public final class OutOfScopeBanner extends JPanel {
                 SwingUtilities.invokeLater(() -> refresh(ctx));
             }
         });
+        ctx.addScopeListener(() -> SwingUtilities.invokeLater(() -> refresh(ctx)));
         refresh(ctx);
     }
 
+    /** Shown only while there is a scope for the setting to apply to. */
     private void refresh(SuiteContext ctx) {
-        setVisible(!dismissed && !ProjectOptions.logOutOfScope(ctx.settings()));
+        setVisible(!dismissed && !ctx.scope().isEmpty() && !ProjectOptions.logOutOfScope(ctx.settings()));
         revalidate();
         repaint();
     }

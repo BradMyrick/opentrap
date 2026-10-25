@@ -400,14 +400,6 @@ public class ProxyServer {
             return conn == null || !conn.toLowerCase(Locale.ROOT).contains("close");
         }
 
-        private void logEntry(LogEntry entry, HttpService svc, HttpMessage request) {
-            boolean inScope = ctx.scope().isInScope(svc, request.path());
-            if (!inScope && !logOutOfScope) return;
-            ctx.store().add(entry);
-            ctx.siteMapChanged(entry);
-            if (observer != null) observer.exchangeLogged(entry);
-        }
-
         private boolean isLocalRequest(HttpMessage req, HttpService svc) {
             String h = svc.host();
             return h.equals("opentrap") || h.equals("opentrap.proxy")
@@ -531,6 +523,19 @@ public class ProxyServer {
     }
 
     /** Read bytes up to and including the header terminator. */
+    /**
+     * Record an exchange, HTTP or WebSocket handshake alike. With no scope
+     * defined nothing is out of scope, so everything is recorded whatever the
+     * out-of-scope setting says.
+     */
+    private void logEntry(LogEntry entry, HttpService svc, HttpMessage request) {
+        boolean inScope = ctx.scope().isEmpty() || ctx.scope().isInScope(svc, request.path());
+        if (!inScope && !logOutOfScope) return;
+        ctx.store().add(entry);
+        ctx.siteMapChanged(entry);
+        if (observer != null) observer.exchangeLogged(entry);
+    }
+
     private static boolean isWebSocketUpgrade(HttpMessage request) {
         String up = request.header("Upgrade");
         String con = request.header("Connection");
@@ -560,8 +565,7 @@ public class ProxyServer {
 
             LogEntry entry = new LogEntry("proxy", svc, request);
             entry.setResponse(resp);
-            ctx.store().add(entry);
-            ctx.siteMapChanged(entry);
+            logEntry(entry, svc, request);   // same scope rule as every other exchange
 
             if (resp.statusCode() != 101) return; // server declined the upgrade
             ctx.alert("proxy", "WebSocket connected to " + svc.host());

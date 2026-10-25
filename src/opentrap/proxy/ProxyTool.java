@@ -37,6 +37,12 @@ public class ProxyTool implements ToolModule {
         server.unpackGzip = ctx.settings().getBool("http.unpackGzip", true);
         // Out-of-scope logging is a project setting, so the banner, the settings
         // pane and a restored project all drive the one flag on the server.
+        // The flag is a preference as well, so it can arrive from an earlier
+        // session; with no scope defined it has nothing to apply to, and would
+        // otherwise read as "record nothing", so it is cleared.
+        if (ctx.scope().isEmpty() && !ProjectOptions.logOutOfScope(ctx.settings())) {
+            ctx.settings().setBool(ProjectOptions.LOG_OUT_OF_SCOPE, true);
+        }
         server.logOutOfScope = ProjectOptions.logOutOfScope(ctx.settings());
         ctx.settings().addListener(key -> {
             if (ProjectOptions.LOG_OUT_OF_SCOPE.equals(key)) server.logOutOfScope = ProjectOptions.logOutOfScope(ctx.settings());
@@ -67,6 +73,10 @@ public class ProxyTool implements ToolModule {
         int now = ctx.scope().include().size();
         boolean grew = now > lastIncludeCount;
         lastIncludeCount = now;
+        // The last include rule gone: there is no scope to restrict logging to.
+        if (now == 0 && !ProjectOptions.logOutOfScope(ctx.settings())) {
+            ctx.settings().setBool(ProjectOptions.LOG_OUT_OF_SCOPE, true);
+        }
         if (!grew || ctx.restoring() || server == null || !server.logOutOfScope) return;
         String choice = ProjectOptions.outOfScopeChoice(ctx.settings());
         if ("keep".equals(choice)) return;
