@@ -24,12 +24,60 @@ import opentrap.spider.Cdp.JsonValue;
  */
 public final class ZapScanner {
 
+    /** The engine context that mirrors the suite's target scope. */
+    public static final String SCOPE_CONTEXT = "OpenTRAP scope";
+
     private final SuiteContext ctx;
     private final ZapApi api;
+    private final java.util.concurrent.atomic.AtomicInteger imported;
+
+    /** Drive the shared engine; the message-history cursor is the engine's. */
+    public ZapScanner(SuiteContext ctx, ZapEngine engine) {
+        this(ctx, engine.api(), engine.importedMessages());
+    }
 
     public ZapScanner(SuiteContext ctx, ZapApi api) {
+        this(ctx, api, new java.util.concurrent.atomic.AtomicInteger());
+    }
+
+    private ZapScanner(SuiteContext ctx, ZapApi api, java.util.concurrent.atomic.AtomicInteger imported) {
         this.ctx = ctx;
         this.api = api;
+        this.imported = imported;
+    }
+
+    /**
+     * Hand the suite's target scope to the engine as a context, rebuilt from
+     * the current rules, so the crawl and the audit are bound by the same
+     * includes and excludes as every other tool. Returns the context id.
+     * Fails rather than falling back: a scan that cannot be bound to the
+     * scope must not run unbounded.
+     */
+    private String applyScope(java.util.List<Seed> seeds, ScanTask task) throws Exception {
+        try { api.removeContext(SCOPE_CONTEXT); } catch (Exception ignore) { /* none yet */ }
+        String id = api.newContext(SCOPE_CONTEXT);
+        if (id == null || id.isBlank()) throw new Exception("the engine did not create the scope context");
+        int inc = 0, exc = 0;
+        for (opentrap.core.Scope.Rule r : ctx.scope().include()) {
+            String re = r.urlRegex();
+            if (re != null) { api.includeInContext(SCOPE_CONTEXT, re); inc++; }
+        }
+        if (inc == 0) {
+            // No usable include rule: bind the scan to the targets themselves.
+            for (Seed seed : seeds) {
+                opentrap.core.Scope.Rule r = new opentrap.core.Scope.Rule();
+                r.prefix = seed.service().host().toLowerCase(java.util.Locale.ROOT);
+                String re = r.urlRegex();
+                if (re != null) { api.includeInContext(SCOPE_CONTEXT, re); inc++; }
+            }
+        }
+        for (opentrap.core.Scope.Rule r : ctx.scope().exclude()) {
+            String re = r.urlRegex();
+            if (re != null) { api.excludeFromContext(SCOPE_CONTEXT, re); exc++; }
+        }
+        api.setContextInScope(SCOPE_CONTEXT, true);
+        task.log("Scope applied to the engine: " + inc + " include rule(s), " + exc + " exclude rule(s)");
+        return id;
     }
 
     /** One seed to crawl: the target service and the full seed URL. */
@@ -58,6 +106,10 @@ public final class ZapScanner {
             api.setSpiderProcessForms(cfg.submitForms());
         } catch (Exception ignore) { /* use the engine defaults */ }
 
+        // Everything the engine does in this job stays inside the suite scope.
+        final String contextId = applyScope(seeds, crawlTask);
+        ctx.taskChanged(crawlTask);
+
         int lastLoc = -1;
         for (Seed seed : seeds) {
             if (crawlTask.cancelled()) break;
@@ -65,7 +117,18 @@ public final class ZapScanner {
             api.accessUrl(seed.url());
             // 0 = no per-node child limit: crawl every in-scope link within the
             // depth budget, instead of stopping after 20 links per page.
-            final String sid = api.spiderScan(seed.url(), 0);
+            final String sid;
+            try {
+                sid = api.spiderScan(seed.url(), 0, SCOPE_CONTEXT);
+            } catch (Exception e) {
+                crawlTask.log("The engine would not crawl " + seed.url() + ": " + e.getMessage());
+                ctx.taskChanged(crawlTask);
+                continue;
+            }
+            if (sid == null || sid.isBlank()) {
+                crawlTask.log("The engine gave no crawl id for " + seed.url());
+                continue;
+            }
             boolean zapPaused = false;
             while (true) {
                 // Stop the moment the task is deleted, so nothing keeps crawling.
@@ -91,7 +154,7 @@ public final class ZapScanner {
             }
             drain("crawl", true, crawlTask);
             // AJAX crawl (headless Chromium) for JavaScript-rendered routes.
-            if (cfg.ajaxSpider() && !crawlTask.cancelled()) runAjaxCrawl(seed.url(), cfg, crawlTask);
+            if (cfg.ajaxSpider() && !crawlTask.cancelled()) runAjaxCrawl(seed.url(), contextId, cfg, crawlTask);
         }
 
         drain("crawl", true, crawlTask);
@@ -134,9 +197,20 @@ public final class ZapScanner {
             int doneSeeds = 0;
             for (Seed seed : seeds) {
                 if (auditTask.cancelled()) break;
-                final String aid = api.ascanScan(seed.url());
-                // Nothing crawled for this seed: skip it with a note rather than
-                // driving the audit loop with a null id the API would reject.
+                // The audit is bound to the scope context: only what the crawl
+                // found inside it is attacked. Nothing crawled for this seed, or
+                // a seed the scope no longer covers, is skipped with a note
+                // rather than driving the loop with an id the engine rejected.
+                String started;
+                try {
+                    started = api.ascanScan(seed.url(), contextId);
+                } catch (Exception e) {
+                    auditTask.log("Nothing to audit for " + seed.service().host() + ": " + e.getMessage());
+                    ctx.taskChanged(auditTask);
+                    doneSeeds++;
+                    continue;
+                }
+                final String aid = started;
                 if (aid == null || aid.isBlank()) {
                     auditTask.log("Nothing to audit for " + seed.service().host()
                             + (crawlTask.discoveredLocations() <= 0 ? " (no crawlable content found)" : ""));
@@ -198,7 +272,7 @@ public final class ZapScanner {
      * JavaScript-rendered links and routes are discovered and fed to the audit.
      * Bounded by a time budget; absence of the add-on or a browser is not fatal.
      */
-    private void runAjaxCrawl(String seedUrl, ScanConfig cfg, ScanTask crawlTask) {
+    private void runAjaxCrawl(String seedUrl, String contextId, ScanConfig cfg, ScanTask crawlTask) {
         try {
             api.setAjaxBrowser("chrome-headless");
             api.setAjaxBrowsers(2);   // bound the headless-browser pool
@@ -209,10 +283,8 @@ public final class ZapScanner {
             } catch (Exception ignore) { /* use the engine defaults */ }
             crawlTask.log("Starting AJAX crawl (headless Chromium, executes JavaScript)...");
             ctx.taskChanged(crawlTask);
-            // inScope=false: crawl from the seed directly (Crawljax stays on the
-            // seed's domain). inScope=true would require a ZAP context we do not
-            // define, and fails with "starting URI is not in scope".
-            api.ajaxSpiderScan(seedUrl, false);
+            // Bound to the scope context like the traditional crawl.
+            api.ajaxSpiderScan(seedUrl, contextId == null ? null : SCOPE_CONTEXT);
 
             // Local wall-clock backstop mirroring the engine's own time budget, so
             // the loop still ends even if the engine does not stop itself. An
@@ -379,29 +451,54 @@ public final class ZapScanner {
 
     // ------------------------------------------- live traffic record (logger)
 
-    private int importedMessages = 0;
-
     /**
-     * Stream every new message ZAP has recorded into our store, so the logger
-     * holds a complete live record of everything the engine ran. Tagged by phase:
-     * {@code crawl} pages also populate the site map; {@code audit} probes do not,
-     * to keep the site map to real endpoints rather than every attack variant.
-     * Batched so a flood of attack traffic cannot pull thousands of messages in
-     * one call.
+     * Stream every new message the engine has recorded into our store, so the
+     * logger holds a complete live record of everything the engine ran. Each
+     * record is tagged by what the engine says made it: its crawlers' pages
+     * become {@code crawl} entries and populate the site map; its scanner's
+     * probes become {@code audit} entries and do not, to keep the site map to
+     * real endpoints rather than every attack variant. Traffic the engine only
+     * relayed for the proxy is left out, because the proxy has already recorded
+     * it. The read position is shared across scans, so nothing is imported
+     * twice. Batched so a flood of attack traffic cannot pull thousands of
+     * messages in one call.
+     *
+     * @param phase the tool to count the batch against when a record carries
+     *              no type, and the one whose entries count as this task's requests
      */
-    private void drain(String tool, boolean toSiteMap, ScanTask task) {
+    private void drain(String phase, boolean toSiteMap, ScanTask task) {
         try {
             int total = api.numberOfMessages();
             int added = 0;
-            while (importedMessages < total) {
-                int want = Math.min(total - importedMessages, 500);
-                java.util.List<JsonValue> batch = api.messages(importedMessages, want);
+            while (imported.get() < total) {
+                int from = imported.get();
+                int want = Math.min(total - from, 500);
+                java.util.List<JsonValue> batch = api.messages(from, want);
                 if (batch.isEmpty()) break;
-                for (JsonValue m : batch) if (importMessage(m, tool, toSiteMap)) added++;
-                importedMessages += batch.size();
+                for (JsonValue m : batch) {
+                    String tool = toolFor(ZapApi.str(m, "type"), phase);
+                    if (tool == null) continue;
+                    if (importMessage(m, tool, "crawl".equals(tool)) && tool.equals(phase)) added++;
+                }
+                imported.addAndGet(batch.size());
             }
             if (added > 0 && task != null) task.addRequests(added);
         } catch (Exception ignore) { }
+    }
+
+    /**
+     * Which tool a record of the engine's history belongs to, from the record
+     * type the engine stamps on it, or null for one that is not the engine's
+     * own work. Proxied traffic is the proxy's, recorded there already.
+     */
+    static String toolFor(String type, String phase) {
+        if (type == null || type.isEmpty()) return phase;
+        return switch (type) {
+            case "0" -> phase;                                               // the engine's own untyped fetches
+            case "2", "9", "10", "15", "18", "19", "24", "25" -> "crawl";   // spiders, and the seed fetch
+            case "3", "14" -> opentrap.core.ProjectOptions.AUDIT_TOOL;       // active scanner
+            default -> null;                                                 // proxied, hidden, internal
+        };
     }
 
     private boolean importMessage(JsonValue m, String tool, boolean toSiteMap) {

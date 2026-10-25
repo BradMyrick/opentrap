@@ -17,6 +17,7 @@ public final class RunTests {
         new opentrap.core.UpstreamProxyTest().run();
         new opentrap.core.ScopeDisplayTest().run();
         new opentrap.core.ScopePrefixTest().run();
+        new opentrap.core.ScopeUrlRegexTest().run();
         new opentrap.core.MessageStoreCapTest().run();
         new opentrap.session.SessionTest().run();
         new opentrap.intruder.PayloadProcessorTest().run();

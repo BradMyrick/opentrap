@@ -189,7 +189,7 @@ exposing crawl depth, attack strength, the input points tested and more.
 - **Scan configurations that fit the job** - pick a tier from Lightweight to Deep, build a Custom scan with full control over crawl depth, attack strength and the inputs tested, and save it to the configuration library for next time.
 - **Projects that open in seconds** - a saved project with tens of thousands of requests loads in a few seconds without freezing the window.
 - **Projects that stay small** - the crawl, your own traffic and every finding are kept in full; the audit's thousands of probe requests are kept as headers only, so a scan-heavy project is a fraction of the size. Save a copy with in-scope items only to shrink it further, and see where the bytes go under Project > Project size.
-- **Scope that keeps the noise out** - add a host or a path to scope from the site map, and the proxy offers to stop recording everything else; the site map and history filters hide out-of-scope, not-found and static content the way you would expect.
+- **Scope that keeps the noise out** - add a host or a path to scope from the site map, and the proxy offers to stop recording everything else; the site map and history filters hide out-of-scope, not-found and static content the way you would expect, and a scan crawls and attacks only what the scope covers.
 - **One Settings dialog** - every tool's settings in one place, reachable from the gear in the top bar or from the tool itself.
 - **Built to be improved** - shaped by the people who use it, with every contribution credited and a public [roadmap](ROADMAP.md).
 

@@ -75,7 +75,17 @@ public final class ZapEngine {
     private java.io.OutputStream lifeline;   // write end of the watchdog's stdin pipe
     private ZapApi api;
 
+    /**
+     * How far into the engine's message history the suite has read, shared by
+     * every scan driven on this engine, so a second scan carries on from where
+     * the first stopped instead of importing the whole history again.
+     */
+    private final java.util.concurrent.atomic.AtomicInteger imported = new java.util.concurrent.atomic.AtomicInteger();
+
     private ZapEngine(String jar, boolean bundled) { this.jar = jar; this.bundled = bundled; }
+
+    /** The shared read position into this engine's message history. */
+    public java.util.concurrent.atomic.AtomicInteger importedMessages() { return imported; }
 
     private static ZapEngine shared;
     private static boolean sharedResolved;
@@ -161,6 +171,7 @@ public final class ZapEngine {
         if (jar == null) throw new IOException("No scan engine available");
 
         int port = freePort();
+        imported.set(0);   // a fresh engine process starts with an empty history
         apiKey = Long.toHexString(new java.security.SecureRandom().nextLong());
         Path home = Files.createTempDirectory("opentrap-zap-");
 

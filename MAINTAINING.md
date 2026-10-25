@@ -104,6 +104,21 @@ drives it over ZAP's local HTTP API (`opentrap.engine.ZapApi`, e.g.
 `http://127.0.0.1:8090`). This is why the bundled runtime must keep `bin/java` and
 a full module set: the engine is a second JVM, not a library call.
 
+**The engine is bound to the suite scope through a context.** Before each scan
+job, `opentrap.engine.ZapScanner.applyScope` rebuilds one engine context
+("OpenTRAP scope") from the current `Scope` rules, each rule turned into a
+whole-URL regex by `Scope.Rule.urlRegex`, flags it as the engine's scope, and
+starts the crawler, the AJAX crawler and the active scan inside it. The engine
+refuses a seed outside the context and never requests or attacks anything the
+context does not cover, so the excludes (logout pages and the like) and the
+subdomain rule hold at the engine as well as in the suite. A scan that cannot
+be bound to the scope fails rather than running unbounded. The engine's message
+history is streamed into the logger by record type: its crawlers' pages become
+`crawl` entries and feed the site map, its scanner's probes become `audit`
+entries, and traffic it only relayed for the proxy is skipped because the proxy
+recorded it already. The read position lives on the shared `ZapEngine`, so a
+second scan carries on from where the first stopped.
+
 **The testing browser is not bundled in the release.** It is large (~680 MB), so
 the release stays small. `opentrap.proxy.EmbeddedBrowser` uses a Chromium found in
 the product `browser/` folder (populated by `fetch-browser.sh`, or by the optional

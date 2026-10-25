@@ -172,6 +172,67 @@ public class Scope implements Serializable {
         }
 
         @Override public String toString() { return describe(); }
+
+        /**
+         * The rule as one regex over a whole URL ({@code scheme://host:port/path}),
+         * which is how the scan engine takes a scope. A prefix rule converts
+         * exactly. An advanced rule's three patterns are matched by search
+         * against the host, port and path, so each is embedded between
+         * wildcards; a leading {@code ^} or trailing {@code $} on the file
+         * pattern keeps its anchoring. Null when the rule is disabled or has no
+         * usable host.
+         */
+        public synchronized String urlRegex() {
+            if (!enabled) return null;
+            if (prefix != null) {
+                if (!prefix.equals(parsedFor)) parsePrefix();
+                if (pHost == null) return null;
+                String scheme = pScheme == null ? "https?" : Pattern.quote(pScheme);
+                String hostPart = (subdomains ? "(?:[^/:]+\\.)?" : "") + Pattern.quote(pHost);
+                String portPart = pPort > 0 ? "(?::" + pPort + ")?" : "(?::\\d+)?";
+                String pathPart = (pPath.isEmpty() || pPath.equals("/"))
+                        ? "(?:/.*)?" : Pattern.quote(pPath) + ".*";
+                return "(?i)^" + scheme + "://" + hostPart + portPart + pathPart + "$";
+            }
+            String scheme = "any".equalsIgnoreCase(protocol) ? "https?" : protocol.toLowerCase(Locale.ROOT);
+            String hostPart;
+            if (host == null || host.isBlank()) {
+                hostPart = "[^/:]+";
+            } else {
+                boolean head = host.startsWith("^");
+                boolean tail = host.endsWith("$") && !host.endsWith("\\$");
+                hostPart = (head ? "" : "[^/:]*") + "(?:" + unanchored(host) + ")" + (tail ? "" : "[^/:]*");
+            }
+            String portPart;
+            if (port == null || port.isBlank()) {
+                portPart = "(?::\\d+)?";
+            } else {
+                // A port pattern that admits a default port must also accept a
+                // URL that leaves the port out, as the engine writes them.
+                boolean dflt = matchPort("80") || matchPort("443");
+                portPart = "(?::\\d*(?:" + unanchored(port) + ")\\d*)" + (dflt ? "?" : "");
+            }
+            String pathPart;
+            if (file == null || file.isBlank()) {
+                pathPart = "(?:/.*)?";
+            } else {
+                String f = file;
+                boolean head = f.startsWith("^");
+                boolean tail = f.endsWith("$") && !f.endsWith("\\$");
+                if (head) f = f.substring(1);
+                if (tail) f = f.substring(0, f.length() - 1);
+                pathPart = "(?=/)" + (head ? "" : ".*") + "(?:" + f + ")" + (tail ? "" : ".*");
+            }
+            return "(?i)^" + scheme + "://" + hostPart + portPart + pathPart + "$";
+        }
+
+        /** A search pattern without its outer anchors, ready to sit inside a group. */
+        private static String unanchored(String re) {
+            String s = re;
+            if (s.startsWith("^")) s = s.substring(1);
+            if (s.endsWith("$") && !s.endsWith("\\$")) s = s.substring(0, s.length() - 1);
+            return s;
+        }
     }
 
     /**

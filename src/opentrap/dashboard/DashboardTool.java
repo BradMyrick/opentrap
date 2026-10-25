@@ -1613,6 +1613,7 @@ public class DashboardTool implements ToolModule {
         ScanTask t = selected;
         if (t == null) {
             rightCards.show(rightBody, "scan");
+            applyIssueTables();
             rightHeader.setText("Dashboard");
             cfgType.setText("-");
             cfgScope.setText("-");
@@ -1638,6 +1639,7 @@ public class DashboardTool implements ToolModule {
             return;
         }
         rightCards.show(rightBody, "scan");
+        applyIssueTables();
 
         cfgType.setText(typeLabel(t.type()));
         cfgScope.setText(t.scope().isEmpty() ? "-" : t.scope());
@@ -1668,12 +1670,39 @@ public class DashboardTool implements ToolModule {
         eventLog.setCaretPosition(eventLog.getDocument().getLength());
     }
 
+    // The shared issue list as last seen, and which task's slice the tables show.
+    private List<Issue> allIssues = new ArrayList<>();
+    private int issuesStamp;
+    private ScanTask tablesFor;
+    private int tablesStamp = -1;
+
+    /**
+     * Fill the Summary, Issues and Audit log tables for the selected task: a
+     * scan task shows only what it found, the live audit shows the shared set.
+     * Rebuilt only when the task or the issue list has changed, so the
+     * once-a-second progress refresh does not reset the tables' selection.
+     */
+    private void applyIssueTables() {
+        ScanTask t = selected;
+        if (t == tablesFor && issuesStamp == tablesStamp) return;
+        tablesFor = t;
+        tablesStamp = issuesStamp;
+        List<Issue> rows = allIssues;
+        if (t != null && t.type() != ScanTask.Type.LIVE_PASSIVE) {
+            String source = "Scan " + t.number;
+            rows = new ArrayList<>();
+            for (Issue i : allIssues) if (source.equals(i.source())) rows.add(i);
+        }
+        summaryModel.setIssues(rows);
+        issuesModel.setIssues(rows);
+        auditLogModel.setIssues(rows);
+    }
+
     private void onIssuesChanged() {
         List<Issue> all = ctx == null ? new ArrayList<>() : ctx.issues();
         all.sort(java.util.Comparator.comparingInt(Issue::rank));
-        summaryModel.setIssues(all);
-        issuesModel.setIssues(all);
-        auditLogModel.setIssues(all);
+        allIssues = all;
+        issuesStamp++;
         // The live audit task reflects the shared issue set.
         if (liveAudit != null) {
             int h = 0, m = 0, l = 0, i = 0;
@@ -1722,8 +1751,13 @@ public class DashboardTool implements ToolModule {
         String def = "https://";
         // Default to the first in-scope host if scope is set.
         if (!ctx.scope().include().isEmpty()) {
-            String host = opentrap.core.Scope.display(ctx.scope().include().get(0).host);
-            if (!host.isBlank()) def = "https://" + host + "/";
+            opentrap.core.Scope.Rule first = ctx.scope().include().get(0);
+            if (first.isPrefix()) {
+                def = first.prefix.contains("://") ? first.prefix : "https://" + first.prefix + "/";
+            } else {
+                String host = opentrap.core.Scope.display(first.host);
+                if (!host.isBlank()) def = "https://" + host + "/";
+            }
         }
         String url = (String) JOptionPane.showInputDialog(ctx.frame(),
                 "URL to spider (the crawl stays within the target scope):", "Spider",
@@ -1817,7 +1851,7 @@ public class DashboardTool implements ToolModule {
                 catch (Exception ignored) {}
                 task.log("Engine ready. Crawling " + fseeds.size() + " target(s)");
                 ctx.taskChanged(task);
-                new opentrap.engine.ZapScanner(ctx, ze.api())
+                new opentrap.engine.ZapScanner(ctx, ze)
                         .crawlAndAudit(fseeds, thenAudit, cfg, task);
             } catch (Exception ex) {
                 task.log("Scan engine error: " + ex.getMessage());

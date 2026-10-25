@@ -24,6 +24,17 @@ public final class EngineMappingTest {
                 + "\"other\":\"\",\"tags\":{\"A03\":\"u\"}}";
         JsonValue a = JsonValue.parse(sqli);
 
+        Harness.test("engine history records are tagged by what made them", () -> {
+            Expect.equal(ZapScanner.toolFor("2", "crawl"), "crawl", "spider record");
+            Expect.equal(ZapScanner.toolFor("10", "audit"), "crawl", "AJAX spider record during the audit");
+            Expect.equal(ZapScanner.toolFor("3", "crawl"), "audit", "scanner record");
+            Expect.equal(ZapScanner.toolFor("14", "audit"), "audit", "temporary scanner record");
+            Expect.isNull(ZapScanner.toolFor("1", "crawl"), "proxied traffic is the proxy's");
+            Expect.isNull(ZapScanner.toolFor("16", "audit"), "a CONNECT relay");
+            Expect.equal(ZapScanner.toolFor(null, "audit"), "audit", "an untyped record takes the phase");
+            Expect.equal(ZapScanner.toolFor("0", "crawl"), "crawl", "a temporary record takes the phase");
+        });
+
         Harness.test("a high-risk alert maps onto a HIGH issue with all fields", () -> {
             Issue i = ZapScanner.mapAlert(null, a);
             Expect.notNull(i, "mapped issue");

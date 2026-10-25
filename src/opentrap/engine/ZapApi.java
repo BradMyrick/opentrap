@@ -100,10 +100,59 @@ public final class ZapApi {
         call("ascan", "action", "setOptionThreadPerHost", p("Integer", String.valueOf(Math.max(1, n))));
     }
 
-    /** Start the spider (crawler); returns the scan id. */
-    public String spiderScan(String url, int maxChildren) throws Exception {
-        return str(call("spider", "action", "scan",
-                p("url", url, "maxChildren", String.valueOf(maxChildren), "recurse", "true")), "scan");
+    /**
+     * Start the spider (crawler) inside a context, so it never leaves the scope
+     * the context holds; returns the scan id. Fails with the engine's own
+     * message when the URL is outside the context.
+     */
+    public String spiderScan(String url, int maxChildren, String contextName) throws Exception {
+        Map<String, String> q = p("url", url, "maxChildren", String.valueOf(maxChildren), "recurse", "true");
+        if (contextName != null) q.put("contextName", contextName);
+        return str(checked(call("spider", "action", "scan", q)), "scan");
+    }
+
+    /**
+     * The engine answers an action it refused with an error object instead of
+     * the result; turn that into an exception carrying its message, so a
+     * refusal cannot pass as an empty result.
+     */
+    static JsonValue checked(JsonValue v) throws Exception {
+        String code = str(v, "code");
+        if (code != null && !code.isEmpty()) {
+            String msg = str(v, "message");
+            String detail = str(v, "detail");
+            throw new Exception((msg == null || msg.isEmpty() ? code : msg)
+                    + (detail == null || detail.isEmpty() ? "" : " (" + detail + ")"));
+        }
+        return v;
+    }
+
+    // ------------------------------------------------------------ contexts
+
+    /** Create a context; returns its id. */
+    public String newContext(String name) throws Exception {
+        return str(checked(call("context", "action", "newContext", p("contextName", name))), "contextId");
+    }
+
+    /** Remove a context; a context that does not exist is not an error. */
+    public void removeContext(String name) throws Exception {
+        call("context", "action", "removeContext", p("contextName", name));
+    }
+
+    /** A whole-URL regex the context includes. */
+    public void includeInContext(String name, String regex) throws Exception {
+        checked(call("context", "action", "includeInContext", p("contextName", name, "regex", regex)));
+    }
+
+    /** A whole-URL regex the context excludes, even when an include covers it. */
+    public void excludeFromContext(String name, String regex) throws Exception {
+        checked(call("context", "action", "excludeFromContext", p("contextName", name, "regex", regex)));
+    }
+
+    /** Whether the context counts as the engine's scope. */
+    public void setContextInScope(String name, boolean inScope) throws Exception {
+        checked(call("context", "action", "setContextInScope",
+                p("contextName", name, "booleanInScope", String.valueOf(inScope))));
     }
 
     public int spiderStatus(String id) throws Exception {
@@ -127,10 +176,17 @@ public final class ZapApi {
         return arr(call("spider", "view", "results", p("scanId", id)), "results");
     }
 
-    /** Start the active scan (audit) of the subtree under url; returns the scan id. */
-    public String ascanScan(String url) throws Exception {
-        return str(call("ascan", "action", "scan",
-                p("url", url, "recurse", "true", "inScopeOnly", "false")), "scan");
+    /**
+     * Start the active scan (audit) of the subtree under url, limited to the
+     * context when one is given, so nothing outside it is ever attacked;
+     * returns the scan id. Fails with the engine's own message when there is
+     * nothing under the URL or it lies outside the context.
+     */
+    public String ascanScan(String url, String contextId) throws Exception {
+        Map<String, String> q = p("url", url, "recurse", "true",
+                "inScopeOnly", String.valueOf(contextId != null));
+        if (contextId != null) q.put("contextId", contextId);
+        return str(checked(call("ascan", "action", "scan", q)), "scan");
     }
 
     public int ascanStatus(String id) throws Exception {
@@ -162,9 +218,14 @@ public final class ZapApi {
         call("ajaxSpider", "action", "setOptionNumberOfBrowsers", p("Integer", String.valueOf(n)));
     }
 
-    /** Start the AJAX spider over the URL; it executes JavaScript as it crawls. */
-    public void ajaxSpiderScan(String url, boolean inScope) throws Exception {
-        call("ajaxSpider", "action", "scan", p("url", url, "inScope", String.valueOf(inScope)));
+    /**
+     * Start the AJAX spider over the URL, kept inside the context when one is
+     * given; it executes JavaScript as it crawls.
+     */
+    public void ajaxSpiderScan(String url, String contextName) throws Exception {
+        Map<String, String> q = p("url", url, "inScope", "false");
+        if (contextName != null) q.put("contextName", contextName);
+        checked(call("ajaxSpider", "action", "scan", q));
     }
 
     /** "running" while the AJAX spider is working, "stopped" once it is done. */
