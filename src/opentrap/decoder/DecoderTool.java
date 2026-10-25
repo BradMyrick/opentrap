@@ -215,7 +215,7 @@ public class DecoderTool implements ToolModule {
             area.setFont(Ui.MONO);
             area.setLineWrap(true);
             area.setEditable(first);
-            area.setBackground(Color.WHITE);
+            area.setBackground(opentrap.ui.Theme.BG);
 
             ButtonGroup group = new ButtonGroup();
             group.add(text);

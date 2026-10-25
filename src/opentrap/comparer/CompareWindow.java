@@ -15,9 +15,9 @@ import java.util.List;
 final class CompareWindow extends JFrame {
 
     // Comparer colour key: modified = blue, deleted = red, added = green.
-    private static final Color DELETED  = new Color(0xF7, 0xC9, 0xC9);
-    private static final Color ADDED    = new Color(0xCB, 0xE8, 0xCB);
-    private static final Color MODIFIED = new Color(0xC7, 0xDC, 0xF5);
+    private static final Color DELETED  = opentrap.ui.Theme.DIFF_DELETED;
+    private static final Color ADDED    = opentrap.ui.Theme.DIFF_ADDED;
+    private static final Color MODIFIED = opentrap.ui.Theme.DIFF_MODIFIED;
 
     CompareWindow(ComparerTool.Item one, ComparerTool.Item two, boolean words, Frame owner) {
         List<Diff.Block> blocks = Diff.compare(one.data(), two.data(), words);
@@ -82,7 +82,7 @@ final class CompareWindow extends JFrame {
     private static AttributeSet attributes(Diff.Kind kind) {
         if (kind == Diff.Kind.SAME) return null;
         SimpleAttributeSet a = new SimpleAttributeSet();
-        StyleConstants.setForeground(a, Color.BLACK);
+        StyleConstants.setForeground(a, opentrap.ui.Theme.TEXT);
         StyleConstants.setBackground(a, switch (kind) {
             case DELETED -> DELETED;
             case ADDED -> ADDED;
@@ -128,7 +128,7 @@ final class CompareWindow extends JFrame {
         JLabel l = Ui.bold(text);
         l.setOpaque(true);
         l.setBackground(background);
-        l.setForeground(Color.BLACK);
+        l.setForeground(opentrap.ui.Theme.TEXT);
         return l;
     }
 }

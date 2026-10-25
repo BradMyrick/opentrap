@@ -33,11 +33,11 @@ public class MessageEditor extends JPanel {
     public interface ActionProvider { void contribute(JPopupMenu menu); }
 
     // Syntax colours for request and response highlighting.
-    private static final Color C_HEADER_NAME = new Color(0x33, 0x33, 0x8D);
-    private static final Color C_STARTLINE   = new Color(0x8A, 0x1F, 0x1F);
-    private static final Color C_STRING      = new Color(0x1A, 0x7F, 0x37);
-    private static final Color C_NUMBER      = new Color(0x0B, 0x72, 0x85);
-    private static final Color C_TAG         = new Color(0x33, 0x33, 0x8D);
+    private static final Color C_HEADER_NAME = Theme.CODE_NAME;
+    private static final Color C_STARTLINE   = Theme.CODE_START;
+    private static final Color C_STRING      = Theme.CODE_STRING;
+    private static final Color C_NUMBER      = Theme.CODE_NUMBER;
+    private static final Color C_TAG         = Theme.CODE_NAME;
 
     private final int flags;
     private final boolean editable;
@@ -393,7 +393,7 @@ public class MessageEditor extends JPanel {
         try { text = doc.getText(0, doc.getLength()); }
         catch (javax.swing.text.BadLocationException e) { return; }
         SimpleAttributeSet plain = new SimpleAttributeSet();
-        StyleConstants.setForeground(plain, new Color(0x1A, 0x1A, 0x1A));
+        StyleConstants.setForeground(plain, Theme.TEXT);
         doc.setCharacterAttributes(0, text.length(), plain, true);
 
         int bodyStart = text.indexOf("\r\n\r\n");
@@ -478,7 +478,7 @@ public class MessageEditor extends JPanel {
             positions.add(i);
             try {
                 h.addHighlight(i, i + want.length(),
-                        new DefaultHighlighter.DefaultHighlightPainter(new Color(0xFF, 0xF1, 0x76)));
+                        new DefaultHighlighter.DefaultHighlightPainter(Theme.HIGHLIGHT));
             } catch (BadLocationException ignored) {}
             count++;
             i = text.indexOf(want, i + 1);

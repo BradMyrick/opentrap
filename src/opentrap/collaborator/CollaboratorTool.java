@@ -312,7 +312,7 @@ public class CollaboratorTool implements ToolModule {
     private void refreshStatus() {
         if (statusLabel == null) return;
         statusLabel.setText(collab.status());
-        statusLabel.setForeground(collab.isRunning() ? new Color(0x1E, 0x7A, 0x33) : opentrap.ui.Theme.MUTED);
+        statusLabel.setForeground(collab.isRunning() ? opentrap.ui.Theme.OK : opentrap.ui.Theme.MUTED);
     }
 
     // ------------------------------------------------------------- options tab

@@ -35,11 +35,17 @@ public final class Advisory {
         return render(i, true);
     }
 
+    /** A colour as CSS hex, so the advisory follows the light or dark theme. */
+    private static String hex(java.awt.Color c) {
+        return String.format("#%02X%02X%02X", c.getRed(), c.getGreen(), c.getBlue());
+    }
+
     /** The advisory, optionally without the location table for a narrow panel. */
     public static String render(Issue i, boolean withLocation) {
         if (i == null) return "<html><body></body></html>";
         StringBuilder b = new StringBuilder(1024);
-        b.append("<html><body style='font-family:sans-serif;font-size:11px;padding:6px'>");
+        b.append("<html><body style='font-family:sans-serif;font-size:11px;padding:6px;color:")
+         .append(hex(Theme.TEXT)).append("'>");
         b.append("<h2 style='margin:0 0 6px 0'>").append(esc(i.title())).append("</h2>");
 
         b.append("<table cellpadding=2>");
@@ -62,7 +68,7 @@ public final class Advisory {
 
         if (!i.evidence().isBlank()) {
             b.append("<h3>Evidence</h3><pre style='font-family:monospace;font-size:11px;")
-             .append("background:#F4F4F4;padding:4px;white-space:pre-wrap'>")
+             .append("background:").append(hex(Theme.SURFACE_2)).append(";padding:4px;white-space:pre-wrap'>")
              .append(esc(trim(i.evidence(), 2000)))
              .append("</pre>");
         }
@@ -71,7 +77,7 @@ public final class Advisory {
         section(b, "Remediation", i.remediation());
 
         if (!i.references().isBlank()) {
-            b.append("<h3>References</h3><div style='color:#444'>");
+            b.append("<h3>References</h3><div style='color:").append(hex(Theme.MUTED)).append("'>");
             for (String line : i.references().split("\\R")) {
                 if (!line.isBlank()) b.append(esc(line.trim())).append("<br>");
             }

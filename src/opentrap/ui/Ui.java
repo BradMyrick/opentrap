@@ -321,7 +321,7 @@ public final class Ui {
         t.setShowVerticalLines(false);
         t.setIntercellSpacing(new Dimension(0, 0));
         t.setSelectionBackground(SELECTION);
-        t.setSelectionForeground(Color.BLACK);
+        t.setSelectionForeground(Theme.TEXT);
         leftAlign(t);
     }
 
@@ -450,7 +450,7 @@ public final class Ui {
         b.setFocusable(false);
         b.setIcon(funnelIcon());
         b.setIconTextGap(8);
-        b.setBackground(Color.WHITE);
+        b.setBackground(Theme.BG);
         b.setOpaque(true);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.setBorder(BorderFactory.createCompoundBorder(

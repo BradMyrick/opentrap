@@ -11,7 +11,7 @@ import javax.swing.plaf.metal.MetalLookAndFeel;
 import java.awt.*;
 
 /**
- * The suite's visual theme: a flat, light interface with one blue accent.
+ * The suite's visual theme: a flat interface, light or dark, with one orange accent.
  *
  * <p>Everything here is plain Swing. The cross-platform look and feel is the
  * base, so the interface is identical on every desktop, and the parts of it
@@ -44,6 +44,34 @@ public final class Theme {
     public static Color ACCENT_LIGHT = new Color(0xCA, 0xDA, 0xF0);
     public static Color ACCENT_FAINT = new Color(0xF7, 0xF7, 0xF7);
 
+    // ---- the rest of the palette: everything a tool used to hard-code ----
+    /** Cards and other raised panels that sit on the page. */
+    public static Color CARD        = new Color(0xFF, 0xFF, 0xFF);
+    /** Table headers. */
+    public static Color HEADER      = new Color(0xF2, 0xF2, 0xF2);
+    /** Strokes of small drawn icons (play, pause, dots, section glyphs). */
+    public static Color ICON        = new Color(0x55, 0x55, 0x55);
+    /** The track of a switched-off toggle. */
+    public static Color TOGGLE_OFF  = new Color(0xB8, 0xBC, 0xC2);
+    public static Color SCROLL_THUMB       = new Color(0xC9, 0xCF, 0xD6);
+    public static Color SCROLL_THUMB_HOVER = new Color(0xB4, 0xBB, 0xC4);
+    /** Success: a finished task, a running service. */
+    public static Color OK          = new Color(0x3A, 0x9A, 0x4B);
+    /** The search-match highlight in message views. */
+    public static Color HIGHLIGHT   = new Color(0xFF, 0xF1, 0x76);
+    /** Message syntax colouring. */
+    public static Color CODE_NAME   = new Color(0x33, 0x33, 0x8D);
+    public static Color CODE_START  = new Color(0x8A, 0x1F, 0x1F);
+    public static Color CODE_STRING = new Color(0x1A, 0x7F, 0x37);
+    public static Color CODE_NUMBER = new Color(0x0B, 0x72, 0x85);
+    /** Hex view: the offset column and the text column. */
+    public static Color HEX_OFFSET  = new Color(0x88, 0x88, 0x88);
+    public static Color HEX_ASCII   = new Color(0x33, 0x55, 0x88);
+    /** Comparer: backgrounds of deleted, added and modified runs. */
+    public static Color DIFF_DELETED  = new Color(0xF7, 0xC9, 0xC9);
+    public static Color DIFF_ADDED    = new Color(0xCB, 0xE8, 0xCB);
+    public static Color DIFF_MODIFIED = new Color(0xC7, 0xDC, 0xF5);
+
     /** Whether the dark palette is active (set by {@link #configure}). */
     public static boolean dark = false;
 
@@ -60,17 +88,37 @@ public final class Theme {
     public static void configure(boolean darkMode) {
         dark = darkMode;
         if (darkMode) {
-            BG           = new Color(0x1E, 0x22, 0x28);
-            SURFACE      = new Color(0x26, 0x2B, 0x33);
-            SURFACE_2    = new Color(0x2F, 0x35, 0x3E);
-            SURFACE_3    = new Color(0x3A, 0x41, 0x4B);
-            BORDER       = new Color(0x3A, 0x41, 0x4B);
-            TEXT         = new Color(0xE6, 0xE9, 0xED);
-            MUTED        = new Color(0x9A, 0xA3, 0xAF);
-            ACCENT       = new Color(0x5B, 0x8D, 0xD6);
-            ACCENT_DARK  = new Color(0x3C, 0x6E, 0xA5);
-            ACCENT_LIGHT = new Color(0x2B, 0x3B, 0x55);
-            ACCENT_FAINT = new Color(0x23, 0x29, 0x33);
+            // Neutral dark greys, cards a step lighter than the page, and the
+            // same orange accent as the light theme, so the brand reads the
+            // same in both.
+            BG           = new Color(0x25, 0x25, 0x25);
+            SURFACE      = new Color(0x2C, 0x2C, 0x2C);
+            SURFACE_2    = new Color(0x3A, 0x3A, 0x3A);
+            SURFACE_3    = new Color(0x4A, 0x4A, 0x4A);
+            BORDER       = new Color(0x40, 0x40, 0x40);
+            TEXT         = new Color(0xDE, 0xDE, 0xDE);
+            MUTED        = new Color(0x9C, 0x9C, 0x9C);
+            ACCENT       = new Color(0xDB, 0x61, 0x2F);
+            ACCENT_DARK  = new Color(0xC0, 0x4E, 0x20);
+            ACCENT_LIGHT = new Color(0x2F, 0x3E, 0x55);
+            ACCENT_FAINT = new Color(0x2B, 0x2B, 0x2B);
+            CARD         = new Color(0x30, 0x30, 0x30);
+            HEADER       = new Color(0x3A, 0x3A, 0x3A);
+            ICON         = new Color(0xB4, 0xB4, 0xB4);
+            TOGGLE_OFF   = new Color(0x55, 0x5A, 0x62);
+            SCROLL_THUMB       = new Color(0x4E, 0x54, 0x5C);
+            SCROLL_THUMB_HOVER = new Color(0x62, 0x69, 0x72);
+            OK           = new Color(0x5C, 0xC4, 0x6E);
+            HIGHLIGHT    = new Color(0x7A, 0x60, 0x00);
+            CODE_NAME    = new Color(0x8F, 0xA8, 0xFF);
+            CODE_START   = new Color(0xFF, 0x8A, 0x80);
+            CODE_STRING  = new Color(0x7B, 0xD8, 0x8F);
+            CODE_NUMBER  = new Color(0x5F, 0xD3, 0xE8);
+            HEX_OFFSET   = new Color(0x7A, 0x7A, 0x7A);
+            HEX_ASCII    = new Color(0x8F, 0xB0, 0xE0);
+            DIFF_DELETED  = new Color(0x6B, 0x2B, 0x2B);
+            DIFF_ADDED    = new Color(0x2B, 0x5B, 0x2B);
+            DIFF_MODIFIED = new Color(0x2B, 0x45, 0x66);
         } else {
             BG           = new Color(0xFF, 0xFF, 0xFF);
             SURFACE      = new Color(0xEE, 0xEE, 0xEE);
@@ -83,6 +131,23 @@ public final class Theme {
             ACCENT_DARK  = new Color(0xC0, 0x4E, 0x20);
             ACCENT_LIGHT = new Color(0xCA, 0xDA, 0xF0);
             ACCENT_FAINT = new Color(0xF7, 0xF7, 0xF7);
+            CARD         = new Color(0xFF, 0xFF, 0xFF);
+            HEADER       = new Color(0xF2, 0xF2, 0xF2);
+            ICON         = new Color(0x55, 0x55, 0x55);
+            TOGGLE_OFF   = new Color(0xB8, 0xBC, 0xC2);
+            SCROLL_THUMB       = new Color(0xC9, 0xCF, 0xD6);
+            SCROLL_THUMB_HOVER = new Color(0xB4, 0xBB, 0xC4);
+            OK           = new Color(0x3A, 0x9A, 0x4B);
+            HIGHLIGHT    = new Color(0xFF, 0xF1, 0x76);
+            CODE_NAME    = new Color(0x33, 0x33, 0x8D);
+            CODE_START   = new Color(0x8A, 0x1F, 0x1F);
+            CODE_STRING  = new Color(0x1A, 0x7F, 0x37);
+            CODE_NUMBER  = new Color(0x0B, 0x72, 0x85);
+            HEX_OFFSET   = new Color(0x88, 0x88, 0x88);
+            HEX_ASCII    = new Color(0x33, 0x55, 0x88);
+            DIFF_DELETED  = new Color(0xF7, 0xC9, 0xC9);
+            DIFF_ADDED    = new Color(0xCB, 0xE8, 0xCB);
+            DIFF_MODIFIED = new Color(0xC7, 0xDC, 0xF5);
         }
     }
 
@@ -162,6 +227,30 @@ public final class Theme {
         d.put("TextField.selectionForeground", text);
         d.put("TextArea.selectionForeground", text);
         d.put("TextField.caretForeground", text);
+        // Every text component, including the styled panes the message views
+        // and advisories use, takes the page colours; otherwise they keep the
+        // look and feel's white, which the dark theme cannot carry.
+        for (String k : new String[]{"TextPane", "EditorPane", "TextArea", "TextField",
+                "PasswordField", "FormattedTextField"}) {
+            d.put(k + ".background", bg);
+            d.put(k + ".foreground", text);
+            d.put(k + ".caretForeground", text);
+            d.put(k + ".selectionBackground", sel);
+            d.put(k + ".selectionForeground", text);
+            d.put(k + ".inactiveBackground", surface);
+            d.put(k + ".inactiveForeground", muted);
+            d.put(k + ".disabledBackground", surface);
+        }
+        d.put("List.background", bg);
+        d.put("List.foreground", text);
+        d.put("Tree.foreground", text);
+        d.put("Tree.textForeground", text);
+        d.put("Tree.textBackground", bg);
+        d.put("Table.focusCellForeground", text);
+        d.put("Spinner.background", bg);
+        d.put("Spinner.foreground", text);
+        d.put("Label.disabledForeground", muted);
+        d.put("ComboBox.disabledForeground", muted);
         d.put("ComboBoxUI", FlatComboBoxUI.class.getName());
         d.put("ComboBox.background", bg);
         d.put("ComboBox.foreground", text);
@@ -188,7 +277,7 @@ public final class Theme {
         d.put("Table.selectionBackground", sel);
         d.put("Table.selectionForeground", text);
         d.put("Table.focusCellHighlightBorder", BorderFactory.createEmptyBorder(1, 1, 1, 1));
-        d.put("TableHeader.background", surface);
+        d.put("TableHeader.background", new ColorUIResource(HEADER));
         d.put("TableHeader.foreground", text);
         d.put("TableHeader.cellBorder", BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 1, BORDER), BorderFactory.createEmptyBorder(4, 6, 4, 6)));

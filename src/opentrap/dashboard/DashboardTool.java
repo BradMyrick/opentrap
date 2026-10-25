@@ -41,11 +41,11 @@ public class DashboardTool implements ToolModule {
     private static final Color LOW_COL    = Ui.SEV_LOW;
     private static final Color INFO_COL   = Ui.SEV_INFO;
 
-    private static final Color CARD_BG      = Color.WHITE;
+    private static final Color CARD_BG      = Theme.CARD;
     private static final Color CARD_SEL_BG  = Ui.SELECTION;
     private static final Color CARD_BORDER  = Ui.GRID;
-    private static final Color GREY_TEXT    = new Color(0x77, 0x77, 0x77);
-    private static final Color FINISHED_GREEN = new Color(0x3A, 0x9A, 0x4B);
+    private static final Color GREY_TEXT    = Theme.MUTED;
+    private static final Color FINISHED_GREEN = Theme.OK;
 
     private SuiteContext ctx;
     /** The shared ZAP scan engine (same instance the passive-rules tab uses). */
@@ -398,7 +398,7 @@ public class DashboardTool implements ToolModule {
         sumScroll.setBorder(BorderFactory.createLineBorder(Ui.GRID));
         sumScroll.getVerticalScrollBar().setUnitIncrement(16);
         summaryTable.setFillsViewportHeight(true);
-        sumScroll.getViewport().setBackground(Color.WHITE);
+        sumScroll.getViewport().setBackground(Theme.CARD);
 
         JPanel vulnsCard = card();
         vulnsCard.setLayout(new BorderLayout(0, 10));
@@ -503,7 +503,7 @@ public class DashboardTool implements ToolModule {
                 g2.dispose();
             }
         };
-        p.setBackground(Color.WHITE);
+        p.setBackground(Theme.CARD);
         p.setOpaque(false);
         p.setBorder(Ui.pad(12, 14, 14, 14));
         return p;
@@ -647,8 +647,8 @@ public class DashboardTool implements ToolModule {
     /** Give the summary table a light header with a bottom rule, like the reference. */
     private static void lightHeader(JTable t) {
         javax.swing.table.JTableHeader h = t.getTableHeader();
-        h.setBackground(new Color(0xF2, 0xF2, 0xF2));
-        h.setForeground(new Color(0x33, 0x33, 0x33));
+        h.setBackground(Theme.HEADER);
+        h.setForeground(Theme.TEXT);
         h.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Ui.GRID));
         h.setReorderingAllowed(false);
     }
@@ -733,7 +733,7 @@ public class DashboardTool implements ToolModule {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             int w = getWidth(), h = getHeight(), cx = w / 2, cy = h / 2;
-            g2.setColor(new Color(0x55, 0x55, 0x55));
+            g2.setColor(Theme.ICON);
             g2.setStroke(new BasicStroke(1.4f));
             g2.drawOval(2, 2, w - 5, h - 5);
             switch (kind) {
@@ -880,7 +880,7 @@ public class DashboardTool implements ToolModule {
             @Override public void changedUpdate(DocumentEvent e) { upd(); }
         });
         JPanel searchWrap = new JPanel(new BorderLayout(6, 0));
-        searchWrap.setBackground(Color.WHITE);
+        searchWrap.setBackground(Theme.BG);
         searchWrap.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Ui.GRID), Ui.pad(3, 8, 3, 8)));
         searchWrap.add(search, BorderLayout.CENTER);
@@ -1339,8 +1339,8 @@ public class DashboardTool implements ToolModule {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             int w = getWidth(), h = getHeight();
-            // A clean white rounded card, the same whether or not it is selected.
-            g2.setColor(Color.WHITE);
+            // A clean rounded card, the same whether or not it is selected.
+            g2.setColor(Theme.CARD);
             g2.fillRoundRect(0, 0, w - 1, h - 1, 12, 12);
             g2.setColor(Ui.GRID);
             g2.drawRoundRect(0, 0, w - 1, h - 1, 12, 12);
@@ -1413,7 +1413,7 @@ public class DashboardTool implements ToolModule {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(0x55, 0x55, 0x55));
+                g2.setColor(Theme.ICON);
                 int cx = getWidth() / 2, cy = getHeight() / 2, r = 2;
                 for (int i = -1; i <= 1; i++) g2.fillOval(cx - r, cy - r + i * 6, r * 2, r * 2);
                 g2.dispose();
@@ -1445,7 +1445,7 @@ public class DashboardTool implements ToolModule {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             int w = getWidth(), h = getHeight();
-            g2.setColor(new Color(0x55, 0x55, 0x55));
+            g2.setColor(Theme.ICON);
             g2.setStroke(new BasicStroke(1.4f));
             g2.drawOval(1, 1, w - 3, h - 3);
             int cx = w / 2, cy = h / 2;
@@ -1491,7 +1491,7 @@ public class DashboardTool implements ToolModule {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             int w = getWidth(), h = getHeight();
-            g2.setColor(new Color(0xD8, 0xD8, 0xD8));
+            g2.setColor(Theme.SURFACE_3);
             g2.fillRoundRect(0, 0, w - 1, h - 1, h, h);
             g2.setColor(Ui.ACCENT);
             if (indeterminate) {
@@ -1527,12 +1527,12 @@ public class DashboardTool implements ToolModule {
                         g2.fillPolygon(new int[]{2, 2, 11}, new int[]{1, 11, 6}, 3);
                     }
                     case PAUSED -> {
-                        g2.setColor(new Color(0x55, 0x55, 0x55));
+                        g2.setColor(Theme.ICON);
                         g2.fillRect(2, 1, 3, 10);
                         g2.fillRect(7, 1, 3, 10);
                     }
                     case FINISHED -> {
-                        g2.setColor(new Color(0x3A, 0x9A, 0x4B));
+                        g2.setColor(Theme.OK);
                         g2.setStroke(new BasicStroke(2f));
                         g2.drawPolyline(new int[]{1, 5, 11}, new int[]{6, 11, 1}, 3);
                     }
@@ -1569,7 +1569,7 @@ public class DashboardTool implements ToolModule {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             int w = getWidth(), h = getHeight();
-            g2.setColor(on ? Ui.ACCENT : new Color(0xB8, 0xBC, 0xC2));
+            g2.setColor(on ? Ui.ACCENT : Theme.TOGGLE_OFF);
             g2.fillRoundRect(0, 1, w - 1, h - 3, h - 2, h - 2);
             int knob = h - 8;
             int x = on ? w - knob - 4 : 4;

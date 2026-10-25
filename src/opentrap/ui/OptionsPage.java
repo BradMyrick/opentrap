@@ -34,9 +34,9 @@ public class OptionsPage extends JPanel {
         });
         sp.setBorder(null);
         sp.getVerticalScrollBar().setUnitIncrement(25);
-        sp.getViewport().setBackground(Color.WHITE);
-        holder.setBackground(Color.WHITE);
-        stack.setBackground(Color.WHITE);
+        sp.getViewport().setBackground(Theme.BG);
+        holder.setBackground(Theme.BG);
+        stack.setBackground(Theme.BG);
         add(sp, BorderLayout.CENTER);
     }
 

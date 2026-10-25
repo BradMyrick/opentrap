@@ -41,7 +41,7 @@ public class FlatScrollBarUI extends BasicScrollBarUI {
         if (r.isEmpty() || !scrollbar.isEnabled()) return;
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(isThumbRollover() || isDragging ? new Color(0xB4, 0xBB, 0xC4) : new Color(0xC9, 0xCF, 0xD6));
+        g2.setColor(isThumbRollover() || isDragging ? Theme.SCROLL_THUMB_HOVER : Theme.SCROLL_THUMB);
         int inset = 2;
         g2.fill(new RoundRectangle2D.Float(r.x + inset, r.y + inset, r.width - inset * 2, r.height - inset * 2, 6, 6));
         g2.dispose();

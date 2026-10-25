@@ -33,13 +33,13 @@ public class HexView extends JPanel {
                 Component comp = super.getTableCellRendererComponent(t, v, sel, foc, r, c);
                 setFont(Ui.MONO);
                 if (c == 0) {
-                    setForeground(sel ? Color.BLACK : new Color(0x88, 0x88, 0x88));
+                    setForeground(sel ? Theme.TEXT : Theme.HEX_OFFSET);
                     setHorizontalAlignment(RIGHT);
                 } else if (c == 17) {
-                    setForeground(sel ? Color.BLACK : new Color(0x33, 0x55, 0x88));
+                    setForeground(sel ? Theme.TEXT : Theme.HEX_ASCII);
                     setHorizontalAlignment(LEFT);
                 } else {
-                    setForeground(Color.BLACK);
+                    setForeground(Theme.TEXT);
                     setHorizontalAlignment(CENTER);
                 }
                 return comp;

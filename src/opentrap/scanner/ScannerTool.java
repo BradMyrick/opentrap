@@ -70,7 +70,7 @@ public class ScannerTool implements ToolModule {
                     boolean sel, boolean focus, int row, int col) {
                 Component c = super.getTableCellRendererComponent(t, v, sel, focus, row, col);
                 boolean on = model.ruleAt(t.convertRowIndexToModel(row)).enabled;
-                if (!sel) c.setForeground(on ? Color.BLACK : new Color(0x99, 0x99, 0x99));
+                if (!sel) c.setForeground(on ? opentrap.ui.Theme.TEXT : opentrap.ui.Theme.MUTED);
                 return c;
             }
         };

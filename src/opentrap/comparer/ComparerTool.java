@@ -149,7 +149,7 @@ public class ComparerTool implements ToolModule {
                         Component c = base.getTableCellRendererComponent(
                                 t, value, selected, focus, row, col);
                         c.setForeground(!selected && row == other.getSelectedRow()
-                                ? TAKEN : Color.BLACK);
+                                ? TAKEN : opentrap.ui.Theme.TEXT);
                         return c;
                     });
         }
