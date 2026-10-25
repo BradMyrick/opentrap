@@ -190,6 +190,7 @@ public final class EmbeddedBrowser {
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
+            BrowserWindowIcon.watch(running);
             return null;
         } catch (Exception e) {
             return "Failed to launch the browser: " + e.getMessage();
