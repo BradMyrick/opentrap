@@ -99,7 +99,7 @@ licence.
 <tr>
 <td width="50%" valign="top">
 <a href="docs/images/target.png"><img src="docs/images/target.png" alt="Target tab: site map tree, request list, and the issues found with a full advisory for a reflected cross-site scripting finding"></a>
-<br><sub><b>Target</b><br>Site map, scope and every issue found, with the advisory, request and response beside it.</sub>
+<br><sub><b>Target</b><br>Site map with a padlock per host (open for http, closed for https), out-of-scope hosts greyed, and every issue found with the advisory, request and response beside it.</sub>
 </td>
 <td width="50%" valign="top">
 <a href="docs/images/proxy.png"><img src="docs/images/proxy.png" alt="Proxy tab with interception, and the built-in Chromium browser opened from it, routed through the proxy and showing the certificate authority page"></a>
@@ -119,7 +119,7 @@ licence.
 <tr>
 <td width="50%" valign="top">
 <a href="docs/images/logger.png"><img src="docs/images/logger.png" alt="Logger tab with a filterable table of every request made by the crawl, with request and response viewers below"></a>
-<br><sub><b>Logger</b><br>A complete, filterable record of every request OpenTRAP and the scan engine make.</sub>
+<br><sub><b>Logger</b><br>A complete, filterable record of every request OpenTRAP and the scan engine make, newest first and tagged by the tool that sent it.</sub>
 </td>
 <td width="50%" valign="top">
 <a href="docs/images/decoder.png"><img src="docs/images/decoder.png" alt="Decoder tab with a URL-encoded path-traversal string decoded to plain text"></a>
@@ -190,6 +190,7 @@ exposing crawl depth, attack strength, the input points tested and more.
 - **Projects that open in seconds** - a saved project with tens of thousands of requests loads in a few seconds without freezing the window.
 - **Projects that stay small** - the crawl, your own traffic and every finding are kept in full; the audit's thousands of probe requests are kept as headers only, so a scan-heavy project is a fraction of the size. Save a copy with in-scope items only to shrink it further, and see where the bytes go under Project > Project size.
 - **Scope that keeps the noise out** - add a host or a path to scope from the site map, and the proxy offers to stop recording everything else; the site map and history filters hide out-of-scope, not-found and static content the way you would expect, and a scan crawls and attacks only what the scope covers.
+- **Newest first, everywhere** - every history in the suite, from the proxy and the Logger to Intruder results and Collaborator interactions, lists the latest entry at the top, so what just happened is always in view.
 - **One Settings dialog** - every tool's settings in one place, reachable from the gear in the top bar or from the tool itself.
 - **Built to be improved** - shaped by the people who use it, with every contribution credited and a public [roadmap](ROADMAP.md).
 
@@ -198,7 +199,7 @@ exposing crawl depth, attack strength, the input points tested and more.
 | Tool | What it does |
 |------|--------------|
 | **Dashboard** | Live tasks, issues and event log; start a scan from the guided wizard, choosing a configuration from Lightweight to Deep or a Custom one |
-| **Target** | Site map tree with a full filter, and the suite-wide scope (URL prefixes, or regex rules) that governs every tool |
+| **Target** | Site map tree with a padlock per host, a full filter, and the suite-wide scope (URL prefixes, or regex rules) that governs every tool and binds the scan engine |
 | **Proxy** | Intercept, filtered HTTP history, WebSocket capture, HTTP and WebSocket match and replace, per-host certificate authority |
 | **Scanner** | Configure the engine's active and passive rules (enable, disable, threshold) |
 | **Logger** | A complete record of every request OpenTRAP and the engine make |
