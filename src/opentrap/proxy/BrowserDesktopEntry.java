@@ -75,6 +75,10 @@ final class BrowserDesktopEntry {
         run("update-desktop-database", home.resolve(".local/share/applications").toString());
         run("gtk-update-icon-cache", "-q", "-t", "-f", home.resolve(".local/share/icons/hicolor").toString());
         run("xdg-icon-resource", "forceupdate");
+        // KDE reads desktop entries from its own cache, which only a rebuild
+        // picks a new file up into; without it the entry is invisible to Plasma.
+        run("kbuildsycoca6", "--noincremental");
+        run("kbuildsycoca5", "--noincremental");
     }
 
     private static void run(String... cmd) {

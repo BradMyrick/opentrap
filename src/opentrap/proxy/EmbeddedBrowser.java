@@ -181,6 +181,11 @@ public final class EmbeddedBrowser {
         // through the entry installed below, so the testing browser is never
         // mistaken for the user's everyday one in the taskbar.
         cmd.add("--class=" + BrowserDesktopEntry.WM_CLASS);
+        // Run as an X11 client even on a Wayland desktop (through XWayland):
+        // the browser's native Wayland path pushes its vendor icon straight to
+        // the compositor and does not reliably carry the class, so there would
+        // be nothing for the desktop entry or the icon property to attach to.
+        cmd.add("--ozone-platform=x11");
         BrowserDesktopEntry.install();
         cmd.add("--new-window");
         cmd.add(startUrl == null || startUrl.isBlank() ? "http://opentrap/" : startUrl);

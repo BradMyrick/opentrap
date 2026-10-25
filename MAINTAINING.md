@@ -134,6 +134,11 @@ itself (XFCE, Cinnamon, most X11 taskbars) ignore that mapping, so
 the `_NET_WM_ICON` property of every window of that class, through `xprop`, as
 each one opens. Either way the taskbar shows OpenTRAP's own orange globe rather
 than the browser vendor's logo; only windows of that class are ever touched.
+The browser is launched with `--ozone-platform=x11` on purpose: from Chrome 140
+it picks Wayland automatically on a Wayland desktop, and as a native Wayland
+client it pushes its vendor icon to the compositor itself (Chrome 135+) and does
+not carry the class, so nothing above would attach. Through XWayland it does.
+The helper's activity is recorded in `~/.opentrap/browser/window-icon.log`.
 
 **HiDPI scaling works by relaunching the JVM.** Java fixes `sun.java2d.uiScale` at
 startup, so the UI scales uniformly only if the factor is set before any window is

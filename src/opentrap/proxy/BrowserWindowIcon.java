@@ -91,14 +91,24 @@ final class BrowserWindowIcon {
         } catch (Exception e) {
             return;
         }
+        final Path log = dir.resolve("window-icon.log");
         Thread t = new Thread(() -> {
             int idle = 0;
+            try { Files.writeString(log, "session=" + System.getenv("XDG_SESSION_TYPE")
+                    + " desktop=" + System.getenv("XDG_CURRENT_DESKTOP") + " display=" + System.getenv("DISPLAY") + "\n"); }
+            catch (Exception ignore) { }
             while (browser.isAlive()) {
                 try {
                     Process p = new ProcessBuilder("python3", "-I", helper.toString(), icon.toString(), BrowserDesktopEntry.WM_CLASS)
                             .redirectErrorStream(true).start();
                     String out = new String(p.getInputStream().readAllBytes()).trim();
-                    if (p.waitFor() != 0 && ++idle > 3) return;   // no Python or no X library: give up quietly
+                    int rc = p.waitFor();
+                    // A short record of what the helper did, for support.
+                    if (rc != 0 || !out.equals("0")) {
+                        try { Files.writeString(log, "rc=" + rc + " " + out + "\n", StandardCharsets.UTF_8,
+                                java.nio.file.StandardOpenOption.APPEND); } catch (Exception ignore) { }
+                    }
+                    if (rc != 0 && ++idle > 3) return;   // no Python or no X library: give up quietly
                     Thread.sleep(out.equals("0") ? 1500 : 500);
                 } catch (InterruptedException e) {
                     return;
