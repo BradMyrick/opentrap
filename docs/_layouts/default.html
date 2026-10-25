@@ -45,8 +45,8 @@ img{max-width:100%}
 .nav .links a:hover{color:var(--orange);text-decoration:none}
 .btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;border-radius:999px;
   padding:11px 22px;font-size:15px;cursor:pointer;border:0;transition:.15s}
-.btn-primary{background:var(--orange);color:#fff}
-.btn-primary:hover{background:var(--orange-d);color:#fff;text-decoration:none}
+.btn-primary,a.btn-primary,.nav .links a.btn-primary,a.btn-primary:visited{background:var(--orange);color:#fff}
+.btn-primary:hover,a.btn-primary:hover,.nav .links a.btn-primary:hover{background:var(--orange-d);color:#fff;text-decoration:none}
 .btn-ghost{background:transparent;color:var(--navy);border:1.5px solid var(--line)}
 .btn-ghost:hover{border-color:var(--orange);color:var(--orange);text-decoration:none}
 
@@ -64,8 +64,10 @@ img{max-width:100%}
 .band{background:var(--navy);color:#dfe7f0;padding:72px 0}
 .band h2{color:#fff;font-size:34px;margin:0 0 8px;font-weight:800}
 .band .lead{color:#9fb0c4;font-size:18px;margin:0 0 36px}
-.band .grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.band .grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
 .band .shot{border-radius:10px;overflow:hidden;box-shadow:0 20px 50px -20px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.08)}
+/* The screenshot is shorter than the feature list: pin it so it rides along as the list scrolls, instead of floating mid-way in empty space. */
+.band .grid .shot{position:sticky;top:88px}
 .checks{list-style:none;margin:0;padding:0}
 .checks li{display:flex;gap:14px;padding:12px 0;align-items:flex-start}
 .checks .ic{flex:0 0 24px;margin-top:2px}
@@ -119,7 +121,7 @@ footer .fl{display:flex;gap:22px;flex-wrap:wrap}
   .hero{padding:48px 0}
   .hero h1{font-size:44px}
   .nav .links a:not(.btn){display:none}
-  .band .grid .shot{order:2}
+  .band .grid .shot{order:2;position:static}
 }
 </style>
 </head>

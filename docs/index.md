@@ -10,7 +10,7 @@ title: OpenTRAP
     <p class="lead">Capture, inspect, replay and tamper with the traffic between a browser and a web application, then crawl and audit it for real vulnerabilities. One self-contained download, no licence gate, powered by the OWASP ZAP engine.</p>
     <div class="cta">
       <a class="btn btn-primary" href="https://github.com/opentrap/opentrap/releases/latest/download/opentrap-x86_64.appimage">&#8681;&nbsp; Download for Linux</a>
-      <a class="btn btn-ghost" href="https://github.com/opentrap/opentrap/releases/latest">Go straight to releases &rarr;</a>
+      <a class="btn btn-ghost" href="https://github.com/opentrap/opentrap/releases/latest">Go straight to releases</a>
     </div>
   </div>
   <div class="hshot">
