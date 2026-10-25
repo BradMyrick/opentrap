@@ -115,6 +115,12 @@ public class SuiteContext {
     public java.io.File projectFile() { return projectFile; }
     public void setProjectFile(java.io.File f) { this.projectFile = f; }
 
+    // True while a project is being opened, so a listener can tell a scope
+    // that arrived from the file apart from one the user just added.
+    private volatile boolean restoring;
+    public boolean restoring() { return restoring; }
+    public void setRestoring(boolean b) { this.restoring = b; }
+
     /** Proxy routing info, set by the proxy tool, used by the browser crawler. */
     public java.util.function.Function<HttpService, UpstreamProxy> liveScanRouter() { return liveScanRouter; }
     public void setLiveScanRouter(java.util.function.Function<HttpService, UpstreamProxy> r) { this.liveScanRouter = r; }

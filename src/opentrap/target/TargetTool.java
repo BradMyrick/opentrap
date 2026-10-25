@@ -20,7 +20,8 @@ public class TargetTool implements ToolModule {
     private final java.util.Map<SiteMap.Node, DefaultMutableTreeNode> treeNodes = new java.util.IdentityHashMap<>();
     private ItemsModel itemsModel;
     private JTable itemsTable;
-    private final opentrap.proxy.HistoryFilter itemsFilter = new opentrap.proxy.HistoryFilter();
+    // One filter for the tree and the contents table, as the reference has it.
+    private final opentrap.proxy.HistoryFilter itemsFilter = opentrap.proxy.HistoryFilter.siteMapDefaults();
     private JButton itemsFilterButton;
     private MessageEditor reqView, respView;
     private JTree issuesTree;
@@ -53,6 +54,60 @@ public class TargetTool implements ToolModule {
             @Override public void issueAdded(Issue i) { SwingUtilities.invokeLater(TargetTool.this::refreshIssues); }
             @Override public void issuesReloaded()    { SwingUtilities.invokeLater(TargetTool.this::refreshIssues); }
         });
+        // "Show only in-scope items" depends on the scope, so a scope edit
+        // re-filters the tree and the table.
+        ctx.addScopeListener(() -> SwingUtilities.invokeLater(() -> {
+            if (itemsFilter.inScopeOnly) applyItemsFilter();
+        }));
+    }
+
+    // ---- tree filtering -----------------------------------------------------
+
+    /**
+     * Whether a site map node is shown under the current filter. A leaf shows
+     * when its own exchange passes; a folder shows when anything beneath it
+     * passes, or, with "hide empty folders" off, when its own URL is not
+     * filtered out by scope.
+     */
+    private boolean nodeVisible(SiteMap.Node n) {
+        if (itemsFilter.isEverything() && !itemsFilter.hideEmptyFolders) return true;
+        if (n.entry != null && itemsFilter.test(n.entry)) return true;
+        for (LogEntry e : n.entries()) if (itemsFilter.test(e)) return true;
+        if (n.entry != null) return false;   // a requested item that is filtered out
+        if (itemsFilter.hideEmptyFolders) return false;
+        return !itemsFilter.inScopeOnly || n.service == null
+                || ctx.scope().isInScope(n.service, n.isHost ? "/" : n.path);
+    }
+
+    /** Rebuild the whole tree under the current filter, keeping what was expanded and selected. */
+    private void rebuildTree() {
+        if (treeModel == null || tree == null) return;
+        java.util.Set<SiteMap.Node> expanded = new java.util.HashSet<>();
+        for (int i = 0; i < tree.getRowCount(); i++) {
+            TreePath p = tree.getPathForRow(i);
+            if (tree.isExpanded(p) && ((DefaultMutableTreeNode) p.getLastPathComponent()).getUserObject() instanceof SiteMap.Node n)
+                expanded.add(n);
+        }
+        java.util.List<SiteMap.Node> wasSelected = new ArrayList<>(selectedNodes == null ? List.of() : selectedNodes);
+        DefaultMutableTreeNode rootTn = (DefaultMutableTreeNode) treeModel.getRoot();
+        rootTn.removeAllChildren();
+        treeNodes.clear();
+        treeNodes.put(siteMap.root(), rootTn);
+        buildTree(siteMap.root(), rootTn);
+        treeModel.reload();
+        tree.expandPath(new TreePath(rootTn));
+        for (SiteMap.Node n : expanded) {
+            DefaultMutableTreeNode tn = treeNodes.get(n);
+            if (tn != null) tree.expandPath(new TreePath(tn.getPath()));
+        }
+        java.util.List<TreePath> reselect = new ArrayList<>();
+        for (SiteMap.Node n : wasSelected) {
+            DefaultMutableTreeNode tn = treeNodes.get(n);
+            if (tn != null) reselect.add(new TreePath(tn.getPath()));
+        }
+        if (!reselect.isEmpty()) tree.setSelectionPaths(reselect.toArray(new TreePath[0]));
+        else if (tree.getRowCount() > 0) tree.setSelectionRow(0);
+        else { selectedNodes = new ArrayList<>(); selectedNode = null; itemsModel.setEntries(List.of()); refreshIssues(); }
     }
 
     /** Entries recorded since the last tree sync, drained by {@link #syncTimer}. */
@@ -92,6 +147,7 @@ public class TargetTool implements ToolModule {
 
     private void buildTree(SiteMap.Node sm, DefaultMutableTreeNode tn) {
         for (SiteMap.Node child : sm.children.values()) {
+            if (!nodeVisible(child)) continue;
             DefaultMutableTreeNode c = new DefaultMutableTreeNode(child);
             treeNodes.put(child, c);
             tn.add(c);
@@ -134,7 +190,6 @@ public class TargetTool implements ToolModule {
 
         itemsFilter.scope = ctx.scope();
         JComponent contents = new JPanel(new BorderLayout());
-        contents.add(buildItemsFilterBar(), BorderLayout.NORTH);
         contents.add(Ui.scroll(itemsTable), BorderLayout.CENTER);
 
         JSplitPane detail = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, reqView, respView);
@@ -152,7 +207,18 @@ public class TargetTool implements ToolModule {
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, Ui.scroll(tree), rightmost);
         split.setDividerSize(5);
         Ui.balance(split, 0.22);
-        return split;
+
+        // The filter bar spans the tree and the contents, as in the reference,
+        // because one filter drives both; above it, the out-of-scope logging
+        // notice when the proxy has stopped recording other sites.
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(new OutOfScopeBanner(ctx), BorderLayout.NORTH);
+        top.add(buildItemsFilterBar(), BorderLayout.CENTER);
+        JPanel page = new JPanel(new BorderLayout());
+        page.add(top, BorderLayout.NORTH);
+        page.add(split, BorderLayout.CENTER);
+        applyItemsFilter();
+        return page;
     }
 
     private JComponent buildIssuesPanel() {
@@ -368,8 +434,8 @@ public class TargetTool implements ToolModule {
         JTextArea note = Ui.note(
             "Use these settings to define exactly what hosts and URLs constitute the target for "
             + "your current work. This configuration affects the behaviour of tools throughout "
-            + "the suite. Fields take regex strings; the easiest way to configure scope is to "
-            + "browse to your target and use the site map's context menus.");
+            + "the suite. Add a URL prefix here, or browse to your target and use the site map's "
+            + "context menu; advanced scope control takes regex rules instead.");
         note.setMaximumSize(new Dimension(900, note.getPreferredSize().height));
         JPanel body = Ui.vbox(Ui.heading("Target scope"), Box.createVerticalStrut(4), note,
                 Box.createVerticalStrut(14), new ScopeEditor(ctx, ctx.scope()));
@@ -399,27 +465,39 @@ public class TargetTool implements ToolModule {
         if (tn == null) return;
         for (SiteMap.Node child : sm.children.values()) {
             DefaultMutableTreeNode childTn = treeNodes.get(child);
+            boolean visible = nodeVisible(child);
             if (childTn == null) {
+                if (!visible) continue;
                 childTn = new DefaultMutableTreeNode(child);
                 treeNodes.put(child, childTn);
                 treeModel.insertNodeInto(childTn, tn, tn.getChildCount());
+            } else if (!visible) {
+                // A new exchange can take a node out of view (a folder that is
+                // now all not-found items, say); a later one can bring it back.
+                treeModel.removeNodeFromParent(childTn);
+                removeTreeNodes(child);
+                continue;
             }
             sync(child);
         }
     }
 
+    private void removeTreeNodes(SiteMap.Node n) {
+        treeNodes.remove(n);
+        for (SiteMap.Node c : n.children.values()) removeTreeNodes(c);
+    }
+
     /**
-     * The site-map Contents filter bar: a clickable summary that opens the full
-     * filter and full-text search, plus a quick URL search, matching the proxy
-     * history.
+     * The site map filter bar: a clickable summary that opens the full filter
+     * and full-text search, plus a quick URL search, matching the proxy history.
      */
     private JComponent buildItemsFilterBar() {
         itemsFilterButton = Ui.filterButton();
-        itemsFilterButton.setText("Filter:  " + itemsFilter.summary());
+        itemsFilterButton.setText("Site map filter: " + itemsFilter.summary());
         itemsFilterButton.addActionListener(e -> {
             java.awt.Window owner = SwingUtilities.getWindowAncestor(itemsTable);
-            new opentrap.proxy.FilterDialog(owner, "site map filter",
-                    itemsFilter, TargetTool.this::applyItemsFilter).setVisible(true);
+            new opentrap.proxy.FilterDialog(owner, "Site map filter",
+                    itemsFilter, true, TargetTool.this::applyItemsFilter).setVisible(true);
         });
         JTextField urlSearch = Ui.field("", 22);
         urlSearch.setToolTipText("quick search of the URL only");
@@ -429,13 +507,24 @@ public class TargetTool implements ToolModule {
             public void removeUpdate(javax.swing.event.DocumentEvent e)  { go(); }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { go(); }
         });
-        return Ui.filterBar(itemsFilterButton, Ui.label("URL search:"), urlSearch);
+        return Ui.filterBar(itemsFilterButton, Ui.label("Search:"), urlSearch);
     }
 
     private void applyItemsFilter() {
         if (itemsModel == null) return;
         itemsModel.setFilter(itemsFilter::test);
-        if (itemsFilterButton != null) itemsFilterButton.setText("Filter:  " + itemsFilter.summary());
+        if (itemsFilterButton != null) itemsFilterButton.setText("Site map filter: " + itemsFilter.summary());
+        rebuildTree();
+    }
+
+    /** The filter travels with the project. */
+    @Override public java.io.Serializable saveState() { return itemsFilter.copy(); }
+
+    @Override public void restoreState(java.io.Serializable state) {
+        if (!(state instanceof opentrap.proxy.HistoryFilter f)) return;
+        f.scope = ctx.scope();
+        itemsFilter.copyFrom(f);
+        SwingUtilities.invokeLater(this::applyItemsFilter);
     }
 
     /** Refresh the items table for the selected node without stealing selection. */
@@ -481,10 +570,8 @@ public class TargetTool implements ToolModule {
         int row = itemsTable.getSelectedRow();
         LogEntry e = itemsModel.at(row);
         if (e == null) return;
-        reqView.setMessage(e.service(),
-                e.request() == null ? new HttpMessage(new byte[0]) : e.request().copy());
-        respView.setMessage(e.service(),
-                e.response() == null ? new HttpMessage(new byte[0]) : e.response().copy(), e.request());
+        reqView.showRequest(e);
+        respView.showResponse(e);
     }
 
     private void installTreeMenu() {
@@ -509,14 +596,21 @@ public class TargetTool implements ToolModule {
         t.setEnabled(false);
         menu.add(t);
         menu.addSeparator();
-        addItem(menu, "add to scope", () -> {
-            ctx.scope().includeUrl(node.service, node.path, node.isHost);
-            ctx.scopeChanged();
-        });
-        addItem(menu, "remove from scope", () -> {
-            ctx.scope().excludeUrl(node.service, node.path, node.isHost);
-            ctx.scopeChanged();
-        });
+        // One item that reads as the opposite of the node's state, as in the
+        // reference: a node already in scope offers to leave it.
+        boolean inScope = node.service != null
+                && ctx.scope().isInScope(node.service, node.isHost ? "/" : node.path);
+        if (inScope) {
+            addItem(menu, "remove from scope", () -> {
+                ctx.scope().removeUrl(node.service, node.path, node.isHost);
+                ctx.scopeChanged();
+            });
+        } else {
+            addItem(menu, "add to scope", () -> {
+                ctx.scope().includeUrl(node.service, node.path, node.isHost);
+                ctx.scopeChanged();
+            });
+        }
         java.util.List<LogEntry> ents = node.entries();
         LogEntry e = node.entry != null ? node.entry : (ents.isEmpty() ? null : ents.get(0));
         if (e != null) {

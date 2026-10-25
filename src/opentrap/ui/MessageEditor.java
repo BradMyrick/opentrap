@@ -73,6 +73,9 @@ public class MessageEditor extends JPanel {
     private final List<ActionProvider> providers = new ArrayList<>();
     private boolean updating;
     private Runnable changeListener;
+    // A line above the views for something the bytes alone would not say, such
+    // as a response whose body was not kept in the project.
+    private final JLabel noteLabel = new JLabel();
 
     public MessageEditor(SuiteContext ctx, int flags, boolean editable) {
         super(new BorderLayout());
@@ -101,8 +104,15 @@ public class MessageEditor extends JPanel {
         if ((flags & RESPONSE) != 0) views.addTab("Render", Ui.scroll(renderPane));
         views.addChangeListener(e -> onViewChanged());
 
+        noteLabel.setFont(Ui.PLAIN);
+        noteLabel.setForeground(Theme.MUTED);
+        noteLabel.setBorder(Ui.pad(3, 8, 3, 8));
+        noteLabel.setVisible(false);
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(buildToolbar(), BorderLayout.NORTH);
+        top.add(noteLabel, BorderLayout.SOUTH);
         JComponent editorSide = new JPanel(new BorderLayout());
-        editorSide.add(buildToolbar(), BorderLayout.NORTH);
+        editorSide.add(top, BorderLayout.NORTH);
         editorSide.add(views, BorderLayout.CENTER);
 
         add(editorSide, BorderLayout.CENTER);
@@ -250,6 +260,28 @@ public class MessageEditor extends JPanel {
         this.relatedRequest = related;
         loadActiveFromMessage();
         refreshViews();
+    }
+
+    /** Show a history entry's request: a copy of it, so edits never touch the record. */
+    public void showRequest(LogEntry e) {
+        setNote(null);
+        setMessage(e.service(), e.request() == null ? new HttpMessage(new byte[0]) : e.request().copy());
+    }
+
+    /**
+     * Show a history entry's response: a copy, with the entry's request as the
+     * related message, and a note when the project holds less than the whole body.
+     */
+    public void showResponse(LogEntry e) {
+        setMessage(e.service(), e.response() == null ? new HttpMessage(new byte[0]) : e.response().copy(), e.request());
+        setNote(e.bodyNote());
+    }
+
+    /** A line shown above the views, or hidden when null. */
+    public void setNote(String text) {
+        noteLabel.setText(text == null ? "" : text);
+        noteLabel.setVisible(text != null && !text.isEmpty());
+        noteLabel.getParent().revalidate();
     }
 
     public HttpMessage message()  { return message; }

@@ -35,7 +35,6 @@ public final class SettingsDialog {
     private static Unbuilt placeholder(String category) {
         return switch (category) {
             case "Comparer"   -> Unbuilt.SETTINGS_COMPARER;
-            case "Project"    -> Unbuilt.SETTINGS_PROJECT;
             case "Suite"      -> Unbuilt.SETTINGS_SUITE;
             case "Extensions" -> Unbuilt.SETTINGS_EXTENSIONS;
             default           -> null;

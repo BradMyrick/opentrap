@@ -48,8 +48,7 @@ This file is generated from the registry in `src/opentrap/ui/Unbuilt.java`, whic
 | Feature | Reference |
 |---|---|
 | Comparer | `OT-SETTINGS-COMPARER` |
-| Project | `OT-SETTINGS-PROJECT` |
 | Suite | `OT-SETTINGS-SUITE` |
 | Extensions | `OT-SETTINGS-EXTENSIONS` |
 
-16 open items.
+15 open items.

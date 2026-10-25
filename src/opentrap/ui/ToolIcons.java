@@ -51,6 +51,15 @@ final class ToolIcons {
         });
     }
 
+    /** An information mark: a circle with a dot and a stem. */
+    static Icon info() {
+        return make(g -> {
+            g.drawOval(1, 1, 13, 13);
+            g.fillOval(7, 4, 2, 2);
+            g.drawLine(8, 7, 8, 11);
+        });
+    }
+
     /** A gear: a ring with eight teeth and a hub. */
     static Icon gear() {
         return make(g -> {

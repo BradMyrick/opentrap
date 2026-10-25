@@ -70,9 +70,8 @@ public final class Unbuilt {
     public static final Unbuilt CONSOLE              = of("OT-CONSOLE",              "Console");
 
     // Settings dialog panes (the dialog and the Proxy, Browser, Intruder, Repeater,
-    // Sequencer, Sessions and Configuration library panes are built; these are not)
+    // Sequencer, Project, Sessions and Configuration library panes are built; these are not)
     public static final Unbuilt SETTINGS_COMPARER       = of("OT-SETTINGS-COMPARER",       "Settings > Comparer");
-    public static final Unbuilt SETTINGS_PROJECT        = of("OT-SETTINGS-PROJECT",        "Settings > Project");
     public static final Unbuilt SETTINGS_SUITE          = of("OT-SETTINGS-SUITE",          "Settings > Suite");
     public static final Unbuilt SETTINGS_EXTENSIONS     = of("OT-SETTINGS-EXTENSIONS",     "Settings > Extensions");
 

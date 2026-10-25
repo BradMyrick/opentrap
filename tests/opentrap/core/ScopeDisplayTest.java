@@ -17,8 +17,9 @@ public final class ScopeDisplayTest {
         Harness.test("an auto-created host rule displays as plain text", () -> {
             Scope scope = new Scope();
             scope.includeHost(new HttpService("testaspnet.vulnweb.com", 443, true));
-            String host = Scope.display(scope.include().get(scope.include().size() - 1).host);
-            Expect.equal(host, "testaspnet.vulnweb.com", "host reads cleanly");
+            Scope.Rule r = scope.include().get(scope.include().size() - 1);
+            Expect.equal(r.describe(), "testaspnet.vulnweb.com", "host reads cleanly");
+            Expect.isTrue(r.isPrefix(), "a target host is a prefix rule");
         });
 
         Harness.test("a dotted host keeps its dots and loses the quote markers", () -> {

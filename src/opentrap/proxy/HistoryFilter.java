@@ -23,20 +23,27 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * <p>Everything else is a structural filter: scope, response presence, MIME
- * type, status band and file extension.
+ * type, status band, file extension and annotation. {@link #hideEmptyFolders}
+ * is read by the site map tree alone.
  */
 public class HistoryFilter implements Serializable {
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 3L;
 
     // Structural filters.
     public boolean inScopeOnly = false;
     public boolean hideWithoutResponses = false;
+    public boolean hideNotFound = false;
     public boolean parameterisedOnly = false;
     public boolean showHtml = true, showScript = true, showXml = true, showJson = true;
     public boolean showCss = true, showImages = true, showOtherText = true, showOtherBinary = true;
     public boolean show2xx = true, show3xx = true, show4xx = true, show5xx = true;
-    public String extShowOnly = "";   // comma-separated, empty = any
-    public String extHide = "";       // comma-separated, empty = none
+    public boolean extShowOnlyOn = false;
+    public boolean extHideOn = false;
+    public String extShowOnly = "asp,aspx,jsp,php";   // comma-separated
+    public String extHide = "js,gif,jpg,png,ico,css,woff,woff2,ttf,svg";
+    public boolean notesOnly = false;
+    public boolean highlightedOnly = false;
+    public boolean hideEmptyFolders = false;
 
     // Fast URL search (the quick box).
     public String urlSearch = "";
@@ -54,6 +61,24 @@ public class HistoryFilter implements Serializable {
     private transient String compiledFor;
     private transient boolean compiledCase;
 
+    /** The site map's starting filter: not-found items, stylesheets, images, binaries, 4xx and empty folders hidden. */
+    public static HistoryFilter siteMapDefaults() {
+        HistoryFilter f = new HistoryFilter();
+        f.hideNotFound = true;
+        f.showCss = false; f.showImages = false; f.showOtherBinary = false;
+        f.show4xx = false;
+        f.hideEmptyFolders = true;
+        return f;
+    }
+
+    /** The proxy history's starting filter: stylesheets, images and static-asset extensions hidden. */
+    public static HistoryFilter proxyDefaults() {
+        HistoryFilter f = new HistoryFilter();
+        f.showCss = false; f.showImages = false;
+        f.extHideOn = true;
+        return f;
+    }
+
     public boolean test(LogEntry e) {
         // Fast URL search first: it rejects the most rows for the least work.
         if (urlSearch != null && !urlSearch.isBlank()) {
@@ -63,7 +88,10 @@ public class HistoryFilter implements Serializable {
 
         if (inScopeOnly && (scope == null || !scope.isInScope(e))) return false;
         if (hideWithoutResponses && e.response() == null) return false;
+        if (hideNotFound && e.status() == 404) return false;
         if (parameterisedOnly && (e.request() == null || !e.request().hasParameters())) return false;
+        if (notesOnly && (e.notes() == null || e.notes().isBlank())) return false;
+        if (highlightedOnly && (e.highlight() == null || e.highlight().isBlank())) return false;
 
         int sc = e.status();
         if (sc >= 200 && sc < 300 && !show2xx) return false;
@@ -84,8 +112,8 @@ public class HistoryFilter implements Serializable {
         }
 
         String ext = e.request() == null ? "" : e.request().fileExtension();
-        if (!extShowOnly.isBlank() && !extListContains(extShowOnly, ext)) return false;
-        if (!extHide.isBlank() && extListContains(extHide, ext)) return false;
+        if (extShowOnlyOn && !extShowOnly.isBlank() && !extListContains(extShowOnly, ext)) return false;
+        if (extHideOn && !extHide.isBlank() && extListContains(extHide, ext)) return false;
 
         // Thorough full-text search last: it is the most expensive, and the
         // cheaper filters above have already discarded most rows.
@@ -134,27 +162,63 @@ public class HistoryFilter implements Serializable {
 
     /** True when no structural filter and no search is active. */
     public boolean isEverything() {
-        return !inScopeOnly && !hideWithoutResponses && !parameterisedOnly
-                && showHtml && showScript && showXml && showJson && showCss && showImages
-                && showOtherText && showOtherBinary && show2xx && show3xx && show4xx && show5xx
-                && extShowOnly.isBlank() && extHide.isBlank()
+        return !inScopeOnly && !hideWithoutResponses && !hideNotFound && !parameterisedOnly
+                && !notesOnly && !highlightedOnly
+                && allMimeShown() && allStatusShown()
+                && !(extShowOnlyOn && !extShowOnly.isBlank()) && !(extHideOn && !extHide.isBlank())
                 && (searchTerm == null || searchTerm.isBlank());
     }
 
-    /** A one-line description of the active structural filter, for the bar. */
+    /**
+     * A one-line description of the active structural filter, for the bar,
+     * phrased the way the reference does: "Hiding out of scope and not found
+     * items; hiding CSS, image and general binary content; hiding 4xx responses".
+     */
     public String summary() {
-        StringBuilder sb = new StringBuilder();
-        if (inScopeOnly) sb.append("in-scope only; ");
-        if (hideWithoutResponses) sb.append("hiding items without responses; ");
-        if (parameterisedOnly) sb.append("parameterised only; ");
-        if (!allMimeShown()) sb.append("hiding some content types; ");
-        if (!allStatusShown()) sb.append("hiding some status codes; ");
-        if (!extShowOnly.isBlank()) sb.append("only extensions ").append(extShowOnly).append("; ");
-        if (!extHide.isBlank()) sb.append("hiding extensions ").append(extHide).append("; ");
+        java.util.List<String> parts = new java.util.ArrayList<>();
+
+        java.util.List<String> items = new java.util.ArrayList<>();
+        if (inScopeOnly) items.add("out of scope");
+        if (hideNotFound) items.add("not found");
+        if (hideWithoutResponses) items.add("unanswered");
+        if (parameterisedOnly) items.add("unparameterised");
+        if (!items.isEmpty()) parts.add("hiding " + join(items) + " items");
+
+        java.util.List<String> content = new java.util.ArrayList<>();
+        if (!showHtml) content.add("HTML");
+        if (!showScript) content.add("script");
+        if (!showXml) content.add("XML");
+        if (!showJson) content.add("JSON");
+        if (!showCss) content.add("CSS");
+        if (!showImages) content.add("image");
+        if (!showOtherText) content.add("other text");
+        if (!showOtherBinary) content.add("general binary");
+        if (content.size() == 8) parts.add("hiding all content types");
+        else if (!content.isEmpty()) parts.add("hiding " + join(content) + " content");
+
+        java.util.List<String> codes = new java.util.ArrayList<>();
+        if (!show2xx) codes.add("2xx");
+        if (!show3xx) codes.add("3xx");
+        if (!show4xx) codes.add("4xx");
+        if (!show5xx) codes.add("5xx");
+        if (!codes.isEmpty()) parts.add("hiding " + join(codes) + " responses");
+
+        if (extShowOnlyOn && !extShowOnly.isBlank()) parts.add("showing only " + extShowOnly.replace(",", ", ") + " extensions");
+        if (extHideOn && !extHide.isBlank()) parts.add("hiding specific extensions");
+        if (notesOnly) parts.add("showing only items with notes");
+        if (highlightedOnly) parts.add("showing only highlighted items");
         if (searchTerm != null && !searchTerm.isBlank())
-            sb.append(searchNegative ? "not matching \"" : "matching \"").append(searchTerm).append("\"; ");
-        if (sb.length() == 0) return "showing all items";
-        return sb.substring(0, sb.length() - 2);
+            parts.add((searchNegative ? "hiding items matching \"" : "showing only items matching \"") + searchTerm + "\"");
+        if (hideEmptyFolders) parts.add("hiding empty folders");
+
+        if (parts.isEmpty()) return "Showing all items";
+        String s = String.join("; ", parts);
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    private static String join(java.util.List<String> words) {
+        if (words.size() == 1) return words.get(0);
+        return String.join(", ", words.subList(0, words.size() - 1)) + " and " + words.get(words.size() - 1);
     }
 
     private boolean allMimeShown() {
@@ -167,10 +231,33 @@ public class HistoryFilter implements Serializable {
     }
 
     public void showAll() {
-        inScopeOnly = hideWithoutResponses = parameterisedOnly = false;
+        inScopeOnly = hideWithoutResponses = hideNotFound = parameterisedOnly = false;
+        notesOnly = highlightedOnly = false;
         showHtml = showScript = showXml = showJson = showCss = showImages = showOtherText = showOtherBinary = true;
         show2xx = show3xx = show4xx = show5xx = true;
-        extShowOnly = extHide = "";
+        extShowOnlyOn = extHideOn = false;
         searchTerm = "";
+        hideEmptyFolders = false;
+    }
+
+    public HistoryFilter copy() {
+        HistoryFilter c = new HistoryFilter();
+        c.copyFrom(this);
+        return c;
+    }
+
+    public void copyFrom(HistoryFilter o) {
+        inScopeOnly = o.inScopeOnly; hideWithoutResponses = o.hideWithoutResponses;
+        hideNotFound = o.hideNotFound; parameterisedOnly = o.parameterisedOnly;
+        showHtml = o.showHtml; showScript = o.showScript; showXml = o.showXml; showJson = o.showJson;
+        showCss = o.showCss; showImages = o.showImages; showOtherText = o.showOtherText; showOtherBinary = o.showOtherBinary;
+        show2xx = o.show2xx; show3xx = o.show3xx; show4xx = o.show4xx; show5xx = o.show5xx;
+        extShowOnlyOn = o.extShowOnlyOn; extHideOn = o.extHideOn;
+        extShowOnly = o.extShowOnly; extHide = o.extHide;
+        notesOnly = o.notesOnly; highlightedOnly = o.highlightedOnly; hideEmptyFolders = o.hideEmptyFolders;
+        urlSearch = o.urlSearch;
+        searchTerm = o.searchTerm; searchRegex = o.searchRegex;
+        searchCaseSensitive = o.searchCaseSensitive; searchNegative = o.searchNegative;
+        scope = o.scope;
     }
 }

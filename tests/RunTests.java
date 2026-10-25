@@ -16,6 +16,8 @@ public final class RunTests {
         new opentrap.core.HttpModeTest().run();
         new opentrap.core.UpstreamProxyTest().run();
         new opentrap.core.ScopeDisplayTest().run();
+        new opentrap.core.ScopePrefixTest().run();
+        new opentrap.core.MessageStoreCapTest().run();
         new opentrap.session.SessionTest().run();
         new opentrap.intruder.PayloadProcessorTest().run();
         new opentrap.report.ExportTest().run();
@@ -28,9 +30,11 @@ public final class RunTests {
         new opentrap.proxy.ProxyDefaultsTest().run();
         new opentrap.proxy.WebSocketFrameTest().run();
         new opentrap.proxy.WsMatchReplaceTest().run();
+        new opentrap.proxy.HistoryFilterTest().run();
         new opentrap.engine.ScanConfigStoreTest().run();
         new opentrap.ui.SendToComparerTest().run();
         new opentrap.ui.ProjectTasksTest().run();
+        new opentrap.ui.ProjectSlimTest().run();
 
         System.exit(Harness.report());
     }

@@ -73,12 +73,38 @@ public final class StateIO {
     private static volatile long savedStamp = -1;   // the session change stamp the file holds
 
     /**
+     * What a write keeps. The session's own project is written with
+     * {@link #fromSettings}; a saved copy can narrow it further.
+     */
+    public static final class SaveOptions {
+        /** Only history entries and issues inside the target scope. */
+        public boolean inScopeOnly;
+        /** The tools whose history is kept, by tool tag; null keeps every tool. */
+        public java.util.Set<String> tools;
+        /** Keep the scan cards from the dashboard. */
+        public boolean includeTasks = true;
+        /** Keep the full body of audit probe responses. */
+        public boolean keepAuditBodies;
+        /** Largest response body kept, in bytes; 0 for no cap. */
+        public int bodyCapBytes;
+
+        /** The options the project's settings ask for. */
+        public static SaveOptions fromSettings(SuiteContext ctx) {
+            SaveOptions o = new SaveOptions();
+            o.keepAuditBodies = opentrap.core.ProjectOptions.keepAuditBodies(ctx.settings());
+            o.bodyCapBytes = opentrap.core.ProjectOptions.bodyCapBytes(ctx.settings());
+            return o;
+        }
+    }
+
+    /**
      * Save the session to the project file it is bound to, in the background,
      * if anything has changed since the file was last written. Does nothing for
      * a temporary session or while another autosave runs. A failure is reported
-     * once in the event log; a success is silent.
+     * once in the event log; a success is silent apart from {@code onSaved},
+     * which gets the file's size in bytes on the event thread.
      */
-    public static void autosave(SuiteContext ctx) {
+    public static void autosave(SuiteContext ctx, java.util.function.LongConsumer onSaved) {
         File f = ctx.projectFile();
         if (f == null || autosaving) return;
         final long stamp = ctx.changeStamp();
@@ -88,6 +114,10 @@ public final class StateIO {
             try {
                 save(ctx, f);
                 savedStamp = stamp;
+                if (onSaved != null) {
+                    final long size = f.length();
+                    SwingUtilities.invokeLater(() -> onSaved.accept(size));
+                }
             } catch (Exception e) {
                 ctx.alert("suite", "Could not save the project to " + f.getName() + ": " + e.getMessage());
             } finally {
@@ -98,15 +128,22 @@ public final class StateIO {
         t.start();
     }
 
+    public static void autosave(SuiteContext ctx) { autosave(ctx, null); }
+
+    /** Write the session to {@code file} with the options its settings ask for. */
+    public static void save(SuiteContext ctx, File file) throws IOException {
+        save(ctx, file, SaveOptions.fromSettings(ctx));
+    }
+
     /**
      * Write the session to {@code file}. The file is written beside its final
      * name and moved into place at the end, so a crash or a full disk part-way
      * through never leaves a truncated project behind.
      */
-    public static void save(SuiteContext ctx, File file) throws IOException {
+    public static void save(SuiteContext ctx, File file, SaveOptions options) throws IOException {
         synchronized (SAVE_LOCK) {
             File tmp = new File(file.getParentFile(), file.getName() + ".saving");
-            writeTo(ctx, tmp);
+            writeTo(ctx, tmp, options == null ? SaveOptions.fromSettings(ctx) : options);
             try {
                 java.nio.file.Files.move(tmp.toPath(), file.toPath(),
                         java.nio.file.StandardCopyOption.REPLACE_EXISTING,
@@ -120,25 +157,43 @@ public final class StateIO {
         }
     }
 
-    private static void writeTo(SuiteContext ctx, File file) throws IOException {
+    /** The history as a write keeps it: filtered by scope and tool, bodies slimmed. */
+    static List<LogEntry> historyToSave(SuiteContext ctx, SaveOptions o) {
+        List<LogEntry> out = new ArrayList<>();
+        for (LogEntry e : ctx.store().all()) {
+            if (o.tools != null && !o.tools.contains(e.tool())) continue;
+            if (o.inScopeOnly && !ctx.scope().isInScope(e)) continue;
+            boolean drop = !o.keepAuditBodies && opentrap.core.ProjectOptions.AUDIT_TOOL.equals(e.tool());
+            out.add(e.slim(drop, o.bodyCapBytes));
+        }
+        return out;
+    }
+
+    private static void writeTo(SuiteContext ctx, File file, SaveOptions o) throws IOException {
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
             zos.putNextEntry(new ZipEntry("opentrap"));
             ObjectOutputStream oos = new ObjectOutputStream(zos);
-            oos.writeInt(5);                            // format version
-            oos.writeObject(ctx.store().all());         // history
+            oos.writeInt(6);                            // format version
+            oos.writeObject(historyToSave(ctx, o));     // history (v6: audit bodies left out)
             oos.writeObject(ctx.scope());               // scope
             oos.writeObject(ctx.settings().snapshot()); // settings
             oos.writeObject(ctx.sessions().snapshot()); // session jar, macros, rules (v2)
             oos.writeObject(ctx.organizer().snapshot()); // organizer items (v3)
             // v4: scanner issues, and each tool's own working state.
-            oos.writeObject(new ArrayList<>(ctx.issues()));
+            List<opentrap.core.Issue> issues = new ArrayList<>();
+            for (opentrap.core.Issue i : ctx.issues()) {
+                if (o.inScopeOnly && !ctx.scope().isInScope(i.service(), i.path())) continue;
+                issues.add(i);
+            }
+            oos.writeObject(issues);
             java.util.LinkedHashMap<String, java.io.Serializable> toolStates = new java.util.LinkedHashMap<>();
             for (opentrap.core.ToolModule t : ctx.tools()) {
                 java.io.Serializable s = t.saveState();
                 if (s != null) toolStates.put(t.name(), s);
             }
             oos.writeObject(toolStates);
-            oos.writeObject(new ArrayList<>(ctx.taskSnapshots()));   // v5: the scans on the dashboard
+            // v5: the scans on the dashboard
+            oos.writeObject(o.includeTasks ? new ArrayList<>(ctx.taskSnapshots()) : new ArrayList<>());
             oos.flush();
             zos.closeEntry();
         }
@@ -151,7 +206,7 @@ public final class StateIO {
             if (e == null) throw new IOException("Input file is not in correct format");
             ObjectInputStream ois = new ObjectInputStream(zis);
             int version = ois.readInt();
-            if (version > 5) {
+            if (version > 6) {
                 ctx.alert("suite", "This file was saved by a later version - restore may fail");
             }
             List<LogEntry> entries = (List<LogEntry>) ois.readObject();
@@ -176,6 +231,8 @@ public final class StateIO {
                 savedTasks = (java.util.List<opentrap.core.ScanTask.Snapshot>) ois.readObject();
             }
 
+            ctx.setRestoring(true);
+            try {
             ctx.store().replaceAll(entries == null ? new ArrayList<>() : entries);
             if (scope != null) {
                 ctx.scope().include().clear();
@@ -204,6 +261,9 @@ public final class StateIO {
             // One bulk rebuild of the site map, not one tree sync per entry.
             ctx.siteMapReloaded(all);
             return all.size();
+            } finally {
+                ctx.setRestoring(false);
+            }
         }
     }
 

@@ -65,6 +65,14 @@ public class SuiteFrame extends JFrame {
             configLibrary.reload();
             return configLibrary;
         });
+        SettingsDialog.register("Project", () -> new ProjectSettingsPanel(ctx));
+        // The audit traffic cap follows its setting, including one restored
+        // from a project.
+        ctx.store().setAuditCapBytes(opentrap.core.ProjectOptions.auditMemoryBytes(ctx.settings()));
+        ctx.settings().addListener(key -> {
+            if (opentrap.core.ProjectOptions.AUDIT_MEMORY_MB.equals(key))
+                ctx.store().setAuditCapBytes(opentrap.core.ProjectOptions.auditMemoryBytes(ctx.settings()));
+        });
         setIconImages(AppIcon.images());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         tabs.setFont(Ui.PLAIN);
@@ -85,7 +93,9 @@ public class SuiteFrame extends JFrame {
         // when something changed (in the background, atomically), so a crash
         // costs half a minute at most. Writing on every request is not an
         // option: each save rewrites the whole file.
-        Timer autosave = new Timer(30_000, e -> StateIO.autosave(ctx));
+        Timer autosave = new Timer(30_000, e -> StateIO.autosave(ctx, size -> setStatus(
+                "Project saved at " + java.time.LocalTime.now().withNano(0) + ", "
+                + ProjectSizeDialog.human(size) + " on disk")));
         autosave.setRepeats(true);
         autosave.start();
 
@@ -235,6 +245,7 @@ public class SuiteFrame extends JFrame {
         addItem(project, "project settings", e -> SettingsDialog.open(this, ctx, "Project"));
         addItem(project, "rename project", e -> renameProject());
         addItem(project, "save copy", e -> saveProjectCopy());
+        addItem(project, "project size", e -> ProjectSizeDialog.show(this, ctx));
         addItem(project, "import project file", e -> StateIO.restoreDialog(ctx, this));
         menuBar.add(project);
 
@@ -317,8 +328,55 @@ public class SuiteFrame extends JFrame {
         }
     }
 
-    /** Write the current state to another file without rebinding the session to it. */
+    /**
+     * Write the current state to another file without rebinding the session to
+     * it. First a small dialog chooses what the copy keeps: in-scope items only,
+     * which tools' history, the scan cards and the audit bodies; it is also the
+     * way to shrink a project, since a copy drops what the filters leave out.
+     */
     private void saveProjectCopy() {
+        StateIO.SaveOptions opts = StateIO.SaveOptions.fromSettings(ctx);
+        JCheckBox inScope = Ui.check("Save in-scope items only", false);
+        JCheckBox tasks = Ui.check("Include the scans on the dashboard", true);
+        JCheckBox audit = Ui.check("Keep full audit responses", opts.keepAuditBodies);
+        java.util.LinkedHashMap<String, JCheckBox> tools = new java.util.LinkedHashMap<>();
+        for (opentrap.core.LogEntry e : ctx.store().all()) {
+            tools.computeIfAbsent(e.tool(), t -> Ui.check(t, true));
+        }
+        JPanel toolBox = new JPanel();
+        toolBox.setLayout(new BoxLayout(toolBox, BoxLayout.Y_AXIS));
+        toolBox.setOpaque(false);
+        for (JCheckBox b : tools.values()) { b.setAlignmentX(Component.LEFT_ALIGNMENT); toolBox.add(b); }
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setBorder(Ui.pad(4, 4, 4, 4));
+        JLabel lead = Ui.label("Choose what the copy keeps.");
+        lead.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(lead);
+        body.add(Box.createVerticalStrut(10));
+        inScope.setAlignmentX(Component.LEFT_ALIGNMENT); body.add(inScope);
+        tasks.setAlignmentX(Component.LEFT_ALIGNMENT); body.add(tasks);
+        audit.setAlignmentX(Component.LEFT_ALIGNMENT); body.add(audit);
+        if (!tools.isEmpty()) {
+            body.add(Box.createVerticalStrut(10));
+            JLabel th = Ui.label("History from these tools:");
+            th.setAlignmentX(Component.LEFT_ALIGNMENT);
+            body.add(th);
+            toolBox.setBorder(Ui.pad(2, 16, 0, 0));
+            toolBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+            body.add(toolBox);
+        }
+        int r = JOptionPane.showOptionDialog(this, body, "Save copy", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE, null, new Object[]{"Choose file...", "Cancel"}, "Choose file...");
+        if (r != 0) return;
+        opts.inScopeOnly = inScope.isSelected();
+        opts.includeTasks = tasks.isSelected();
+        opts.keepAuditBodies = audit.isSelected();
+        if (!tools.isEmpty()) {
+            opts.tools = new java.util.HashSet<>();
+            for (var en : tools.entrySet()) if (en.getValue().isSelected()) opts.tools.add(en.getKey());
+        }
+
         JFileChooser fc = new JFileChooser();
         fc.setDialogTitle("save copy");
         java.io.File current = ctx.projectFile();
@@ -331,8 +389,8 @@ public class SuiteFrame extends JFrame {
         if (f.exists() && JOptionPane.showConfirmDialog(this, "This file already exists. Overwrite it?",
                 "save copy", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
         try {
-            StateIO.save(ctx, f);
-            ctx.alert("suite", "Copy saved to " + f.getName());
+            StateIO.save(ctx, f, opts);
+            ctx.alert("suite", "Copy saved to " + f.getName() + ", " + ProjectSizeDialog.human(f.length()));
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Could not save the copy: " + e.getMessage(),
                     "save copy", JOptionPane.ERROR_MESSAGE);

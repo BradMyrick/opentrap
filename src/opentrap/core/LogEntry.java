@@ -24,12 +24,40 @@ public class LogEntry implements Serializable {
     private long durationMillis = -1;
     private String error = "";
 
+    // Set on an entry written to a project with its response body left out or
+    // cut short: the headers are kept, the full length is remembered, and the
+    // viewer says so instead of showing an empty body as if that was the reply.
+    private boolean bodyDropped;
+    private boolean bodyTruncated;
+    private int fullResponseLength;
+
     public LogEntry(String tool, HttpService service, HttpMessage request) {
         this.number = SEQ.incrementAndGet();
         this.tool = tool;
         this.service = service;
         this.request = request;
         this.time = new Date();
+    }
+
+    /** A copy of {@code src} that keeps its number and time but carries a different response. */
+    private LogEntry(LogEntry src, HttpMessage response) {
+        this.number = src.number;
+        this.tool = src.tool;
+        this.service = src.service;
+        this.request = src.request;
+        this.response = response;
+        this.originalRequest = src.originalRequest;
+        this.originalResponse = src.originalResponse;
+        this.time = src.time;
+        this.remoteIp = src.remoteIp;
+        this.edited = src.edited;
+        this.notes = src.notes;
+        this.highlight = src.highlight;
+        this.durationMillis = src.durationMillis;
+        this.error = src.error;
+        this.bodyDropped = src.bodyDropped;
+        this.bodyTruncated = src.bodyTruncated;
+        this.fullResponseLength = src.fullResponseLength;
     }
 
     public static void resetCounter() { SEQ.set(0); }
@@ -72,6 +100,70 @@ public class LogEntry implements Serializable {
     public void setDurationMillis(long v)  { this.durationMillis = v; }
     public void setError(String s)         { this.error = s == null ? "" : s; }
 
+    /** True when the stored response is headers only. */
+    public boolean bodyDropped()   { return bodyDropped; }
+    /** True when the stored response body was cut to the project's cap. */
+    public boolean bodyTruncated() { return bodyTruncated; }
+
+    /**
+     * The one-line note a viewer shows above a response whose body is not all
+     * here, or null when the response is complete.
+     */
+    public String bodyNote() {
+        if (bodyDropped) {
+            return "Response body not kept in the project (" + fullResponseLength
+                    + " bytes with headers). The findings that point at this request hold the full response.";
+        }
+        if (bodyTruncated) {
+            return "Response body cut to the project's cap; the full response was "
+                    + fullResponseLength + " bytes with headers.";
+        }
+        return null;
+    }
+
+    /**
+     * The entry as it is written to a project: the same entry when nothing is
+     * taken out, otherwise a copy whose response is headers only
+     * ({@code dropBody}) or whose body is cut at {@code capBytes} (when the cap
+     * is above zero). The live entry is never changed, so the session keeps
+     * showing the whole response.
+     */
+    public LogEntry slim(boolean dropBody, int capBytes) {
+        if (response == null || bodyDropped) return this;
+        int bodyLen = response.length() - response.bodyOffset();
+        if (dropBody && bodyLen > 0) {
+            LogEntry c = new LogEntry(this, headersOnly(response));
+            c.bodyDropped = true;
+            c.fullResponseLength = response.length();
+            // The server's original copy would carry the body straight back in.
+            c.originalResponse = null;
+            return c;
+        }
+        if (capBytes > 0 && bodyLen > capBytes && !bodyTruncated) {
+            HttpMessage cut = new HttpMessage(Bytes.slice(response.raw(), 0, response.bodyOffset() + capBytes));
+            LogEntry c = new LogEntry(this, cut);
+            c.bodyTruncated = true;
+            c.fullResponseLength = response.length();
+            c.originalResponse = null;
+            return c;
+        }
+        return this;
+    }
+
+    private static HttpMessage headersOnly(HttpMessage m) {
+        return new HttpMessage(Bytes.slice(m.raw(), 0, m.bodyOffset()));
+    }
+
+    /** Request and response bytes held for this entry, including any original copies. */
+    public long bytes() {
+        long n = 0;
+        if (request != null) n += request.length();
+        if (response != null) n += response.length();
+        if (originalRequest != null) n += originalRequest.length();
+        if (originalResponse != null) n += originalResponse.length();
+        return n;
+    }
+
     /** Absolute URL of the request. */
     public String url() {
         if (request == null) return service.url();
@@ -85,7 +177,11 @@ public class LogEntry implements Serializable {
     }
 
     public int status()      { return response == null ? 0 : response.statusCode(); }
-    public int responseLen() { return response == null ? 0 : response.length(); }
+    /** The response's length as received, even when the project holds less of it. */
+    public int responseLen() {
+        if (response == null) return 0;
+        return (bodyDropped || bodyTruncated) ? fullResponseLength : response.length();
+    }
     public String mimeType() { return response == null ? "" : response.mimeType(); }
     public String title()    { return response == null ? "" : response.htmlTitle(); }
 

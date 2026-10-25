@@ -56,14 +56,19 @@ public class HistoryContextMenu {
         menu.add(title);
         menu.addSeparator();
 
-        add(menu, single ? "add item to scope" : "add selection to scope", () -> {
-            for (LogEntry e : sel) ctx.scope().includeUrl(e.service(), e.request() == null ? "/" : e.request().path(), false);
-            ctx.scopeChanged();
-        });
-        add(menu, single ? "remove item from scope" : "remove selection from scope", () -> {
-            for (LogEntry e : sel) ctx.scope().excludeUrl(e.service(), e.request() == null ? "/" : e.request().path(), false);
-            ctx.scopeChanged();
-        });
+        // A single item in scope offers to leave it; anything else offers to join.
+        boolean inScope = single && ctx.scope().isInScope(first);
+        if (inScope) {
+            add(menu, "remove item from scope", () -> {
+                ctx.scope().removeUrl(first.service(), first.request() == null ? "/" : first.request().path(), false);
+                ctx.scopeChanged();
+            });
+        } else {
+            add(menu, single ? "add item to scope" : "add selection to scope", () -> {
+                for (LogEntry e : sel) ctx.scope().includeUrl(e.service(), e.request() == null ? "/" : e.request().path(), false);
+                ctx.scopeChanged();
+            });
+        }
         menu.addSeparator();
 
         if (single) {

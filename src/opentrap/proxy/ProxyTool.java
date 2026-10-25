@@ -35,6 +35,14 @@ public class ProxyTool implements ToolModule {
             return;
         }
         server.unpackGzip = ctx.settings().getBool("http.unpackGzip", true);
+        // Out-of-scope logging is a project setting, so the banner, the settings
+        // pane and a restored project all drive the one flag on the server.
+        server.logOutOfScope = ProjectOptions.logOutOfScope(ctx.settings());
+        ctx.settings().addListener(key -> {
+            if (ProjectOptions.LOG_OUT_OF_SCOPE.equals(key)) server.logOutOfScope = ProjectOptions.logOutOfScope(ctx.settings());
+        });
+        lastIncludeCount = ctx.scope().include().size();
+        ctx.addScopeListener(this::scopeEdited);
         server.startAll();
         // Publish routing info for the browser crawler.
         try {
@@ -45,6 +53,61 @@ public class ProxyTool implements ToolModule {
     }
 
     @Override public void shutdown() { server.stopAll(); }
+
+    private volatile int lastIncludeCount;
+
+    /**
+     * When an item is added to the scope while out-of-scope traffic is still
+     * being recorded, offer to stop recording it, as the reference does. The
+     * answer can be remembered ("always take the same action in future"), and
+     * is then applied without asking; the choice lives under Settings >
+     * Project. A scope arriving from an opened project never asks.
+     */
+    private void scopeEdited() {
+        int now = ctx.scope().include().size();
+        boolean grew = now > lastIncludeCount;
+        lastIncludeCount = now;
+        if (!grew || ctx.restoring() || server == null || !server.logOutOfScope) return;
+        String choice = ProjectOptions.outOfScopeChoice(ctx.settings());
+        if ("keep".equals(choice)) return;
+        if ("stop".equals(choice)) { ctx.settings().setBool(ProjectOptions.LOG_OUT_OF_SCOPE, false); return; }
+        SwingUtilities.invokeLater(this::askOutOfScope);
+    }
+
+    private void askOutOfScope() {
+        if (!server.logOutOfScope) return;
+        JTextArea text = Ui.note(
+                "You have added an item to the target scope. Do you want the Proxy to stop sending "
+                + "out-of-scope items to the history and the other tools?\n\n"
+                + "Answering \"yes\" avoids accumulating project data for out-of-scope items.");
+        Ui.sizeNote(text, 440);
+        JCheckBox always = Ui.check("Always take the same action in future", false);
+        JPanel body = new JPanel(new BorderLayout(0, 10));
+        body.add(text, BorderLayout.CENTER);
+        body.add(always, BorderLayout.SOUTH);
+        int r = JOptionPane.showOptionDialog(ctx.frame(), body, "Proxy history logging",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null,
+                new Object[]{"Yes", "No"}, "Yes");
+        if (r == JOptionPane.CLOSED_OPTION) return;
+        boolean stop = r == JOptionPane.YES_OPTION;
+        if (always.isSelected()) ctx.settings().set(ProjectOptions.OUT_OF_SCOPE_CHOICE, stop ? "stop" : "keep");
+        if (stop) {
+            ctx.settings().setBool(ProjectOptions.LOG_OUT_OF_SCOPE, false);
+            ctx.alert("proxy", "no longer recording out-of-scope traffic");
+        }
+    }
+
+    /** The history filter travels with the project. */
+    @Override public java.io.Serializable saveState() {
+        return historyPanel == null ? null : historyPanel.filter.copy();
+    }
+
+    @Override public void restoreState(java.io.Serializable state) {
+        if (historyPanel == null || !(state instanceof HistoryFilter f)) return;
+        f.scope = ctx.scope();
+        historyPanel.filter.copyFrom(f);
+        SwingUtilities.invokeLater(historyPanel::applyFilter);
+    }
 
     @Override public Tab[] tabs() {
         if (server == null) {
@@ -251,7 +314,7 @@ public class ProxyTool implements ToolModule {
         private final HistoryModel model;
         private final JTable table;
         private final MessageEditor reqView, respView;
-        private final HistoryFilter filter = new HistoryFilter();
+        final HistoryFilter filter = HistoryFilter.proxyDefaults();
         private final JButton filterButton = Ui.filterButton();
 
         HistoryPanel(SuiteContext ctx, ProxyServer server) {
@@ -269,7 +332,10 @@ public class ProxyTool implements ToolModule {
             Ui.centerCells(table);
             table.setRowSorter(new TableRowSorter<>(model));
 
-            add(buildFilterBar(), BorderLayout.NORTH);
+            JPanel top = new JPanel(new BorderLayout());
+            top.add(new OutOfScopeBanner(ctx), BorderLayout.NORTH);
+            top.add(buildFilterBar(), BorderLayout.CENTER);
+            add(top, BorderLayout.NORTH);
 
             JSplitPane detail = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, reqView, respView);
             detail.setDividerSize(5);
@@ -305,24 +371,24 @@ public class ProxyTool implements ToolModule {
         private JPanel buildFilterBar() {
             // A clickable filter bar that opens the full filter popup, with the
             // fast URL search beside it, both at one uniform height.
-            filterButton.setText("Filter:  " + filter.summary());
+            filterButton.setText("Filter settings: " + filter.summary());
             filterButton.addActionListener(e -> openFilter());
             JTextField urlSearch = Ui.field("", 22);
             urlSearch.setToolTipText("quick search of the URL only");
             urlSearch.getDocument().addDocumentListener(new SimpleDoc(() -> {
                 filter.urlSearch = urlSearch.getText(); applyFilter();
             }));
-            return Ui.filterBar(filterButton, Ui.label("URL search:"), urlSearch);
+            return Ui.filterBar(filterButton, Ui.label("Search:"), urlSearch);
         }
 
         private void openFilter() {
             Window owner = SwingUtilities.getWindowAncestor(this);
-            new FilterDialog(owner, "proxy history filter", filter, this::applyFilter).setVisible(true);
+            new FilterDialog(owner, "HTTP history filter", filter, false, this::applyFilter).setVisible(true);
         }
 
-        private void applyFilter() {
+        void applyFilter() {
             model.setFilter(filter::test);
-            filterButton.setText("Filter:  " + filter.summary());
+            filterButton.setText("Filter settings: " + filter.summary());
         }
 
         private void showSelected() {
@@ -330,10 +396,8 @@ public class ProxyTool implements ToolModule {
             if (row < 0) return;
             LogEntry e = model.at(table.convertRowIndexToModel(row));
             if (e == null) return;
-            reqView.setMessage(e.service(),
-                    e.request() == null ? new HttpMessage(new byte[0]) : e.request().copy());
-            respView.setMessage(e.service(),
-                    e.response() == null ? new HttpMessage(new byte[0]) : e.response().copy(), e.request());
+            reqView.showRequest(e);
+            respView.showResponse(e);
         }
     }
 
@@ -386,8 +450,15 @@ public class ProxyTool implements ToolModule {
             JCheckBox logoos = Ui.check("log out-of-scope traffic", server.logOutOfScope);
             http10.addActionListener(e -> server.http10 = http10.isSelected());
             unpack.addActionListener(e -> server.unpackGzip = unpack.isSelected());
-            logoos.addActionListener(e -> server.logOutOfScope = logoos.isSelected());
-            page.section("misc", http10, unpack, logoos);
+            logoos.addActionListener(e -> ctx.settings().setBool(ProjectOptions.LOG_OUT_OF_SCOPE, logoos.isSelected()));
+            ctx.settings().addListener(key -> {
+                if (ProjectOptions.LOG_OUT_OF_SCOPE.equals(key))
+                    SwingUtilities.invokeLater(() -> logoos.setSelected(ProjectOptions.logOutOfScope(ctx.settings())));
+            });
+            JTextArea logoosNote = Ui.note(
+                    "Off, the proxy still passes everything through but records only in-scope traffic. "
+                    + "What to do when an item is added to scope is set under Settings > Project.");
+            page.section("misc", http10, unpack, logoos, logoosNote);
 
             // Upstream proxy chaining: a titled section like the others.
             page.section("Upstream proxy servers", new UpstreamProxyPanel(ctx));

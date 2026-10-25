@@ -188,6 +188,8 @@ exposing crawl depth, attack strength, the input points tested and more.
 - **Guided from the start** - open or create a project at launch, then drive crawl-and-audit scans through a step-by-step wizard.
 - **Scan configurations that fit the job** - pick a tier from Lightweight to Deep, build a Custom scan with full control over crawl depth, attack strength and the inputs tested, and save it to the configuration library for next time.
 - **Projects that open in seconds** - a saved project with tens of thousands of requests loads in a few seconds without freezing the window.
+- **Projects that stay small** - the crawl, your own traffic and every finding are kept in full; the audit's thousands of probe requests are kept as headers only, so a scan-heavy project is a fraction of the size. Save a copy with in-scope items only to shrink it further, and see where the bytes go under Project > Project size.
+- **Scope that keeps the noise out** - add a host or a path to scope from the site map, and the proxy offers to stop recording everything else; the site map and history filters hide out-of-scope, not-found and static content the way you would expect.
 - **One Settings dialog** - every tool's settings in one place, reachable from the gear in the top bar or from the tool itself.
 - **Built to be improved** - shaped by the people who use it, with every contribution credited and a public [roadmap](ROADMAP.md).
 
@@ -196,8 +198,8 @@ exposing crawl depth, attack strength, the input points tested and more.
 | Tool | What it does |
 |------|--------------|
 | **Dashboard** | Live tasks, issues and event log; start a scan from the guided wizard, choosing a configuration from Lightweight to Deep or a Custom one |
-| **Target** | Site map tree and the suite-wide scope that governs every tool |
-| **Proxy** | Intercept, HTTP history, WebSocket capture, HTTP and WebSocket match and replace, per-host certificate authority |
+| **Target** | Site map tree with a full filter, and the suite-wide scope (URL prefixes, or regex rules) that governs every tool |
+| **Proxy** | Intercept, filtered HTTP history, WebSocket capture, HTTP and WebSocket match and replace, per-host certificate authority |
 | **Scanner** | Configure the engine's active and passive rules (enable, disable, threshold) |
 | **Logger** | A complete record of every request OpenTRAP and the engine make |
 | **Intruder** | Four attack types with payload sets and processing |
@@ -285,6 +287,16 @@ comparer and a full traffic logger, all in one window.
 **Which platforms does it run on?**
 Today OpenTRAP ships as a single self-contained Linux AppImage. It needs nothing
 installed: the Java runtime and the scan engine are inside the file.
+
+**How big do project files get?**
+A project keeps every page the crawl fetched, everything you did by hand and every
+finding with its full request and response. An audit sends thousands of probe
+requests per endpoint, and those are kept as headers only, so a scan-heavy project is
+roughly a tenth of the size it would otherwise be. The Logger still lists every probe
+while the session is open. Settings > Project can keep the probe bodies too, cap
+large response bodies, and stop the proxy recording out-of-scope traffic. Project >
+Project size shows where the bytes go, and Project > Save copy writes a smaller copy
+with in-scope items only or fewer tools.
 
 **Is it really free?**
 Yes. OpenTRAP is released under the GNU AGPL v3.0. Every capability is open, with

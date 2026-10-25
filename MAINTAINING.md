@@ -122,6 +122,19 @@ the running JVM, relaunches a fresh JVM with the factor applied via
 sets the scale up front, because relaunching would tear down the AppImage mount and
 kill the app.
 
+**A project file is one serialised object graph in a zip, and it is slimmed on the
+way out.** `opentrap.ui.StateIO` writes format version 6: the history, scope,
+settings, session state, organizer, issues, tool states and scan cards. Every
+version from 1 still opens. On write, `StateIO.historyToSave` filters the history
+by the `SaveOptions` (scope, tools) and calls `LogEntry.slim`: an entry tagged with
+the audit tool (`ProjectOptions.AUDIT_TOOL`) is written headers only unless
+`project.keepAuditBodies` is set, and any body over `project.bodyCapKb` is cut;
+both leave a marker and the full length on the entry, which the message editor
+shows as a note. The live session is never changed by a save. In memory,
+`MessageStore` caps audit traffic at `project.auditMemoryMb` (default 100 MB) and
+drops the oldest probes past it; nothing from any other tool is ever dropped.
+Settings, including these, travel in the file; `ProjectOptions` names the keys.
+
 **The build identifier is the jar manifest version.** `release.sh` stamps
 `Implementation-Version` with the UTC build timestamp; `opentrap.ui.Main.VERSION`
 reads it back (a dev build reports `dev`). It appears in the title bar and About

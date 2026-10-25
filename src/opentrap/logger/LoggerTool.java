@@ -36,6 +36,7 @@ public class LoggerTool implements ToolModule {
                 if (loggingOn) SwingUtilities.invokeLater(() -> model.add(e));
             }
             @Override public void entryUpdated(LogEntry e) { SwingUtilities.invokeLater(() -> model.updated(e)); }
+            @Override public void entryRemoved(LogEntry e) { SwingUtilities.invokeLater(() -> model.remove(e)); }
             @Override public void reloaded(List<LogEntry> all) { SwingUtilities.invokeLater(() -> model.reload(all)); }
         });
     }
@@ -113,8 +114,8 @@ public class LoggerTool implements ToolModule {
         if (row < 0) return;
         LogEntry e = model.at(table.convertRowIndexToModel(row));
         if (e == null) return;
-        reqView.setMessage(e.service(), e.request() == null ? new HttpMessage(new byte[0]) : e.request().copy());
-        respView.setMessage(e.service(), e.response() == null ? new HttpMessage(new byte[0]) : e.response().copy(), e.request());
+        reqView.showRequest(e);
+        respView.showResponse(e);
     }
 
     private boolean matches(LogEntry e) {
@@ -150,6 +151,12 @@ public class LoggerTool implements ToolModule {
             refreshFilterLabel();
         }
         void clear() { all.clear(); shown.clear(); fireTableDataChanged(); refreshFilterLabel(); }
+        /** An entry the store dropped to stay within the audit traffic cap. */
+        void remove(LogEntry e) {
+            all.remove(e);
+            int i = shown.indexOf(e);
+            if (i >= 0) { shown.remove(i); fireTableRowsDeleted(i, i); refreshFilterLabel(); }
+        }
         /** Replace the contents from a restored history in one go. */
         void reload(List<LogEntry> entries) { all.clear(); all.addAll(entries); reapply(); }
         private void refreshFilterLabel() {
