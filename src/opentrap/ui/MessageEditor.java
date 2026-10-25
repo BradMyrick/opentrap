@@ -95,7 +95,7 @@ public class MessageEditor extends JPanel {
         rawArea.setTabSize(4);
 
         renderPane.setEditable(false);
-        renderPane.setContentType("text/html");
+        renderPane.setEditorKit(Theme.htmlKit());   // page colours from the theme, not black on white
 
         views.setFont(Ui.PLAIN);
         views.addTab("Pretty", Ui.scroll(prettyPane));
@@ -361,7 +361,6 @@ public class MessageEditor extends JPanel {
             // HTMLDocument makes JEditorPane keep showing the earlier page (or
             // nothing at all) on the next setText, which is why most responses
             // came up blank. A fresh document forces a clean re-parse every time.
-            renderPane.setContentType("text/html");
             renderPane.setDocument(renderPane.getEditorKit().createDefaultDocument());
             if (body.isBlank()) {
                 renderPane.setText("<html><body><i>No HTML body to render.</i></body></html>");
@@ -437,7 +436,7 @@ public class MessageEditor extends JPanel {
             int after = str.end();
             while (after < body.length() && Character.isWhitespace(body.charAt(after))) after++;
             boolean key = after < body.length() && body.charAt(after) == ':';
-            style(doc, base + str.start(), str.end() - str.start(), key ? C_HEADER_NAME : C_STRING, key);
+            style(doc, base + str.start(), str.end() - str.start(), key ? Theme.CODE_KEY : C_STRING, key);
         }
         Matcher num = Pattern.compile("(?<![\\w\"])-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?").matcher(body);
         while (num.find()) style(doc, base + num.start(), num.end() - num.start(), C_NUMBER, false);

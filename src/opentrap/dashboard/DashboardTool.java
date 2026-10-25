@@ -773,7 +773,7 @@ public class DashboardTool implements ToolModule {
         issuesTable.getSelectionModel().addListSelectionListener(this::onIssueRowSelected);
 
         issueDetail = new JEditorPane();
-        issueDetail.setContentType("text/html");
+        issueDetail.setEditorKit(Theme.htmlKit());
         issueDetail.setEditable(false);
         issueDetail.setFont(Ui.PLAIN);
 

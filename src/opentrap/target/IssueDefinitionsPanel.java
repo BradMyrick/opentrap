@@ -41,7 +41,7 @@ public class IssueDefinitionsPanel extends JPanel {
         table.setRowSorter(new javax.swing.table.TableRowSorter<>(model));
         table.getSelectionModel().addListSelectionListener(e -> showDetail());
 
-        detail.setContentType("text/html");
+        detail.setEditorKit(opentrap.ui.Theme.htmlKit());
         detail.setEditable(false);
         detail.setFont(Ui.PLAIN);
 

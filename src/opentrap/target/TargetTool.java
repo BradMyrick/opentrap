@@ -272,7 +272,7 @@ public class TargetTool implements ToolModule {
 
         issueAdvisory = new javax.swing.JEditorPane();
         issueAdvisory.setEditable(false);
-        issueAdvisory.setContentType("text/html");
+        issueAdvisory.setEditorKit(Theme.htmlKit());
         issueReq = new MessageEditor(ctx, MessageEditor.REQUEST, false);
         issueResp = new MessageEditor(ctx, MessageEditor.RESPONSE, false);
 

@@ -59,9 +59,10 @@ public final class Theme {
     public static Color OK          = new Color(0x3A, 0x9A, 0x4B);
     /** The search-match highlight in message views. */
     public static Color HIGHLIGHT   = new Color(0xFF, 0xF1, 0x76);
-    /** Message syntax colouring. */
+    /** Message syntax colouring: header names and markup tags, the start line, JSON keys, strings, numbers. */
     public static Color CODE_NAME   = new Color(0x33, 0x33, 0x8D);
     public static Color CODE_START  = new Color(0x8A, 0x1F, 0x1F);
+    public static Color CODE_KEY    = new Color(0x9A, 0x4A, 0x0A);
     public static Color CODE_STRING = new Color(0x1A, 0x7F, 0x37);
     public static Color CODE_NUMBER = new Color(0x0B, 0x72, 0x85);
     /** Hex view: the offset column and the text column. */
@@ -112,8 +113,9 @@ public final class Theme {
             HIGHLIGHT    = new Color(0x7A, 0x60, 0x00);
             CODE_NAME    = new Color(0x8F, 0xA8, 0xFF);
             CODE_START   = new Color(0xFF, 0x8A, 0x80);
-            CODE_STRING  = new Color(0x7B, 0xD8, 0x8F);
-            CODE_NUMBER  = new Color(0x5F, 0xD3, 0xE8);
+            CODE_KEY     = new Color(0xE8, 0x95, 0x4A);
+            CODE_STRING  = new Color(0xE0, 0xC0, 0x6E);
+            CODE_NUMBER  = new Color(0x7F, 0xB8, 0xE8);
             HEX_OFFSET   = new Color(0x7A, 0x7A, 0x7A);
             HEX_ASCII    = new Color(0x8F, 0xB0, 0xE0);
             DIFF_DELETED  = new Color(0x6B, 0x2B, 0x2B);
@@ -141,6 +143,7 @@ public final class Theme {
             HIGHLIGHT    = new Color(0xFF, 0xF1, 0x76);
             CODE_NAME    = new Color(0x33, 0x33, 0x8D);
             CODE_START   = new Color(0x8A, 0x1F, 0x1F);
+            CODE_KEY     = new Color(0x9A, 0x4A, 0x0A);
             CODE_STRING  = new Color(0x1A, 0x7F, 0x37);
             CODE_NUMBER  = new Color(0x0B, 0x72, 0x85);
             HEX_OFFSET   = new Color(0x88, 0x88, 0x88);
@@ -332,6 +335,25 @@ public final class Theme {
         d.put("OptionPane.errorIcon", new DialogIcon(DialogIcon.Kind.ERROR));
         d.put("TitledBorder.titleColor", text);
         d.put("TabbedPane.focus", new Color(0, 0, 0, 0));
+    }
+
+    /**
+     * An HTML editor kit whose page colours follow the theme. A plain
+     * {@code JEditorPane} renders HTML in black on white whatever the look and
+     * feel says, which the dark theme cannot carry; every HTML pane (the
+     * response render, advisories, issue definitions) takes this kit. A page
+     * that brings its own styles still overrides these, as a render should.
+     */
+    public static javax.swing.text.html.HTMLEditorKit htmlKit() {
+        javax.swing.text.html.HTMLEditorKit kit = new javax.swing.text.html.HTMLEditorKit();
+        javax.swing.text.html.StyleSheet ss = new javax.swing.text.html.StyleSheet();
+        ss.addStyleSheet(kit.getStyleSheet());
+        ss.addRule(String.format("body { color: #%06X; background-color: #%06X; font-family: sans-serif; }",
+                TEXT.getRGB() & 0xFFFFFF, BG.getRGB() & 0xFFFFFF));
+        ss.addRule(String.format("a { color: #%06X; }", ACCENT.getRGB() & 0xFFFFFF));
+        ss.addRule(String.format("pre, code { color: #%06X; }", TEXT.getRGB() & 0xFFFFFF));
+        kit.setStyleSheet(ss);
+        return kit;
     }
 
     /** A rounded hairline border for cards and grouped content. */
