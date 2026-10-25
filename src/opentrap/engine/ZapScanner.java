@@ -508,6 +508,11 @@ public final class ZapScanner {
         HttpService s = (target != null) ? HttpService.parse(target) : null;
         if (s == null) return false;
         HttpMessage req = new HttpMessage(Bytes.bytes(norm(toOriginForm(reqH)) + nz(ZapApi.str(m, "requestBody"))));
+        // A scan is within scope, so nothing outside it is ever attributed to
+        // one. The JavaScript crawl drives a real browser, which makes its own
+        // background requests and loads each page's external resources; the
+        // engine records those too, and they are not the crawl.
+        if (!ctx.scope().isEmpty() && !ctx.scope().isInScope(s, req.path())) return false;
         LogEntry e = new LogEntry(tool, s, req);
         String resH = ZapApi.str(m, "responseHeader");
         if (resH != null && !resH.isEmpty()) {
