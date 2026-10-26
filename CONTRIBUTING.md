@@ -36,6 +36,9 @@ A maintainer reviews the pull request, may ask for adjustments, and merges it.
 The merged commit keeps you as its author, and you are credited in
 `CONTRIBUTORS.md`.
 
+Reporting a problem counts too: when an issue you opened leads to a fix, you are
+credited in `CONTRIBUTORS.md` under issue reporters.
+
 Keep each change self-contained. Match the style of the surrounding code: the same
 naming, comment density and idioms. Do not reformat unrelated code.
 

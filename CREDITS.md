@@ -55,6 +55,11 @@ people who have shaped it so far:
 - **exploit-development** - the modern themed interface and UI refresh
 - **codesec-ops** - the project startup screen, new scan wizard, live passive
   scanning, message-editor inspector, WebSocket capture, and the project site
+- **BradMyrick** - the launch fix for non-reparenting compositors (sway, i3,
+  Hyprland and others)
+- **PotatoGamo** - reported the dark theme contrast problem that led to its
+  rebuild
 
-The full list, with what each person worked on, is in
+The full list, with what each person worked on and everyone who has reported
+a problem, is in
 [CONTRIBUTORS.md](CONTRIBUTORS.md).
