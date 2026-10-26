@@ -24,9 +24,9 @@ public final class MessageEditorJsonTest {
 
     private static String spansOf(String body) {
         StringBuilder sb = new StringBuilder();
-        for (int[] s : MessageEditor.jsonStringSpans(body)) {
+        for (MessageEditor.Span s : MessageEditor.jsonStringSpans(body)) {
             if (sb.length() > 0) sb.append(' ');
-            sb.append(s[0]).append('-').append(s[1]);
+            sb.append(s.start()).append('-').append(s.end());
         }
         return sb.toString();
     }
@@ -52,17 +52,17 @@ public final class MessageEditorJsonTest {
             StringBuilder body = new StringBuilder("{\"k\":\"");
             for (int i = 0; i < 1_000_000; i++) body.append('x');
             body.append("\"}");
-            int[][] spans = MessageEditor.jsonStringSpans(body.toString());
-            Expect.isTrue(spans.length == 2 && spans[1][0] == 5
-                && spans[1][1] == body.length() - 1, "key span then one span covering the value");
+            var spans = MessageEditor.jsonStringSpans(body.toString());
+            Expect.isTrue(spans.size() == 2 && spans.get(1).start() == 5
+                && spans.get(1).end() == body.length() - 1, "key span then one span covering the value");
         });
 
         Harness.test("alternating escapes walk without overflowing", () -> {
             StringBuilder body = new StringBuilder("\"");
             for (int i = 0; i < 500_000; i++) body.append("\\\\");
             body.append('"');
-            int[][] spans = MessageEditor.jsonStringSpans(body.toString());
-            Expect.isTrue(spans.length == 1 && spans[0][1] == body.length(), "one closed span");
+            var spans = MessageEditor.jsonStringSpans(body.toString());
+            Expect.isTrue(spans.size() == 1 && spans.get(0).end() == body.length(), "one closed span");
         });
 
         Harness.test("full json colouring holds on a small stack", () -> {

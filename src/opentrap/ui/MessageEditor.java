@@ -459,24 +459,30 @@ public class MessageEditor extends JPanel {
         // the app the moment such a message was rendered. The walk cannot
         // recurse, and pairs spans off exactly as the old regex did: an
         // opening quote closes at the next quote a backslash has not escaped.
-        for (int[] span : jsonStringSpans(body)) {
-            int after = span[1];
+        for (Span span : jsonStringSpans(body)) {
+            int after = span.end();
             while (after < body.length() && Character.isWhitespace(body.charAt(after))) after++;
             boolean key = after < body.length() && body.charAt(after) == ':';
-            style(doc, base + span[0], span[1] - span[0], key ? Theme.CODE_KEY : C_STRING, key);
+            style(doc, base + span.start(), span.end() - span.start(), key ? Theme.CODE_KEY : C_STRING, key);
         }
         Matcher num = Pattern.compile("(?<![\\w\"])-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?").matcher(body);
         while (num.find()) style(doc, base + num.start(), num.end() - num.start(), C_NUMBER, false);
     }
 
     /**
-     * The quoted-string spans of a JSON body as {@code [start, end)} pairs
-     * (end exclusive, past the closing quote). An unterminated final string
+     * A quoted string in a JSON body: {@link #start} inclusive, {@link #end}
+     * exclusive (one past the closing quote) - the same convention a Matcher
+     * reports for a match that includes both quotes.
+     */
+    record Span(int start, int end) {}
+
+    /**
+     * The quoted-string spans of a JSON body. An unterminated final string
      * yields nothing and nothing beyond it can pair off, matching the
      * previous regex's behaviour.
      */
-    static int[][] jsonStringSpans(String body) {
-        java.util.ArrayList<int[]> out = new java.util.ArrayList<>();
+    static List<Span> jsonStringSpans(String body) {
+        ArrayList<Span> out = new ArrayList<>();
         int n = body.length();
         int i = 0;
         while (i < n) {
@@ -491,9 +497,9 @@ public class MessageEditor extends JPanel {
                 if (c == '"') { closed = true; break; }
             }
             if (!closed) break;
-            out.add(new int[]{start, i});
+            out.add(new Span(start, i));
         }
-        return out.toArray(new int[0][]);
+        return out;
     }
 
     static void colourMarkup(StyledDocument doc, int base, String body) {
