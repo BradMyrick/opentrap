@@ -56,7 +56,8 @@ people who have shaped it so far:
 - **codesec-ops** - the project startup screen, new scan wizard, live passive
   scanning, message-editor inspector, WebSocket capture, and the project site
 - **BradMyrick** - the launch fix for non-reparenting compositors (sway, i3,
-  Hyprland and others)
+  Hyprland and others), and the fix for the crash on responses with long JSON
+  strings
 - **PotatoGamo** - reported the dark theme contrast problem that led to its
   rebuild
 
