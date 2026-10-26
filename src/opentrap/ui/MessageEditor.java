@@ -417,39 +417,99 @@ public class MessageEditor extends JPanel {
             pos = eol + 1;
         }
 
-        // Body.
+        // Body. Colouring is best-effort decoration; colourBody contains any
+        // failure so the event thread always survives it.
         if (bodyStart >= 0) {
             int bodyFrom = bodyStart + sep;
             String body = text.substring(Math.min(bodyFrom, text.length()));
-            String ct = message.contentType();
-            if (ct.contains("json") || looksJson(body)) colourJson(doc, bodyFrom, body);
-            else if (ct.contains("xml") || ct.contains("html") || body.trim().startsWith("<")) colourMarkup(doc, bodyFrom, body);
+            colourBody(doc, bodyFrom, body, message.contentType());
+        }
+    }
+
+    /** A JSON syntax colourer, substitutable in tests. */
+    interface JsonColourer { void colour(StyledDocument doc, int base, String body); }
+
+    /**
+     * Colour a body best-effort. Colouring is decoration, so nothing it does
+     * may take the app down: a StackOverflowError unwinds to this frame,
+     * where catching it is safe, and the body simply shows uncoloured. The
+     * trace is omitted on purpose - it is a thousand Pattern frames with the
+     * caller cut off, as the field logs of the original crash showed.
+     */
+    static void colourBody(StyledDocument doc, int base, String body, String ct) {
+        colourBody(doc, base, body, ct, MessageEditor::colourJson);
+    }
+
+    static void colourBody(StyledDocument doc, int base, String body, String ct, JsonColourer json) {
+        try {
+            if (ct.contains("json") || looksJson(body)) json.colour(doc, base, body);
+            else if (ct.contains("xml") || ct.contains("html") || body.trim().startsWith("<")) colourMarkup(doc, base, body);
+        } catch (StackOverflowError e) {
+            Debug.error("syntax colouring gave up; body shown uncoloured: " + e, null);
         }
     }
 
     private static boolean looksJson(String s) { String t = s.trim(); return t.startsWith("{") || t.startsWith("["); }
 
-    private void colourJson(StyledDocument doc, int base, String body) {
-        Matcher str = Pattern.compile("\"(\\\\.|[^\"\\\\])*\"").matcher(body);
-        while (str.find()) {
-            // a string immediately before a ':' is a key, else a value
-            int after = str.end();
+    static void colourJson(StyledDocument doc, int base, String body) {
+        // Quoted strings are found by a linear walk, not a regex. Java's
+        // Pattern nests one stack frame per character for a group loop such
+        // as "(\\.|[^"\\])*", so one large string value (RUM payloads carry
+        // 100 KB+ values) overflowed the AWT event queue's stack and killed
+        // the app the moment such a message was rendered. The walk cannot
+        // recurse, and pairs spans off exactly as the old regex did: an
+        // opening quote closes at the next quote a backslash has not escaped.
+        for (Span span : jsonStringSpans(body)) {
+            int after = span.end();
             while (after < body.length() && Character.isWhitespace(body.charAt(after))) after++;
             boolean key = after < body.length() && body.charAt(after) == ':';
-            style(doc, base + str.start(), str.end() - str.start(), key ? Theme.CODE_KEY : C_STRING, key);
+            style(doc, base + span.start(), span.end() - span.start(), key ? Theme.CODE_KEY : C_STRING, key);
         }
         Matcher num = Pattern.compile("(?<![\\w\"])-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?").matcher(body);
         while (num.find()) style(doc, base + num.start(), num.end() - num.start(), C_NUMBER, false);
     }
 
-    private void colourMarkup(StyledDocument doc, int base, String body) {
+    /**
+     * A quoted string in a JSON body: {@link #start} inclusive, {@link #end}
+     * exclusive (one past the closing quote) - the same convention a Matcher
+     * reports for a match that includes both quotes.
+     */
+    record Span(int start, int end) {}
+
+    /**
+     * The quoted-string spans of a JSON body. An unterminated final string
+     * yields nothing and nothing beyond it can pair off, matching the
+     * previous regex's behaviour.
+     */
+    static List<Span> jsonStringSpans(String body) {
+        ArrayList<Span> out = new ArrayList<>();
+        int n = body.length();
+        int i = 0;
+        while (i < n) {
+            if (body.charAt(i) != '"') { i++; continue; }
+            int start = i;
+            i++;
+            boolean closed = false;
+            while (i < n) {
+                char c = body.charAt(i);
+                if (c == '\\') { i += 2; continue; }
+                i++;
+                if (c == '"') { closed = true; break; }
+            }
+            if (!closed) break;
+            out.add(new Span(start, i));
+        }
+        return out;
+    }
+
+    static void colourMarkup(StyledDocument doc, int base, String body) {
         Matcher tag = Pattern.compile("</?[A-Za-z][\\w:-]*").matcher(body);
         while (tag.find()) style(doc, base + tag.start(), tag.end() - tag.start(), C_TAG, false);
         Matcher attr = Pattern.compile("\"[^\"]*\"").matcher(body);
         while (attr.find()) style(doc, base + attr.start(), attr.end() - attr.start(), C_STRING, false);
     }
 
-    private void style(StyledDocument doc, int off, int len, Color c, boolean bold) {
+    private static void style(StyledDocument doc, int off, int len, Color c, boolean bold) {
         if (off < 0 || len <= 0 || off + len > doc.getLength()) return;
         SimpleAttributeSet a = new SimpleAttributeSet();
         StyleConstants.setForeground(a, c);
