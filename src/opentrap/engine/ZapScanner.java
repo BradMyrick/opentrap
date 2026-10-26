@@ -483,15 +483,21 @@ public final class ZapScanner {
     }
 
     private static Evidence buildEvidence(JsonValue m) {
-        String reqH = ZapApi.str(m, "requestHeader");
-        String resH = ZapApi.str(m, "responseHeader");
-        HttpMessage req = (reqH != null && !reqH.isEmpty())
-                ? new HttpMessage(Bytes.bytes(norm(toOriginForm(reqH)) + nz(ZapApi.str(m, "requestBody"))))
-                : null;
-        HttpMessage res = (resH != null && !resH.isEmpty())
-                ? new HttpMessage(Bytes.bytes(norm(resH) + nz(ZapApi.str(m, "responseBody"))))
-                : null;
-        return new Evidence(req, res);
+        return new Evidence(requestOf(m), responseOf(m));
+    }
+
+    /** An engine record's request as our message model, or null when it holds none. */
+    private static HttpMessage requestOf(JsonValue m) {
+        String h = ZapApi.str(m, "requestHeader");
+        if (h == null || h.isEmpty()) return null;
+        return new HttpMessage(Bytes.bytes(norm(toOriginForm(h)) + nz(ZapApi.str(m, "requestBody"))));
+    }
+
+    /** An engine record's response as our message model, or null when it holds none. */
+    private static HttpMessage responseOf(JsonValue m) {
+        String h = ZapApi.str(m, "responseHeader");
+        if (h == null || h.isEmpty()) return null;
+        return new HttpMessage(Bytes.bytes(norm(h) + nz(ZapApi.str(m, "responseBody"))));
     }
 
     // ------------------------------------------- live traffic record (logger)
@@ -552,17 +558,15 @@ public final class ZapScanner {
         String target = requestTargetUrl(reqH);
         HttpService s = (target != null) ? HttpService.parse(target) : null;
         if (s == null) return false;
-        HttpMessage req = new HttpMessage(Bytes.bytes(norm(toOriginForm(reqH)) + nz(ZapApi.str(m, "requestBody"))));
+        HttpMessage req = requestOf(m);
         // A scan is within scope, so nothing outside it is ever attributed to
         // one. The JavaScript crawl drives a real browser, which makes its own
         // background requests and loads each page's external resources; the
         // engine records those too, and they are not the crawl.
         if (!ctx.scope().isEmpty() && !ctx.scope().isInScope(s, req.path())) return false;
         LogEntry e = new LogEntry(tool, s, req);
-        String resH = ZapApi.str(m, "responseHeader");
-        if (resH != null && !resH.isEmpty()) {
-            e.setResponse(new HttpMessage(Bytes.bytes(norm(resH) + nz(ZapApi.str(m, "responseBody")))));
-        }
+        HttpMessage res = responseOf(m);
+        if (res != null) e.setResponse(res);
         ctx.store().add(e);
         if (toSiteMap) ctx.siteMapChanged(e);
         return true;
