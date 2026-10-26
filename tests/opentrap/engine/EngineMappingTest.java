@@ -5,6 +5,10 @@ import opentrap.spider.Cdp.JsonValue;
 import opentrap.testkit.Expect;
 import opentrap.testkit.Harness;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Tests the translation of a ZAP alert into an OpenTRAP {@link Issue}, which is
  * the one piece of detection logic OpenTRAP owns now that ZAP is the engine: the
@@ -70,5 +74,88 @@ public final class EngineMappingTest {
             JsonValue b = JsonValue.parse("{\"name\":\"X\",\"risk\":\"High\"}");
             Expect.isNull(ZapScanner.mapAlert(null, b), "issue for a url-less alert");
         });
+
+        // -------- evidence sharing: one message commonly triggers several alerts --------
+
+        Harness.test("alerts raised on one message share one evidence pair", () -> {
+            int[] fetches = {0};
+            ZapScanner.MessageSource src = id -> { fetches[0]++; return MESSAGE; };
+            Map<String, ZapScanner.Evidence> evidence = new HashMap<>();
+            Issue one = ZapScanner.mapAlert(alertNamed("Missing header"), evidence, src);
+            Issue two = ZapScanner.mapAlert(alertNamed("Cookie without Secure"), evidence, src);
+            Expect.equal(fetches[0], 1, "the message is fetched once, not once per alert");
+            Expect.isTrue(one.response() == two.response(), "both findings hold the same response");
+        });
+
+        Harness.test("a message that cannot be fetched is not cached", () -> {
+            int[] fetches = {0};
+            ZapScanner.MessageSource src = id -> { fetches[0]++; return null; };
+            Map<String, ZapScanner.Evidence> evidence = new HashMap<>();
+            Issue one = ZapScanner.mapAlert(alertNamed("A"), evidence, src);
+            Issue two = ZapScanner.mapAlert(alertNamed("B"), evidence, src);
+            Expect.equal(fetches[0], 2, "each alert retries the fetch, as before");
+            Expect.isNull(one.response(), "no evidence attached to the first");
+            Expect.isNull(two.response(), "no evidence attached to the second");
+        });
+
+        Harness.test("a record with only a response attaches only the response", () -> {
+            JsonValue responseOnly =
+                    JsonValue.parse("{\"responseHeader\":\"HTTP/1.1 204 No Content\\r\\n\\r\\n\"}");
+            ZapScanner.MessageSource src = id -> responseOnly;
+            Issue i = ZapScanner.mapAlert(alertNamed("A"), new HashMap<>(), src);
+            Expect.isNull(i.request(), "no request in the record");
+            Expect.notNull(i.response(), "the response is attached");
+        });
+
+        Harness.test("shared evidence is written once and restores shared", () -> {
+            ZapScanner.MessageSource src = id -> MESSAGE;
+            // Side A: two findings, each with its own copy of equal evidence,
+            // which is what per-alert construction produced before.
+            Issue a1 = ZapScanner.mapAlert(alertNamed("A"), new HashMap<>(), src);
+            Issue a2 = ZapScanner.mapAlert(alertNamed("B"), new HashMap<>(), src);
+            // Side B: two findings sharing one pair, as one listing's cache builds.
+            Map<String, ZapScanner.Evidence> evidence = new HashMap<>();
+            Issue b1 = ZapScanner.mapAlert(alertNamed("A"), evidence, src);
+            Issue b2 = ZapScanner.mapAlert(alertNamed("B"), evidence, src);
+
+            byte[] distinct = serialize(a1, a2);
+            byte[] shared = serialize(b1, b2);
+            Expect.isTrue(shared.length < distinct.length - EVIDENCE_BODY_BYTES / 2,
+                    "the project file holds one copy, not one per finding");
+            List<Issue> back = deserialize(shared);
+            Expect.isTrue(back.get(0).response() == back.get(1).response(),
+                    "a restored project holds the pair once too");
+        });
+    }
+
+    /** Body size for evidence in the sharing tests, large enough that one copy is unmistakable in the file. */
+    private static final int EVIDENCE_BODY_BYTES = 64 * 1024;
+
+    /** One engine message record: a request and a response with a sizeable body. */
+    private static final JsonValue MESSAGE = JsonValue.parse(
+            "{\"requestHeader\":\"GET /a HTTP/1.1\\r\\nHost: t.example\\r\\n\\r\\n\","
+            + "\"responseHeader\":\"HTTP/1.1 200 OK\\r\\nContent-Type: application/json\\r\\n\\r\\n\","
+            + "\"responseBody\":\"" + "x".repeat(EVIDENCE_BODY_BYTES) + "\"}");
+
+    private static JsonValue alertNamed(String name) {
+        return JsonValue.parse("{\"name\":\"" + name + "\",\"risk\":\"Low\",\"confidence\":\"Medium\","
+                + "\"url\":\"http://t.example/a\",\"messageId\":\"7\"}");
+    }
+
+    private static byte[] serialize(Issue a, Issue b) {
+        try (java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+             java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(bos)) {
+            oos.writeObject(List.of(a, b));
+            oos.flush();
+            return bos.toByteArray();
+        } catch (Exception e) { throw new RuntimeException(e); }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Issue> deserialize(byte[] bytes) {
+        try (java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
+                new java.io.ByteArrayInputStream(bytes))) {
+            return (List<Issue>) ois.readObject();
+        } catch (Exception e) { throw new RuntimeException(e); }
     }
 }

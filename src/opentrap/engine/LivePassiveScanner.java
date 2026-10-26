@@ -86,10 +86,14 @@ public final class LivePassiveScanner {
                 ZapEngine ze = engine;
                 if (ze == null || ze.api() == null) continue;
                 try {
+                    // One cache per poll: findings the engine raised on one
+                    // message share its evidence, and the cache never outlives
+                    // the listing it was built from.
+                    java.util.Map<String, ZapScanner.Evidence> evidence = new java.util.HashMap<>();
                     for (JsonValue a : ze.api().alerts("", 0, 100000)) {
                         String id = ZapApi.str(a, "id");
                         if (id != null && !seen.add(id)) continue;   // already mapped
-                        Issue is = ZapScanner.mapAlert(ze.api(), a);
+                        Issue is = ZapScanner.mapAlert(ze.api(), a, evidence);
                         if (is != null) { is.setSource(SOURCE); ctx.addIssue(is); }
                     }
                 } catch (Exception ignored) {}
