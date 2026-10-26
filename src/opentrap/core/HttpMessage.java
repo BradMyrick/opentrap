@@ -250,14 +250,24 @@ public class HttpMessage implements Serializable {
         return "other binary";
     }
 
-    private static final Pattern TITLE =
-        Pattern.compile("<title[^>]*>(.*?)</title>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final String TITLE_OPEN = "<title";
+    private static final String TITLE_CLOSE = "</title";
 
     public String htmlTitle() {
         if (!"HTML".equals(mimeType())) return "";
-        Matcher m = TITLE.matcher(bodyText());
-        if (!m.find()) return "";
-        return m.group(1).replaceAll("\\s+", " ").trim();
+        // A linear scan, not a regex: "<title[^>]*>(.*?)</title>" recursed one
+        // Pattern frame per position while hunting the closing tag across a
+        // large body - the same event-queue stack overflow the JSON colouring
+        // had. Only the title text itself is materialised.
+        byte[] r = raw();
+        int open = Bytes.indexOfIgnoreCase(r, Bytes.bytes(TITLE_OPEN), bodyOffset());
+        if (open < 0) return "";
+        int gt = open;
+        while (gt < r.length && r[gt] != '>') gt++;
+        if (gt >= r.length) return "";
+        int close = Bytes.indexOfIgnoreCase(r, Bytes.bytes(TITLE_CLOSE), gt + 1);
+        if (close < 0 || close <= gt + 1) return "";
+        return Bytes.str(Bytes.slice(r, gt + 1, close)).replaceAll("\\s+", " ").trim();
     }
 
     // ---------------- parameters ----------------
