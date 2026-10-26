@@ -16,6 +16,15 @@ SCALE=""
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Prefer the pinned portable JDK (fetch-jdk.sh) when present, so the app runs
+# on the same runtime the release and AppImage use. Falls back to a system JDK
+# if jdk/ is absent. Without this, run.sh fails with "java: not found" on a
+# machine that has no system Java even though fetch-jdk.sh installed one.
+if [ -x "$DIR/jdk/bin/java" ]; then
+    export JAVA_HOME="$DIR/jdk"
+    export PATH="$DIR/jdk/bin:$PATH"
+fi
+
 # First numeric argument, or the env var, overrides the default above.
 if [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then SCALE="$1"; shift; fi
 SCALE="${OPENTRAP_SCALE:-$SCALE}"

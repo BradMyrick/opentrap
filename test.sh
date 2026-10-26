@@ -7,6 +7,16 @@ set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
+# Prefer the pinned portable JDK (fetch-jdk.sh) when present, so the tests run
+# against the same toolchain the release and AppImage use. Falls back to a
+# system JDK if jdk/ is absent. Without this, test.sh fails with
+# "javac: command not found" on a machine with no system Java even though
+# fetch-jdk.sh installed one (build.sh already does this).
+if [ -x "$DIR/jdk/bin/javac" ]; then
+    export JAVA_HOME="$DIR/jdk"
+    export PATH="$DIR/jdk/bin:$PATH"
+fi
+
 echo "Compiling application..."
 mkdir -p build
 javac -nowarn -d build -cp "lib/*:build" $(find src -name '*.java')
