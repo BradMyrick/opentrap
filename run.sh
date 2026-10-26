@@ -39,4 +39,17 @@ fi
 # Size the max heap as a share of the machine's RAM rather than a fixed cap, so
 # the app scales with the host. 50% leaves room for the scan engine and the
 # testing browser, which run as their own processes outside this JVM.
+# Java's X11 toolkit positions windows assuming a reparenting window manager.
+# Non-reparenting compositors (sway, i3, hyprland, river, dwl, bspwm, labwc)
+# make Swing windows paint blank white or lay out their contents wrong unless
+# this hint is set. Harmless where it is not needed, so set it when the desktop
+# names a known non-reparenting compositor and the caller has not set it.
+if [ -z "$_JAVA_AWT_WM_NONREPARENTING" ]; then
+    case ",${XDG_CURRENT_DESKTOP:-}," in
+        *,sway,*|*,i3,*|*,Sway,*|*,Hyprland,*|*,hyprland,*|*,river,*|*,dwl,*|*,bspwm,*|*,labwc,*)
+            export _JAVA_AWT_WM_NONREPARENTING=1
+            ;;
+    esac
+fi
+
 exec java -XX:MaxRAMPercentage=50 "${ARGS[@]}" -jar "$DIR/dist/opentrap.jar" "$@"
