@@ -24,6 +24,7 @@ public final class RunTests {
         new opentrap.report.ExportTest().run();
         new opentrap.discovery.DiscoveryTest().run();
         new opentrap.decoder.DecoderTransformsTest().run();
+        new opentrap.ui.MessageEditorJsonTest().run();
         new opentrap.csrf.CsrfPocTest().run();
         new opentrap.sequencer.SequencerStatsTest().run();
         new opentrap.organizer.OrganizerTest().run();

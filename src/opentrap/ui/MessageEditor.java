@@ -430,16 +430,48 @@ public class MessageEditor extends JPanel {
     private static boolean looksJson(String s) { String t = s.trim(); return t.startsWith("{") || t.startsWith("["); }
 
     private void colourJson(StyledDocument doc, int base, String body) {
-        Matcher str = Pattern.compile("\"(\\\\.|[^\"\\\\])*\"").matcher(body);
-        while (str.find()) {
-            // a string immediately before a ':' is a key, else a value
-            int after = str.end();
+        // Quoted strings are found by a linear walk, not a regex. Java's
+        // Pattern nests one stack frame per character for a group loop such
+        // as "(\\.|[^"\\])*", so one large string value (RUM payloads carry
+        // 100 KB+ values) overflowed the AWT event queue's stack and killed
+        // the app the moment such a message was rendered. The walk cannot
+        // recurse, and pairs spans off exactly as the old regex did: an
+        // opening quote closes at the next quote a backslash has not escaped.
+        for (int[] span : jsonStringSpans(body)) {
+            int after = span[1];
             while (after < body.length() && Character.isWhitespace(body.charAt(after))) after++;
             boolean key = after < body.length() && body.charAt(after) == ':';
-            style(doc, base + str.start(), str.end() - str.start(), key ? Theme.CODE_KEY : C_STRING, key);
+            style(doc, base + span[0], span[1] - span[0], key ? Theme.CODE_KEY : C_STRING, key);
         }
         Matcher num = Pattern.compile("(?<![\\w\"])-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?").matcher(body);
         while (num.find()) style(doc, base + num.start(), num.end() - num.start(), C_NUMBER, false);
+    }
+
+    /**
+     * The quoted-string spans of a JSON body as {@code [start, end)} pairs
+     * (end exclusive, past the closing quote). An unterminated final string
+     * yields nothing and nothing beyond it can pair off, matching the
+     * previous regex's behaviour.
+     */
+    static int[][] jsonStringSpans(String body) {
+        java.util.ArrayList<int[]> out = new java.util.ArrayList<>();
+        int n = body.length();
+        int i = 0;
+        while (i < n) {
+            if (body.charAt(i) != '"') { i++; continue; }
+            int start = i;
+            i++;
+            boolean closed = false;
+            while (i < n) {
+                char c = body.charAt(i);
+                if (c == '\\') { i += 2; continue; }
+                i++;
+                if (c == '"') { closed = true; break; }
+            }
+            if (!closed) break;
+            out.add(new int[]{start, i});
+        }
+        return out.toArray(new int[0][]);
     }
 
     private void colourMarkup(StyledDocument doc, int base, String body) {
