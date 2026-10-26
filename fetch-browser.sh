@@ -9,8 +9,17 @@ DEST="$DIR/browser"
 mkdir -p "$DEST"
 
 BASE="https://commondatastorage.googleapis.com/chromium-browser-snapshots/Linux_x64"
-echo "Finding the latest Chromium snapshot..."
-REV=$(curl -s "$BASE/LAST_CHANGE")
+
+# tools/versions pins CHROMIUM_REVISION so a clean checkout reproduces the
+# browser the release ships. Set CHROMIUM_REVISION=latest in the environment
+# to fetch the newest snapshot instead (then record the fetched revision in
+# tools/versions as part of the release).
+. "$DIR/tools/versions"
+REV="${CHROMIUM_REVISION:-}"
+if [ -z "$REV" ] || [ "$REV" = "latest" ]; then
+    echo "Finding the latest Chromium snapshot..."
+    REV=$(curl -s "$BASE/LAST_CHANGE")
+fi
 echo "Revision $REV"
 echo "Downloading Chromium..."
 curl -L --fail -o "$DEST/chrome.zip" "$BASE/$REV/chrome-linux.zip"
