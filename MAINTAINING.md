@@ -163,6 +163,14 @@ shows as a note. The live session is never changed by a save. In memory,
 drops the oldest probes past it; nothing from any other tool is ever dropped.
 Settings, including these, travel in the file; `ProjectOptions` names the keys.
 
+**Tiling and wlroots-family compositors need a toolkit hint.** Java's X11
+toolkit assumes a reparenting window manager; under sway, i3, Hyprland, river,
+dwl, bspwm and labwc, Swing windows paint blank white without
+`_JAVA_AWT_WM_NONREPARENTING=1`. The JVM reads it from the environment at
+startup, so both launchers (`AppRun` written by `package-appimage.sh`, and
+`run.sh`) set it when `XDG_CURRENT_DESKTOP` names one of those and the caller
+has not set it already. The in-app scale relaunch inherits the environment.
+
 **The build identifier is the jar manifest version.** `release.sh` stamps
 `Implementation-Version` with the UTC build timestamp; `opentrap.ui.Main.VERSION`
 reads it back (a dev build reports `dev`). It appears in the title bar and About

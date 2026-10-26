@@ -16,6 +16,18 @@ SCALE=""
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Java's X11 toolkit assumes a reparenting window manager. Under the tiling
+# and wlroots-family compositors below, Swing windows paint blank white unless
+# this hint is set. Set it only when the caller has not set it themselves; it
+# is harmless where it is not needed.
+if [ -z "${_JAVA_AWT_WM_NONREPARENTING+x}" ]; then
+  for d in $(printf '%s' "${XDG_CURRENT_DESKTOP:-}" | tr ':' ' ' | tr '[:upper:]' '[:lower:]'); do
+    case "$d" in
+      sway|i3|hyprland|river|dwl|bspwm|labwc) export _JAVA_AWT_WM_NONREPARENTING=1; break ;;
+    esac
+  done
+fi
+
 # First numeric argument, or the env var, overrides the default above.
 if [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then SCALE="$1"; shift; fi
 SCALE="${OPENTRAP_SCALE:-$SCALE}"
@@ -30,17 +42,4 @@ fi
 # Size the max heap as a share of the machine's RAM rather than a fixed cap, so
 # the app scales with the host. 50% leaves room for the scan engine and the
 # testing browser, which run as their own processes outside this JVM.
-# Java's X11 toolkit positions windows assuming a reparenting window manager.
-# Non-reparenting compositors (sway, i3, hyprland, river, dwl, bspwm, labwc)
-# make Swing windows paint blank white or lay out their contents wrong unless
-# this hint is set. Harmless where it is not needed, so set it when the desktop
-# names a known non-reparenting compositor and the caller has not set it.
-if [ -z "$_JAVA_AWT_WM_NONREPARENTING" ]; then
-    case ",${XDG_CURRENT_DESKTOP:-}," in
-        *,sway,*|*,i3,*|*,Sway,*|*,Hyprland,*|*,hyprland,*|*,river,*|*,dwl,*|*,bspwm,*|*,labwc,*)
-            export _JAVA_AWT_WM_NONREPARENTING=1
-            ;;
-    esac
-fi
-
 exec java -XX:MaxRAMPercentage=50 "${ARGS[@]}" -jar "$DIR/dist/opentrap.jar" "$@"

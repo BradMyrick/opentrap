@@ -63,6 +63,17 @@ cp src/opentrap/ui/icons/opentrap_256.png AppDir/opentrap.png
 cat > AppDir/AppRun <<'RUN'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
+# Java's X11 toolkit assumes a reparenting window manager. Under the tiling
+# and wlroots-family compositors below, Swing windows paint blank white unless
+# this hint is set. Set it only when the caller has not set it themselves; it
+# is harmless where it is not needed.
+if [ -z "${_JAVA_AWT_WM_NONREPARENTING+x}" ]; then
+  for d in $(printf '%s' "${XDG_CURRENT_DESKTOP:-}" | tr ':' ' ' | tr '[:upper:]' '[:lower:]'); do
+    case "$d" in
+      sway|i3|hyprland|river|dwl|bspwm|labwc) export _JAVA_AWT_WM_NONREPARENTING=1; break ;;
+    esac
+  done
+fi
 SCALE="$("$HERE/usr/bin/OpenTRAP" --print-scale 2>/dev/null | tr -d '[:space:]')"
 case "$SCALE" in
   1.25|1.5|2|2.0|3|3.0) export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Dsun.java2d.uiScale=$SCALE -Dopentrap.scaled=$SCALE" ;;
