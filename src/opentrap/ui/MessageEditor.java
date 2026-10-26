@@ -417,19 +417,41 @@ public class MessageEditor extends JPanel {
             pos = eol + 1;
         }
 
-        // Body.
+        // Body. Colouring is best-effort decoration; colourBody contains any
+        // failure so the event thread always survives it.
         if (bodyStart >= 0) {
             int bodyFrom = bodyStart + sep;
             String body = text.substring(Math.min(bodyFrom, text.length()));
-            String ct = message.contentType();
-            if (ct.contains("json") || looksJson(body)) colourJson(doc, bodyFrom, body);
-            else if (ct.contains("xml") || ct.contains("html") || body.trim().startsWith("<")) colourMarkup(doc, bodyFrom, body);
+            colourBody(doc, bodyFrom, body, message.contentType());
+        }
+    }
+
+    /** A JSON syntax colourer, substitutable in tests. */
+    interface JsonColourer { void colour(StyledDocument doc, int base, String body); }
+
+    /**
+     * Colour a body best-effort. Colouring is decoration, so nothing it does
+     * may take the app down: a StackOverflowError unwinds to this frame,
+     * where catching it is safe, and the body simply shows uncoloured. The
+     * trace is omitted on purpose - it is a thousand Pattern frames with the
+     * caller cut off, as the field logs of the original crash showed.
+     */
+    static void colourBody(StyledDocument doc, int base, String body, String ct) {
+        colourBody(doc, base, body, ct, MessageEditor::colourJson);
+    }
+
+    static void colourBody(StyledDocument doc, int base, String body, String ct, JsonColourer json) {
+        try {
+            if (ct.contains("json") || looksJson(body)) json.colour(doc, base, body);
+            else if (ct.contains("xml") || ct.contains("html") || body.trim().startsWith("<")) colourMarkup(doc, base, body);
+        } catch (StackOverflowError e) {
+            Debug.error("syntax colouring gave up; body shown uncoloured: " + e, null);
         }
     }
 
     private static boolean looksJson(String s) { String t = s.trim(); return t.startsWith("{") || t.startsWith("["); }
 
-    private void colourJson(StyledDocument doc, int base, String body) {
+    static void colourJson(StyledDocument doc, int base, String body) {
         // Quoted strings are found by a linear walk, not a regex. Java's
         // Pattern nests one stack frame per character for a group loop such
         // as "(\\.|[^"\\])*", so one large string value (RUM payloads carry
@@ -474,14 +496,14 @@ public class MessageEditor extends JPanel {
         return out.toArray(new int[0][]);
     }
 
-    private void colourMarkup(StyledDocument doc, int base, String body) {
+    static void colourMarkup(StyledDocument doc, int base, String body) {
         Matcher tag = Pattern.compile("</?[A-Za-z][\\w:-]*").matcher(body);
         while (tag.find()) style(doc, base + tag.start(), tag.end() - tag.start(), C_TAG, false);
         Matcher attr = Pattern.compile("\"[^\"]*\"").matcher(body);
         while (attr.find()) style(doc, base + attr.start(), attr.end() - attr.start(), C_STRING, false);
     }
 
-    private void style(StyledDocument doc, int off, int len, Color c, boolean bold) {
+    private static void style(StyledDocument doc, int off, int len, Color c, boolean bold) {
         if (off < 0 || len <= 0 || off + len > doc.getLength()) return;
         SimpleAttributeSet a = new SimpleAttributeSet();
         StyleConstants.setForeground(a, c);
