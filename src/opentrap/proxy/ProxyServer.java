@@ -339,7 +339,10 @@ public class ProxyServer {
             }
 
             LogEntry entry = new LogEntry("proxy", svc, request);
-            entry.setOriginalRequest(original);
+            // The pre-edit request is kept only when something changed it, as
+            // the response side does below: an unmodified original would just
+            // duplicate the bytes the entry already holds, for every entry.
+            if (wasModified) entry.setOriginalRequest(original);
             entry.setEdited(wasModified);
 
             HttpClient.Options opt = new HttpClient.Options();
