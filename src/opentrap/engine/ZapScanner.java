@@ -351,10 +351,13 @@ public final class ZapScanner {
     private void pullAlerts(String baseurl, ScanTask task, Map<String, Issue.Severity> seen) throws Exception {
         String source = "Scan " + task.number;
         boolean reattributed = false;
+        // One evidence cache for this listing: findings on the same message
+        // share its request/response pair instead of copying it per alert.
+        java.util.Map<String, Evidence> evidence = new java.util.HashMap<>();
         for (JsonValue a : api.alerts(baseurl, 0, 100000)) {
             String id = ZapApi.str(a, "id");
             if (id == null || seen.containsKey(id)) continue;
-            Issue is = mapAlert(api, a);
+            Issue is = mapAlert(api, a, evidence);
             if (is == null) continue;
             seen.put(id, is.severity());
             is.setSource(source);
@@ -389,6 +392,26 @@ public final class ZapScanner {
      * {@code api} is non-null the alert's HTTP message is fetched and attached.
      */
     public static Issue mapAlert(ZapApi api, JsonValue a) {
+        return mapAlert(api, a, new java.util.HashMap<String, Evidence>());
+    }
+
+    /**
+     * As {@link #mapAlert(ZapApi, JsonValue)}, with the evidence cache of one
+     * listing of alerts. One response commonly triggers several passive
+     * alerts; with a shared cache those findings hold one request/response
+     * pair instead of a copy each, which the project file then writes once
+     * and a restored project holds once. The cache must not outlive its
+     * listing: message ids belong to one engine process, and a restarted
+     * engine reuses them for different messages.
+     */
+    public static Issue mapAlert(ZapApi api, JsonValue a, java.util.Map<String, Evidence> evidence) {
+        return mapAlert(a, evidence, api == null ? null : api::message);
+    }
+
+    /** The engine's message records, so the mapping can be driven without an engine. */
+    interface MessageSource { JsonValue message(String id) throws Exception; }
+
+    static Issue mapAlert(JsonValue a, java.util.Map<String, Evidence> evidence, MessageSource messages) {
         String name = ZapApi.str(a, "name");
         if (name == null || name.isEmpty()) name = ZapApi.str(a, "alert");
         if (name == null || name.isEmpty()) return null;
@@ -418,10 +441,10 @@ public final class ZapScanner {
             b.tags(new ArrayList<>(tags.keys()));
         }
 
-        if (api != null) {
+        if (messages != null) {
             String mid = ZapApi.str(a, "messageId");
             if (mid != null && !mid.isEmpty()) {
-                try { attachMessage(api, b, mid); } catch (Exception ignore) { }
+                try { attachMessage(b, mid, evidence, messages); } catch (Exception ignore) { }
             }
         }
         return b.build();
@@ -436,17 +459,45 @@ public final class ZapScanner {
         return sb.toString();
     }
 
-    private static void attachMessage(ZapApi api, Issue.Builder b, String messageId) throws Exception {
-        JsonValue m = api.message(messageId);
-        if (m == null) return;
-        String reqH = ZapApi.str(m, "requestHeader");
-        String resH = ZapApi.str(m, "responseHeader");
-        if (reqH != null && !reqH.isEmpty()) {
-            b.request(new HttpMessage(Bytes.bytes(norm(toOriginForm(reqH)) + nz(ZapApi.str(m, "requestBody")))));
+    /** The request/response pair one engine message contributes as issue evidence. */
+    static final class Evidence {
+        final HttpMessage request;    // null when the engine holds no request
+        final HttpMessage response;   // null when it holds no response
+        Evidence(HttpMessage request, HttpMessage response) {
+            this.request = request;
+            this.response = response;
         }
-        if (resH != null && !resH.isEmpty()) {
-            b.response(new HttpMessage(Bytes.bytes(norm(resH) + nz(ZapApi.str(m, "responseBody")))));
+    }
+
+    private static void attachMessage(Issue.Builder b, String messageId,
+            java.util.Map<String, Evidence> evidence, MessageSource messages) throws Exception {
+        Evidence e = evidence.get(messageId);
+        if (e == null) {
+            JsonValue m = messages.message(messageId);
+            if (m == null) return;   // nothing attached and nothing cached: a later alert retries
+            e = buildEvidence(m);
+            evidence.put(messageId, e);
         }
+        if (e.request != null) b.request(e.request);
+        if (e.response != null) b.response(e.response);
+    }
+
+    private static Evidence buildEvidence(JsonValue m) {
+        return new Evidence(requestOf(m), responseOf(m));
+    }
+
+    /** An engine record's request as our message model, or null when it holds none. */
+    private static HttpMessage requestOf(JsonValue m) {
+        String h = ZapApi.str(m, "requestHeader");
+        if (h == null || h.isEmpty()) return null;
+        return new HttpMessage(Bytes.bytes(norm(toOriginForm(h)) + nz(ZapApi.str(m, "requestBody"))));
+    }
+
+    /** An engine record's response as our message model, or null when it holds none. */
+    private static HttpMessage responseOf(JsonValue m) {
+        String h = ZapApi.str(m, "responseHeader");
+        if (h == null || h.isEmpty()) return null;
+        return new HttpMessage(Bytes.bytes(norm(h) + nz(ZapApi.str(m, "responseBody"))));
     }
 
     // ------------------------------------------- live traffic record (logger)
@@ -507,17 +558,15 @@ public final class ZapScanner {
         String target = requestTargetUrl(reqH);
         HttpService s = (target != null) ? HttpService.parse(target) : null;
         if (s == null) return false;
-        HttpMessage req = new HttpMessage(Bytes.bytes(norm(toOriginForm(reqH)) + nz(ZapApi.str(m, "requestBody"))));
+        HttpMessage req = requestOf(m);
         // A scan is within scope, so nothing outside it is ever attributed to
         // one. The JavaScript crawl drives a real browser, which makes its own
         // background requests and loads each page's external resources; the
         // engine records those too, and they are not the crawl.
         if (!ctx.scope().isEmpty() && !ctx.scope().isInScope(s, req.path())) return false;
         LogEntry e = new LogEntry(tool, s, req);
-        String resH = ZapApi.str(m, "responseHeader");
-        if (resH != null && !resH.isEmpty()) {
-            e.setResponse(new HttpMessage(Bytes.bytes(norm(resH) + nz(ZapApi.str(m, "responseBody")))));
-        }
+        HttpMessage res = responseOf(m);
+        if (res != null) e.setResponse(res);
         ctx.store().add(e);
         if (toSiteMap) ctx.siteMapChanged(e);
         return true;
@@ -619,10 +668,11 @@ public final class ZapScanner {
         List<JsonValue> alerts = api.alerts(baseurl, 0, 100000);
         System.out.println("raw alerts: " + alerts.size());
         java.util.Map<String, int[]> bySev = new java.util.TreeMap<>();
+        java.util.Map<String, Evidence> evidence = new java.util.HashMap<>();
         Issue sample = null;
         int mapped = 0;
         for (JsonValue a : alerts) {
-            Issue is = mapAlert(api, a);
+            Issue is = mapAlert(api, a, evidence);
             if (is == null) continue;
             mapped++;
             bySev.computeIfAbsent(is.severity().label(), k -> new int[1])[0]++;
