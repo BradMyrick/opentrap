@@ -9,7 +9,7 @@
 # This fetches the pinned version into engine/. Updating to a new ZAP release is
 # just: bump ZAP_VERSION in tools/versions, re-run this. The Core package is used
 # (no bundled JRE) because OpenTRAP already runs on a JVM.
-set -e
+set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 DEST="$DIR/engine"
 source "$DIR/tools/versions"
@@ -18,11 +18,23 @@ VER="${ZAP_VERSION}"
 TAG="v${VER}"
 URL="https://github.com/zaproxy/zaproxy/releases/download/${TAG}/ZAP_${VER}_Core.zip"
 
+check() { # <file> <expected sha256>
+    local got
+    got="$(sha256sum "$1" | cut -d' ' -f1)"
+    if [ "$got" != "$2" ]; then
+        echo "sha256 mismatch for $1:" >&2
+        echo "  expected $2 (update the pin in tools/versions?)" >&2
+        echo "  got      $got" >&2
+        exit 1
+    fi
+}
+
 echo "Installing pinned ZAP engine ${TAG} (edit tools/versions to change)..."
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 echo "Downloading $URL ..."
 curl -L --fail -o "$tmp/zap.zip" "$URL"
+check "$tmp/zap.zip" "$ZAP_SHA256"
 unzip -q "$tmp/zap.zip" -d "$tmp"
 
 # The zip contains a single top-level ZAP_<ver>/ directory; flatten into engine/.
@@ -49,19 +61,20 @@ done
 # needs a newer commonlib than Core ships, so replace commonlib too. Versions are
 # pinned in tools/versions and must stay compatible with ZAP_VERSION.
 EXT="https://github.com/zaproxy/zap-extensions/releases/download"
-fetch_addon() {  # <id> <version> [quality=release]
-    local id="$1" ver="$2" q="${3:-release}"
+fetch_addon() {  # <id> <version> <quality> <sha256>
+    local id="$1" ver="$2" q="$3" sha="$4"
     rm -f "$DEST"/plugin/${id}-*.zap
     echo "Fetching add-on ${id} ${q} ${ver}..."
-    curl -L --fail -o "$DEST/plugin/${id}-${q}-${ver}.zap" \
-        "$EXT/${id}-v${ver}/${id}-${q}-${ver}.zap"
+    curl -L --fail -o "$tmp/${id}.zap" "$EXT/${id}-v${ver}/${id}-${q}-${ver}.zap"
+    check "$tmp/${id}.zap" "$sha"
+    mv "$tmp/${id}.zap" "$DEST/plugin/${id}-${q}-${ver}.zap"
 }
-fetch_addon commonlib  "${ZAP_ADDON_COMMONLIB}"
-fetch_addon selenium   "${ZAP_ADDON_SELENIUM}"
-fetch_addon spiderAjax "${ZAP_ADDON_SPIDERAJAX}"
+fetch_addon commonlib       "${ZAP_ADDON_COMMONLIB}"       release "${ZAP_ADDON_COMMONLIB_SHA256}"
+fetch_addon selenium        "${ZAP_ADDON_SELENIUM}"        release "${ZAP_ADDON_SELENIUM_SHA256}"
+fetch_addon spiderAjax      "${ZAP_ADDON_SPIDERAJAX}"      release "${ZAP_ADDON_SPIDERAJAX_SHA256}"
 # Beta scan-rule packs: many more active + passive checks than the release packs.
-fetch_addon ascanrulesBeta "${ZAP_ADDON_ASCANRULES_BETA}" beta
-fetch_addon pscanrulesBeta "${ZAP_ADDON_PSCANRULES_BETA}" beta
+fetch_addon ascanrulesBeta  "${ZAP_ADDON_ASCANRULES_BETA}" beta    "${ZAP_ADDON_ASCANRULES_BETA_SHA256}"
+fetch_addon pscanrulesBeta  "${ZAP_ADDON_PSCANRULES_BETA}" beta    "${ZAP_ADDON_PSCANRULES_BETA_SHA256}"
 
 JAR="$(ls "$DEST"/zap-*.jar 2>/dev/null | head -1)"
 [ -n "$JAR" ] || { echo "No zap jar after unpack" >&2; exit 1; }

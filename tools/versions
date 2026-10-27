@@ -1,7 +1,8 @@
-# Pinned versions of the tools OpenTRAP bundles or vendors.
-# This is the single source of truth: the fetch scripts install these versions,
-# and tools/check-updates.sh compares them against upstream. Bump a line here as
-# part of a release, then re-run the matching fetch script.
+# Pinned versions of the tools OpenTRAP bundles or vendors, and the sha256 of
+# every artifact the fetch scripts download. This is the single source of
+# truth: the fetch scripts install exactly these bytes, and tools/
+# check-updates.sh compares versions against upstream. Bump a version and its
+# hash together as part of a release, then re-run the matching fetch script.
 
 CHROMIUM_REVISION=1721457
 BOUNCYCASTLE_VERSION=1.78.1
@@ -9,21 +10,38 @@ BROTLI_DEC_VERSION=0.1.2
 
 # OWASP ZAP engine (crawl + active scan backend, run headless)
 ZAP_VERSION=2.17.0
+ZAP_SHA256=0cb73b7f72d12c263fb61de304edb82a455d7aa4e1813c216c061765c306f5b7
 
 # Extra ZAP add-ons not in the Core package, fetched from the ZAP marketplace so
-# the AJAX spider (JavaScript-rendering crawl) works. spiderAjax needs a newer
+# the AJAX spider (JavaScript-rendered crawl) works. spiderAjax needs a newer
 # commonlib than Core ships, so commonlib is upgraded too. Keep these compatible
 # with ZAP_VERSION (see the ZapVersions-2.17 manifest).
 ZAP_ADDON_SELENIUM=15.59.0
 ZAP_ADDON_SPIDERAJAX=23.33.0
 ZAP_ADDON_COMMONLIB=1.44.0
 
-# Beta scan-rule packs (not in Core): many more active and passive checks than the
-# release packs alone. Beta rules are widely used and reasonably stable; alpha is
+# Beta scan-rule packs (not in Core): many more active and passive checks than
+# the release packs alone. Beta rules are widely used and reasonably stable; alpha is
 # deliberately not bundled (experimental, noisier).
 ZAP_ADDON_ASCANRULES_BETA=67
 ZAP_ADDON_PSCANRULES_BETA=50
 
+# sha256 of each add-on above, in the same order: selenium, spiderAjax,
+# commonlib, ascanrulesBeta, pscanrulesBeta.
+ZAP_ADDON_SELENIUM_SHA256=213bb9b008c134aa748ef3f1f7e38c2aa17a603701c4e54b05970d78e633e854
+ZAP_ADDON_SPIDERAJAX_SHA256=38ce8c3d68fe460a17762af40d22cd43f5dc6a5cab5d7538801c8057e30198c6
+ZAP_ADDON_COMMONLIB_SHA256=6450205e07248c20e9c8de185268cf1cd571f3cec7f7c0e5d10178b2126834f9
+ZAP_ADDON_ASCANRULES_BETA_SHA256=81e84d592b1f7ad803470bcc8d8b659d4f7e21370546a482b606207e57a7db69
+ZAP_ADDON_PSCANRULES_BETA_SHA256=a979f7cd5d8be10e0338b417e006ec1e2f6ec79101010d570ddb5199892e921b
+
 # Portable JDK used to compile OpenTRAP and build the AppImage runtime.
 # Temurin is built on an old glibc, so the AppImage runs on mainstream Linux.
-JDK_VERSION=25
+# The full release (not just the major) is pinned, plus the tarball's sha256,
+# so every machine fetches the same bytes.
+JDK_VERSION=25.0.5+8
+JDK_SHA256=68982529869257d0ee6b824ec5aa270ff8b118bb438670da0b97ebdab178d7fb
+
+# appimagetool packs the release AppImage. Pinned by version and hash because
+# the packaging script executes it.
+APPIMAGETOOL_VERSION=1.9.1
+APPIMAGETOOL_SHA256=ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0

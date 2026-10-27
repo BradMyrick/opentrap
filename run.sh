@@ -14,6 +14,7 @@
 # is recommended: it lets detection and your view menu choice work.
 SCALE=""
 
+set -u
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Prefer the pinned portable JDK (fetch-jdk.sh) when present, so the app runs
@@ -38,7 +39,7 @@ if [ -z "${_JAVA_AWT_WM_NONREPARENTING+x}" ]; then
 fi
 
 # First numeric argument, or the env var, overrides the default above.
-if [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then SCALE="$1"; shift; fi
+if [[ "${1:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then SCALE="$1"; shift; fi
 SCALE="${OPENTRAP_SCALE:-$SCALE}"
 
 ARGS=()
@@ -51,4 +52,8 @@ fi
 # Size the max heap as a share of the machine's RAM rather than a fixed cap, so
 # the app scales with the host. 50% leaves room for the scan engine and the
 # testing browser, which run as their own processes outside this JVM.
+if [ ! -f "$DIR/dist/opentrap.jar" ]; then
+    echo "dist/opentrap.jar not found. Build it first:  ./build.sh" >&2
+    exit 1
+fi
 exec java -XX:MaxRAMPercentage=50 -XX:+UseG1GC -XX:G1PeriodicGCInterval=300000 "${ARGS[@]}" -jar "$DIR/dist/opentrap.jar" "$@"

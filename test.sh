@@ -3,7 +3,7 @@
 #
 # Tests live under tests/ rather than src/ so they are never packed into the
 # shipped jar. They compile against the compiled application classes in build/.
-set -e
+set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
@@ -18,12 +18,16 @@ if [ -x "$DIR/jdk/bin/javac" ]; then
 fi
 
 echo "Compiling application..."
-mkdir -p build
-javac -nowarn -d build -cp "lib/*:build" $(find src -name '*.java')
+# Start from an empty build/ like build.sh does, so classes left by a deleted
+# source or by the AppImage packaging cannot leak onto the test classpath.
+rm -rf build && mkdir -p build
+mapfile -t APP_SRCS < <(find src -name '*.java')
+javac -nowarn -d build -cp "lib/*:build" "${APP_SRCS[@]}"
 
 echo "Compiling tests..."
 rm -rf build-tests && mkdir -p build-tests
-javac -nowarn -d build-tests -cp "lib/*:build" $(find tests -name '*.java')
+mapfile -t TEST_SRCS < <(find tests -name '*.java')
+javac -nowarn -d build-tests -cp "lib/*:build" "${TEST_SRCS[@]}"
 
 echo "Running tests..."
 echo
