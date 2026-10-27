@@ -1727,13 +1727,17 @@ public class DashboardTool implements ToolModule {
         issueDetail.setText(opentrap.ui.Advisory.renderCompact(is));
         issueDetail.setCaretPosition(0);
 
+        // Findings on the same engine message now share one request/response
+        // pair, so hand the viewer its own copy: the editors are read-only here,
+        // but an action that ever mutated the shown message in place must not
+        // reach back into the sibling findings' evidence.
+        HttpMessage req = is.request() == null ? null : is.request().copy();
+        HttpMessage resp = is.response() == null ? null : is.response().copy();
         if (issueRequest != null) {
-            if (is.request() != null) issueRequest.setMessage(is.service(), is.request());
-            else issueRequest.setMessage(is.service(), null);
+            issueRequest.setMessage(is.service(), req);
         }
         if (issueResponse != null) {
-            if (is.response() != null) issueResponse.setMessage(is.service(), is.response(), is.request());
-            else issueResponse.setMessage(is.service(), null, is.request());
+            issueResponse.setMessage(is.service(), resp, req == null ? null : req.copy());
         }
     }
 
