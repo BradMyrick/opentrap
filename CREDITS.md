@@ -48,20 +48,5 @@ their respective owners.
 # Contributors
 
 OpenTRAP is built by its community, and every contribution is credited. The
-people who have shaped it so far:
-
-- **scottsturrock** - project maintainer
-- **conformance** - proxy defaults and the fork and pull request workflow
-- **exploit-development** - the modern themed interface and UI refresh
-- **codesec-ops** - the project startup screen, new scan wizard, live passive
-  scanning, message-editor inspector, WebSocket capture, and the project site
-- **BradMyrick** - the launch fix for non-reparenting compositors (sway, i3,
-  Hyprland and others), the fix for the crash on responses with long JSON
-  strings, and the removal of duplicated issue evidence that inflated project
-  memory and files
-- **PotatoGamo** - reported the dark theme contrast problem that led to its
-  rebuild
-
-The full list, with what each person worked on and everyone who has reported
-a problem, is in
-[CONTRIBUTORS.md](CONTRIBUTORS.md).
+list of contributors and issue reporters lives in
+[CONTRIBUTORS.md](CONTRIBUTORS.md), which is the single place it is kept.

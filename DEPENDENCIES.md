@@ -33,8 +33,9 @@ pulling whatever is latest that day.
 
        ./tools/check-updates.sh
 
-   It prints, for each tool, the pinned version, the latest upstream version,
-   and whether an update is available. It changes nothing.
+   It prints, for the ZAP engine, Chromium, BouncyCastle and the Brotli
+   decoder, the pinned version, the latest upstream version, and whether an
+   update is available. The JDK pin is not checked. It changes nothing.
 
 2. For each tool you want to move, edit its line in `tools/versions`.
 

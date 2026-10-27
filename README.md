@@ -129,7 +129,7 @@ licence.
 </table>
 
 Full-size screenshots of every tool are on the
-[project site](https://opentrap.github.io/opentrap/#see-it-in-action).
+[project site](https://opentrap.github.io/opentrap/#screenshots).
 
 ## Help build OpenTRAP
 
@@ -142,6 +142,8 @@ think you can make it better, you probably can.
 - Every change is reviewed, merged, and **fully credited** to its author.
 - One-line fixes are as welcome as whole new tools.
 - Bug reports and concrete ideas move the project forward too.
+- Found a security problem in OpenTRAP itself? [SECURITY.md](SECURITY.md)
+  explains how to report it privately.
 
 The fastest way to help it grow is to **star the repository and share it** (buttons
 at the top), and to send that first change. See [CONTRIBUTING.md](CONTRIBUTING.md)
@@ -258,9 +260,16 @@ authority, so there is nothing to configure and no certificate to install.
 ```
 ./build.sh      # compile src/ into a lean dev jar (uses an engine already on disk)
 ./test.sh       # run the test suite
-./release.sh    # build the self-contained release jar the AppImage is made from
-./package-appimage.sh   # build the AppImage, the only artefact that is released
+./run.sh        # launch the dev build
 ```
+
+`./install-desktop.sh` adds a menu entry for your development build, so it sits
+in your applications list beside the AppImage. No root needed; pass `--system`
+to install it for all users instead.
+
+Releasing is a maintainer job, described in
+[MAINTAINING.md](MAINTAINING.md): `./release.sh` builds the self-contained
+release jar and `./package-appimage.sh` packs the AppImage that is published.
 
 The only compiled-in dependencies are BouncyCastle (the proxy CA) and a Brotli
 decoder. The scan engine, testing browser and a portable JDK are fetched on

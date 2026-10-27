@@ -9,6 +9,10 @@
 # Local app data, if ever created inside the tree
 /.opentrap/
 
+# Saved project files: full request/response history including session
+# cookies and tokens. Never commit one.
+*.otrap
+
 # Editor / OS noise
 *.class
 *.bak
@@ -24,12 +28,8 @@
 # ZAP scan engine (large; fetched on demand by fetch-zap.sh)
 /engine/
 
-# Local README preview (generated)
-/readme-preview.html
-
 # AppImage build scratch
 /AppDir/
-/appbuild/
 
 # Portable JDK (large; fetched on demand by fetch-jdk.sh)
 /jdk/
