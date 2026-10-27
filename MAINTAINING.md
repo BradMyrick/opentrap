@@ -155,7 +155,7 @@ way out.** `opentrap.ui.StateIO` writes format version 6: the history, scope,
 settings, session state, organizer, issues, tool states and scan cards. Every
 version from 1 still opens. On write, `StateIO.historyToSave` filters the history
 by the `SaveOptions` (scope, tools) and calls `LogEntry.slim`: an entry tagged with
-the audit tool (`ProjectOptions.AUDIT_TOOL`) is written headers only unless
+the audit tool (`ProjectOptions.AUDIT_TOOL`) is written with headers only unless
 `project.keepAuditBodies` is set, and any body over `project.bodyCapKb` is cut;
 both leave a marker and the full length on the entry, which the message editor
 shows as a note. The live session is never changed by a save. In memory,
