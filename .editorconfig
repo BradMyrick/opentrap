@@ -1,0 +1,18 @@
+# Editor configuration: https://editorconfig.org
+# Matches the house style described in CONTRIBUTING.md.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+# Two trailing spaces are a hard line break in Markdown; leave them alone.
+trim_trailing_whitespace = false
+
+[*.{java,sh}]
+indent_style = space
+indent_size = 4

@@ -1,9 +1,10 @@
 # OpenTRAP module contract
 
-Source root `~/opentrap/src`. Compile check:
-`cd ~/opentrap && javac -d build -cp "lib/*:build" $(find src -name '*.java')`
+Source root `src` in the repository root. Compile check, from the repository
+root: `javac -d build -cp "lib/*:build" $(find src -name '*.java')`
 
-Java 25, Swing. No external deps except BouncyCastle (already used by the proxy only).
+Java 17 or newer (built and tested on Java 25), Swing. No external deps except
+BouncyCastle (already used by the proxy only).
 
 ## Implement this
 
@@ -90,6 +91,8 @@ Ui.ACCENT Ui.GRID Ui.ERROR_RED Ui.ZEBRA        // colours
 Ui.heading(s) Ui.label(s) Ui.bold(s) Ui.check(s,sel) Ui.radio(s,sel)
 Ui.button(s) Ui.button(s,tooltip) Ui.field(s,cols) Ui.combo(T[]) Ui.note(s)
 Ui.pad(t,l,b,r) Ui.row(comps...) Ui.vbox(comps...)
+Ui.form("label:", field, "label:", field, ...)   // aligned form; see the rules below
+Ui.filterBar(JButton, comps...)                  // shared-height filter or search strip
 Ui.styleTable(JTable) Ui.setWidths(JTable,int...) Ui.scroll(Component) Ui.truncate(s,max)
 ```
 
