@@ -42,4 +42,4 @@ fi
 # Size the max heap as a share of the machine's RAM rather than a fixed cap, so
 # the app scales with the host. 50% leaves room for the scan engine and the
 # testing browser, which run as their own processes outside this JVM.
-exec java -XX:MaxRAMPercentage=50 "${ARGS[@]}" -jar "$DIR/dist/opentrap.jar" "$@"
+exec java -XX:MaxRAMPercentage=50 -XX:+UseG1GC -XX:G1PeriodicGCInterval=300000 "${ARGS[@]}" -jar "$DIR/dist/opentrap.jar" "$@"
