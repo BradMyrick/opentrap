@@ -4,7 +4,12 @@
 # check-updates.sh compares versions against upstream. Bump a version and its
 # hash together as part of a release, then re-run the matching fetch script.
 
-CHROMIUM_REVISION=1721457
+CHROMIUM_REVISION=1725220
+# Google's snapshot storage publishes no sha256, so these are the hashes of the
+# pinned revision's archives, recorded when they were fetched. fetch-browser.sh
+# refuses an archive that does not match.
+CHROMIUM_CHROME_SHA256=b33932ab6f6cfbc6b8c666cb6812ebd3090f3a39776d9444e3164ae7e0e07c17
+CHROMIUM_DRIVER_SHA256=7cd2d78d706d76fb62de981d0d8d7590bc039fdbac46847520cf4d41427aaec3
 BOUNCYCASTLE_VERSION=1.78.1
 BROTLI_DEC_VERSION=0.1.2
 
