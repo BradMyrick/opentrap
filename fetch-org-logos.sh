@@ -64,4 +64,5 @@ echo "Done: $ok fetched, $fail failed."
 echo "Files now in $DIR:"
 ls -la "$DIR"
 [ "$fail" -gt 0 ] && echo "Any FAILs above: grab that logo by hand from the org's brand page and save it in $DIR."
+[ "$fail" -gt 0 ] && exit 1
 exit 0

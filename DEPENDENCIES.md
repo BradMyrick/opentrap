@@ -23,9 +23,10 @@ and the Brotli decoder are small jars vendored under `lib/` and unpacked into
 
 ## Single source of truth
 
-`tools/versions` holds the pinned version of every bundled tool. The fetch
-scripts install exactly those versions, so a build is reproducible rather than
-pulling whatever is latest that day.
+`tools/versions` holds the pinned version of every bundled tool and the
+sha256 of every artifact the fetch scripts download. The fetch scripts
+install exactly those bytes and refuse a download whose hash does not match,
+so a build is reproducible rather than pulling whatever is latest that day.
 
 ## Release-cycle workflow
 
@@ -37,7 +38,10 @@ pulling whatever is latest that day.
    decoder, the pinned version, the latest upstream version, and whether an
    update is available. The JDK pin is not checked. It changes nothing.
 
-2. For each tool you want to move, edit its line in `tools/versions`.
+2. For each tool you want to move, edit its version and its SHA256 together
+   in `tools/versions`. For a release asset, the sha256 is published alongside
+   the download (GitHub shows asset digests on the release page); for the
+   JDK, the Adoptium API lists it with each binary.
 
 3. Re-install the bundled binaries:
 

@@ -8,11 +8,13 @@
 #
 # No root needed: everything goes under ~/.local/share. Pass --system to install
 # for all users instead (needs sudo).
-set -e
+set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
 
 SCOPE="user"
-[ "$1" = "--system" ] && SCOPE="system"
+[ "${1:-}" = "--system" ] && SCOPE="system"
 
 if [ "$SCOPE" = "system" ]; then
     ICONROOT="/usr/share/icons/hicolor"
@@ -30,20 +32,20 @@ cp "$DIR/icon/opentrap.svg" "$ICONROOT/scalable/apps/opentrap.svg"
 
 # Raster sizes, rendered from the app itself so no SVG tool is required.
 if [ -f "$DIR/dist/opentrap.jar" ]; then
-    TMP="$(mktemp -d)"
     java -cp "$DIR/dist/opentrap.jar" opentrap.ui.AppIcon "$TMP" >/dev/null
     for size in 16 24 32 48 64 128 256; do
         mkdir -p "$ICONROOT/${size}x${size}/apps"
         cp "$TMP/opentrap_${size}.png" "$ICONROOT/${size}x${size}/apps/opentrap.png"
     done
-    rm -rf "$TMP"
 else
     echo "  note: dist/opentrap.jar not found, installed the SVG only (run ./build.sh for PNG sizes)"
 fi
 
-# Menu entry, with Exec pointing at this checkout's launcher.
+# Menu entry, with Exec pointing at this checkout's launcher. Any Exec line
+# from an earlier install is dropped first, so re-running the script (or
+# moving the checkout) replaces it instead of appending duplicates.
 mkdir -p "$APPDIR"
-sed "s#^Icon=opentrap#Icon=opentrap#; \$aExec=$DIR/run.sh" "$DIR/icon/opentrap.desktop" \
+sed "/^Exec=/d; \$aExec=$DIR/run.sh" "$DIR/icon/opentrap.desktop" \
     > "$APPDIR/opentrap.desktop"
 chmod +x "$APPDIR/opentrap.desktop" 2>/dev/null || true
 

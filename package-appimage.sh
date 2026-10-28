@@ -7,9 +7,10 @@
 #
 # Needs: a JDK (for jpackage + jdeps), and internet the first time (to fetch
 # appimagetool). Produces the AppImage from the self-contained release jar.
-set -e
+set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
+source "$DIR/tools/versions"
 
 # The AppImage runtime must be built from the pinned portable JDK (old glibc),
 # or the packaged app only starts on machines as new as the build host (it quits
@@ -24,10 +25,22 @@ echo ">> building the self-contained release jar"
 JAR="$(ls -t dist/opentrap_*.jar | head -1)"
 JARNAME="$(basename "$JAR")"
 
-AIT=/tmp/appimagetool
+# appimagetool is executed as part of this build, so it is fetched pinned to
+# the version and sha256 in tools/versions and cached per version under
+# ~/.cache/opentrap. An unverified download is never run.
+AIT="$HOME/.cache/opentrap/appimagetool-x86_64-${APPIMAGETOOL_VERSION}.AppImage"
 if [ ! -x "$AIT" ]; then
-    echo ">> fetching appimagetool"
-    curl -sSL -o "$AIT" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+    echo ">> fetching appimagetool ${APPIMAGETOOL_VERSION}"
+    mkdir -p "$(dirname "$AIT")"
+    curl -fsSL -o "$AIT" "https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-x86_64.AppImage"
+    got="$(sha256sum "$AIT" | cut -d' ' -f1)"
+    if [ "$got" != "$APPIMAGETOOL_SHA256" ]; then
+        echo "appimagetool sha256 mismatch:" >&2
+        echo "  expected $APPIMAGETOOL_SHA256 (update the pin in tools/versions?)" >&2
+        echo "  got      $got" >&2
+        rm -f "$AIT"
+        exit 1
+    fi
     chmod +x "$AIT"
 fi
 

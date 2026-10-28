@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 # Prefer the pinned portable JDK (fetch-jdk.sh) when present, so the dev build
@@ -14,7 +14,8 @@ fi
 # is packed into the jar.
 rm -rf build && mkdir -p build dist
 echo "Compiling..."
-javac -d build -cp "lib/*:build" $(find src -name '*.java')
+mapfile -t SRCS < <(find src -name '*.java')
+javac -d build -cp "lib/*:build" "${SRCS[@]}"
 echo "Copying resources..."
 mkdir -p build/opentrap/ui/icons
 cp src/opentrap/ui/icons/*.png build/opentrap/ui/icons/ 2>/dev/null || true
@@ -23,6 +24,8 @@ cd build
 for j in ../lib/*.jar; do jar xf "$j"; done
 rm -rf META-INF/*.SF META-INF/*.DSA META-INF/*.RSA 2>/dev/null || true
 cd ..
-echo "Main-Class: opentrap.ui.Main" > /tmp/opentrap-manifest.txt
-jar cfm dist/opentrap.jar /tmp/opentrap-manifest.txt -C build .
+MANIFEST="$(mktemp)"
+trap 'rm -f "$MANIFEST"' EXIT
+echo "Main-Class: opentrap.ui.Main" > "$MANIFEST"
+jar cfm dist/opentrap.jar "$MANIFEST" -C build .
 echo "Built dist/opentrap.jar ($(du -h dist/opentrap.jar | cut -f1))"
