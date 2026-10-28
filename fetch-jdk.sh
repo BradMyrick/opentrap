@@ -22,7 +22,9 @@ cd "$DIR"
 #   tag      jdk-25.0.5+8   (the "+" is %2B in the URL)
 #   file     OpenJDK25U-jdk_x64_linux_hotspot_25_0_5_8.tar.gz
 MAJOR="${JDK_VERSION%%.*}"
-FV="$(printf '%s' "$JDK_VERSION" | tr '.+' '__')"
+# Temurin keeps the dotted feature version and replaces only the build "+":
+# 25.0.5+8 -> 25.0.5_8 (not 25_0_5_8, which does not exist upstream).
+FV="${JDK_VERSION//+/_}"
 URL="https://github.com/adoptium/temurin${MAJOR}-binaries/releases/download/jdk-${JDK_VERSION//+/%2B}/OpenJDK${MAJOR}U-jdk_x64_linux_hotspot_${FV}.tar.gz"
 
 check() { # <file> <expected sha256>
