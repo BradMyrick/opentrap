@@ -189,6 +189,10 @@ public final class ZapScanner {
                 api.setInjectableRpc(cfg.rpcMask());
                 api.setActiveDelayMs(cfg.delayMs());
                 api.setActiveMaxScanDuration(cfg.scanDurationMin());
+                // Re-apply the saved per-rule choices: a rule the tester
+                // retuned in the Scanner tab keeps its setting, and the tier's
+                // blanket strength and threshold govern only the rest.
+                RuleOverrides.applyAll(api);
             } catch (Exception ignore) { /* use the engine defaults */ }
             auditTask.log("Auditing with the ZAP active rules (" + cfg.name()
                     + ": strength " + cfg.attackStrength() + ", threshold " + cfg.alertThreshold() + ")...");

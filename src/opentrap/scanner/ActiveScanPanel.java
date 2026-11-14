@@ -2,6 +2,7 @@ package opentrap.scanner;
 
 import opentrap.core.Debug;
 import opentrap.core.SuiteContext;
+import opentrap.engine.RuleOverrides;
 import opentrap.engine.ZapApi;
 import opentrap.engine.ZapEngine;
 import opentrap.spider.Cdp.JsonValue;
@@ -62,7 +63,8 @@ public class ActiveScanPanel extends JPanel {
             "These are the active (attacking) rules on the scan engine (OWASP ZAP). Enable the "
             + "checks you want an audit to run, and set each rule's attack strength (how hard it "
             + "probes) and alert threshold. The policy applies to the scans you launch from the "
-            + "dashboard.");
+            + "dashboard and is remembered for the next session; a rule retuned here keeps its "
+            + "setting even when a scan tier sets a blanket strength.");
         note.setBorder(Ui.pad(8, 10, 4, 10));
 
         JPanel head = new JPanel(new BorderLayout());
@@ -113,7 +115,11 @@ public class ActiveScanPanel extends JPanel {
         new Thread(() -> {
             int failed = 0;
             for (Rule r : all) {
-                try { api.setActiveEnabled(r.id, on); r.enabled = on; }
+                try {
+                    api.setActiveEnabled(r.id, on);
+                    r.enabled = on;
+                    RuleOverrides.setEnabled(RuleOverrides.ACTIVE, r.id, on);
+                }
                 catch (Exception e) { failed++; Debug.log("active rule " + r.id + " enable: " + e); }
             }
             if (failed > 0) ctx.alert("scanner", "could not enable or disable "
@@ -160,12 +166,25 @@ public class ActiveScanPanel extends JPanel {
             Rule m = rules.get(r);
             if (c == 0 && v instanceof Boolean on) {
                 m.enabled = on;
-                run(() -> api.setActiveEnabled(m.id, on));
+                run(() -> {
+                    api.setActiveEnabled(m.id, on);
+                    RuleOverrides.setEnabled(RuleOverrides.ACTIVE, m.id, on);
+                });
                 fireTableRowsUpdated(r, r); refreshSummary();
             } else if (c == 3 && v instanceof String s) {
-                m.strength = s; run(() -> api.setActiveStrength(m.id, s)); fireTableRowsUpdated(r, r);
+                m.strength = s;
+                run(() -> {
+                    api.setActiveStrength(m.id, s);
+                    RuleOverrides.setStrength(RuleOverrides.ACTIVE, m.id, s);
+                });
+                fireTableRowsUpdated(r, r);
             } else if (c == 4 && v instanceof String t) {
-                m.threshold = t; run(() -> api.setActiveThreshold(m.id, t)); fireTableRowsUpdated(r, r);
+                m.threshold = t;
+                run(() -> {
+                    api.setActiveThreshold(m.id, t);
+                    RuleOverrides.setThreshold(RuleOverrides.ACTIVE, m.id, t);
+                });
+                fireTableRowsUpdated(r, r);
             }
         }
         private void run(ThrowingRunnable action) {

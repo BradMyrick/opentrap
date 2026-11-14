@@ -3,6 +3,7 @@ package opentrap.scanner;
 import opentrap.core.Debug;
 import opentrap.core.SuiteContext;
 import opentrap.core.ToolModule;
+import opentrap.engine.RuleOverrides;
 import opentrap.engine.ZapApi;
 import opentrap.engine.ZapEngine;
 import opentrap.spider.Cdp.JsonValue;
@@ -124,7 +125,8 @@ public class ScannerTool implements ToolModule {
             "These are the passive rules on the scan engine (OWASP ZAP). Switch one off when it "
             + "is not relevant, or move its alert threshold: low reports on weaker evidence and "
             + "finds more at the cost of false positives, high reports only on strong evidence. "
-            + "Changes apply to the engine that runs your scans.");
+            + "Changes apply to the engine that runs your scans and are remembered for the next "
+            + "session.");
         note.setBorder(Ui.pad(0, 10, 4, 10));
 
         JPanel head = new JPanel();
@@ -193,7 +195,11 @@ public class ScannerTool implements ToolModule {
         new Thread(() -> {
             int failed = 0;
             for (Rule r : visible) {
-                try { api.setPassiveEnabled(String.valueOf(r.id), on); r.enabled = on; }
+                try {
+                    api.setPassiveEnabled(String.valueOf(r.id), on);
+                    r.enabled = on;
+                    RuleOverrides.setEnabled(RuleOverrides.PASSIVE, String.valueOf(r.id), on);
+                }
                 catch (Exception e) { failed++; Debug.log("passive rule " + r.id + " enable: " + e); }
             }
             reportApplyFailures("enabling or disabling passive rules", failed, visible.size());
@@ -207,7 +213,11 @@ public class ScannerTool implements ToolModule {
         new Thread(() -> {
             int failed = 0;
             for (Rule r : visible) {
-                try { api.setPassiveThreshold(String.valueOf(r.id), t); r.threshold = t; }
+                try {
+                    api.setPassiveThreshold(String.valueOf(r.id), t);
+                    r.threshold = t;
+                    RuleOverrides.setThreshold(RuleOverrides.PASSIVE, String.valueOf(r.id), t);
+                }
                 catch (Exception e) { failed++; Debug.log("passive rule " + r.id + " threshold: " + e); }
             }
             reportApplyFailures("setting passive rule thresholds", failed, visible.size());
@@ -323,7 +333,10 @@ public class ScannerTool implements ToolModule {
                 m.enabled = on;
                 final int id = m.id;
                 new Thread(() -> {
-                    try { api.setPassiveEnabled(String.valueOf(id), on); }
+                    try {
+                        api.setPassiveEnabled(String.valueOf(id), on);
+                        RuleOverrides.setEnabled(RuleOverrides.PASSIVE, String.valueOf(id), on);
+                    }
                     catch (Exception e) { ruleApplyFailed("passive rule " + id, "enable", e); }
                 }, "pscan-set").start();
                 fireTableRowsUpdated(r, r);
@@ -332,7 +345,10 @@ public class ScannerTool implements ToolModule {
                 m.threshold = t;
                 final int id = m.id;
                 new Thread(() -> {
-                    try { api.setPassiveThreshold(String.valueOf(id), t); }
+                    try {
+                        api.setPassiveThreshold(String.valueOf(id), t);
+                        RuleOverrides.setThreshold(RuleOverrides.PASSIVE, String.valueOf(id), t);
+                    }
                     catch (Exception e) { ruleApplyFailed("passive rule " + id, "threshold", e); }
                 }, "pscan-set").start();
                 fireTableRowsUpdated(r, r);

@@ -37,6 +37,7 @@ public final class RunTests {
         new opentrap.proxy.WsMatchReplaceTest().run();
         new opentrap.proxy.HistoryFilterTest().run();
         new opentrap.engine.ScanConfigStoreTest().run();
+        new opentrap.engine.RuleOverridesTest().run();
         new opentrap.ui.SendToComparerTest().run();
         new opentrap.ui.ThemePaletteTest().run();
         new opentrap.ui.TabbedPaneListenerTest().run();

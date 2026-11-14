@@ -237,7 +237,14 @@ public final class ZapEngine {
         long deadline = System.currentTimeMillis() + 120_000;
         while (System.currentTimeMillis() < deadline) {
             if (!proc.isAlive()) throw new IOException("Scan engine exited during start-up");
-            if (responds()) return;
+            if (responds()) {
+                // The saved scan-rule policy governs from the first request
+                // passive or active: apply it now the API answers, so a fresh
+                // engine process never silently reverts Monday's choices.
+                try { RuleOverrides.applyAll(api); }
+                catch (Exception e) { Debug.log("could not apply the saved scan rules: " + e); }
+                return;
+            }
             Thread.sleep(1500);
         }
         throw new IOException("Scan engine did not become ready in time");
